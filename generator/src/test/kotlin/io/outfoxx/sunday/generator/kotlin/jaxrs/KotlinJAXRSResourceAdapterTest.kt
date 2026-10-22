@@ -45,6 +45,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -354,7 +355,6 @@ class KotlinJAXRSResourceAdapterTest {
     target: String,
     mode: GenerationMode = GenerationMode.Server,
   ) = KotlinTypeRegistry(
-    "io.test",
     null,
     mode,
     setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.ValidationConstraints) +
@@ -373,7 +373,7 @@ class KotlinJAXRSResourceAdapterTest {
     explicitSecurityParameters = false,
     baseUriMode = null,
     alwaysUseResponseReturn = false,
-    defaultServicePackageName = "io.test",
+    placement = kotlinPlacement("io.test", "io.test"),
     defaultProblemBaseUri = "http://example.com/",
     defaultMediaTypes = listOf("application/json"),
     serviceSuffix = "API",

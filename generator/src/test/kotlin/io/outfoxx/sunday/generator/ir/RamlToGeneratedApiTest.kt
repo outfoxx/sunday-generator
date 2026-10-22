@@ -188,11 +188,14 @@ class RamlToGeneratedApiTest {
       ),
     )
     assertThat(api.auth, equalTo(oauth2Auth()))
-    assertThat(api.models.map { it.copy(declarationUri = null) }, equalTo(listOf(projectModel())))
+    assertThat(api.models.map { it.copy(declarationUri = null) }, equalTo(listOf(projectModel(api.source))))
     assertThat(api.problems, equalTo(listOf(projectNotFoundProblem(api.source.location))))
 
     assertThat(api.services, hasSize(1))
-    assertThat(api.services.single(), equalTo(projectsService().copy(ownerUris = setOf(api.source.location))))
+    assertThat(
+      api.services.single(),
+      equalTo(projectsService(api.source.location).copy(ownerUris = setOf(api.source.location))),
+    )
     assertIrSnapshot("craft-project.ir.yaml", api)
   }
 
@@ -264,7 +267,7 @@ class RamlToGeneratedApiTest {
     assertThat(api.problems, hasSize(3))
     val commonProblem = api.problems.single { problem -> problem.name == "InvalidTeamIdProblem" }
     assertThat(commonProblem.typeUri, equalTo("https://errors.example.com/common/problems/invalid_team_id"))
-    assertThat(commonProblem.source?.location, containsString("composition-common-problems.raml"))
+    assertThat(commonProblem.source.location, containsString("composition-common-problems.raml"))
     assertThat(
       api.problems
         .filter { problem -> problem.name == "SharedLocalProblem" }
@@ -327,14 +330,14 @@ class RamlToGeneratedApiTest {
 
     assertThat(api.name, equalTo("Request Shapes API"))
     assertThat(api.auth, equalTo(null))
-    assertThat(api.models.map { it.copy(declarationUri = null) }, equalTo(requestShapeModels()))
+    assertThat(api.models.map { it.copy(declarationUri = null) }, equalTo(requestShapeModels(api.source)))
     assertThat(api.services, hasSize(1))
     assertThat(
       api.services
         .single()
         .operations
         .single(),
-      equalTo(updateProjectOperation()),
+      equalTo(updateProjectOperation(api.source.location)),
     )
     assertIrSnapshot("request-shapes.ir.yaml", api)
   }
@@ -394,7 +397,7 @@ class RamlToGeneratedApiTest {
       operation.requestBody,
       equalTo(
         GeneratedPayload(
-          type = GeneratedTypeRef.named("ProjectCreate"),
+          type = GeneratedTypeRef.named("ProjectCreate", source = api.source),
           mediaTypes = listOf("application/json"),
         ),
       ),
@@ -550,6 +553,7 @@ class RamlToGeneratedApiTest {
         GeneratedProblem(
           name = "InvalidIdProblem",
           sourceName = "invalid_id",
+          declarationUri = api.source.location + "#/(sunday.problemTypes)/invalid_id",
           source =
             GeneratedSourceSpec(
               kind = GeneratedSourceSpec.Kind.RAML,
@@ -672,7 +676,7 @@ class RamlToGeneratedApiTest {
         GeneratedTypeRef(
           kind = GeneratedTypeRef.Kind.ARRAY,
           name = "array",
-          arguments = listOf(GeneratedTypeRef.named("Project")),
+          arguments = listOf(GeneratedTypeRef.named("Project", source = api.source)),
         ),
       ),
     )
@@ -794,6 +798,7 @@ class RamlToGeneratedApiTest {
               GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
             ),
           discriminator = "kind",
+          source = api.source,
         ),
       ),
     )
@@ -812,8 +817,9 @@ class RamlToGeneratedApiTest {
                 serializationName = "hunting-skill",
               ),
             ),
-          inherits = listOf(GeneratedTypeRef.named("Animal")),
+          inherits = listOf(GeneratedTypeRef.named("Animal", source = api.source)),
           discriminatorValue = "cat",
+          source = api.source,
         ),
       ),
     )
@@ -843,8 +849,8 @@ class RamlToGeneratedApiTest {
       api.models.single { model -> model.name == "Animal" }.discriminatorMappings,
       equalTo(
         mapOf(
-          "cat" to GeneratedTypeRef.named("Cat"),
-          "dog" to GeneratedTypeRef.named("Dog"),
+          "cat" to GeneratedTypeRef.named("Cat", source = api.source),
+          "dog" to GeneratedTypeRef.named("Dog", source = api.source),
         ),
       ),
     )
@@ -856,7 +862,7 @@ class RamlToGeneratedApiTest {
       equalTo(
         GeneratedModelProperty(
           name = "animal",
-          type = GeneratedTypeRef.named("Animal"),
+          type = GeneratedTypeRef.named("Animal", source = api.source),
           required = true,
           externalDiscriminator = "kind",
         ),
@@ -919,27 +925,33 @@ class RamlToGeneratedApiTest {
 
     val testModels = api.models.filter { model -> model.name == "Test" }
     assertThat(testModels, hasSize(2))
-    val localModel = testModels.single { model -> model.source == null }
-    val libraryModel = testModels.single { model -> model.source != null }
+    val localModel = testModels.single { model -> model.source == api.source }
+    val libraryModel = testModels.single { model -> model.source != api.source }
 
-    assertThat(libraryModel.source?.location, containsString("imported-declaration-lib.raml"))
+    assertThat(libraryModel.source.location, containsString("imported-declaration-lib.raml"))
     assertThat(
       localModel.inherits
         .single()
         .source
         ?.location,
-      equalTo(libraryModel.source?.location),
+      equalTo(libraryModel.source.location),
     )
+    val placedLibrary =
+      GeneratedPlacementResolver()
+        .resolve(
+          api,
+        ).models
+        .single { it.name == "Test" && it.source != api.source }
     assertThat(
-      libraryModel.targets["kotlin"]?.modelPackageName,
+      placedLibrary.targets["kotlinClient"]?.modelPackageName,
       equalTo("io.example.library"),
     )
     assertThat(
-      libraryModel.targets["swift"]?.modelModuleName,
+      placedLibrary.targets["swift"]?.modelModuleName,
       equalTo("LibraryModels"),
     )
     assertThat(
-      libraryModel.targets["typescript"]?.modelModuleName,
+      placedLibrary.targets["typescript"]?.modelModuleName,
       equalTo("library-models"),
     )
     assertIrSnapshot("imported-declarations.ir.yaml", api)
@@ -961,8 +973,8 @@ class RamlToGeneratedApiTest {
       .writeString(api)
       .let { yaml ->
         api.problems
-          .mapNotNull { problem -> problem.source?.location }
-          .plus(api.models.mapNotNull { model -> model.source?.location })
+          .mapNotNull { problem -> problem.source.location }
+          .plus(api.models.mapNotNull { model -> model.source.location })
           .distinct()
           .filterNot { location -> location == api.source.location }
           .sorted()
@@ -987,7 +999,7 @@ class RamlToGeneratedApiTest {
       Path.of("src", "test", "resources", "ir", "expected", "RamlToGeneratedApiTest", name),
     )
 
-  private fun projectModel(): GeneratedModel =
+  private fun projectModel(source: GeneratedSourceSpec): GeneratedModel =
     GeneratedModel(
       name = "Project",
       kind = GeneratedModel.Kind.OBJECT,
@@ -996,12 +1008,14 @@ class RamlToGeneratedApiTest {
           GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
           GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
         ),
+      source = source,
     )
 
   private fun projectNotFoundProblem(sourceLocation: String): GeneratedProblem =
     GeneratedProblem(
       name = "ProjectNotFoundProblem",
       sourceName = "project_not_found",
+      declarationUri = sourceLocation + "#/(sunday.problemTypes)/project_not_found",
       source =
         GeneratedSourceSpec(
           kind = GeneratedSourceSpec.Kind.RAML,
@@ -1046,13 +1060,14 @@ class RamlToGeneratedApiTest {
         ),
     )
 
-  private fun projectsService(): GeneratedService =
+  private fun projectsService(location: String): GeneratedService =
     GeneratedService(
       name = "ProjectsService",
       operations =
         listOf(
           GeneratedOperation(
             id = "getProject",
+            declarationUri = location + "#/~1projects~1%7BprojectId%7D/get",
             method = "GET",
             path = "/projects/{projectId}",
             parameters =
@@ -1068,7 +1083,11 @@ class RamlToGeneratedApiTest {
               listOf(
                 GeneratedResponse(
                   status = 200,
-                  type = GeneratedTypeRef.named("Project"),
+                  type =
+                    GeneratedTypeRef.named(
+                      "Project",
+                      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, location),
+                    ),
                   mediaTypes = listOf("application/json"),
                 ),
               ),
@@ -1089,7 +1108,7 @@ class RamlToGeneratedApiTest {
         ),
     )
 
-  private fun requestShapeModels(): List<GeneratedModel> =
+  private fun requestShapeModels(source: GeneratedSourceSpec): List<GeneratedModel> =
     listOf(
       GeneratedModel(
         name = "ProjectPatch",
@@ -1097,20 +1116,23 @@ class RamlToGeneratedApiTest {
         properties =
           listOf(
             GeneratedModelProperty("name", GeneratedTypeRef.scalar("string")),
-            GeneratedModelProperty("state", GeneratedTypeRef.named("ProjectState")),
-            GeneratedModelProperty("tags", GeneratedTypeRef.named("ProjectTagList")),
+            GeneratedModelProperty("state", GeneratedTypeRef.named("ProjectState", source = source)),
+            GeneratedModelProperty("tags", GeneratedTypeRef.named("ProjectTagList", source = source)),
             GeneratedModelProperty("metadata", GeneratedTypeRef.scalar("string", nullable = true)),
           ),
+        source = source,
       ),
       GeneratedModel(
         name = "ProjectState",
         kind = GeneratedModel.Kind.ENUM,
         values = listOf("active", "archived"),
+        source = source,
       ),
       GeneratedModel(
         name = "ProjectTagList",
         kind = GeneratedModel.Kind.ARRAY,
         aliases = listOf(GeneratedTypeRef.scalar("string")),
+        source = source,
       ),
       GeneratedModel(
         name = "SearchOptions",
@@ -1128,17 +1150,20 @@ class RamlToGeneratedApiTest {
               required = true,
             ),
           ),
+        source = source,
       ),
       GeneratedModel(
         name = "SearchToken",
         kind = GeneratedModel.Kind.UNION,
         aliases = listOf(GeneratedTypeRef.scalar("string"), GeneratedTypeRef.scalar("integer")),
+        source = source,
       ),
     )
 
-  private fun updateProjectOperation(): GeneratedOperation =
+  private fun updateProjectOperation(location: String): GeneratedOperation =
     GeneratedOperation(
       id = "updateProject",
+      declarationUri = location + "#/~1projects~1%7BprojectId%7D/patch",
       method = "PATCH",
       path = "/projects/{projectId}",
       parameters =
@@ -1158,12 +1183,20 @@ class RamlToGeneratedApiTest {
           GeneratedParameter(
             name = "token",
             location = GeneratedParameter.Location.QUERY,
-            type = GeneratedTypeRef.named("SearchToken"),
+            type =
+              GeneratedTypeRef.named(
+                "SearchToken",
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, location),
+              ),
           ),
           GeneratedParameter(
             name = "state",
             location = GeneratedParameter.Location.QUERY,
-            type = GeneratedTypeRef.named("ProjectState"),
+            type =
+              GeneratedTypeRef.named(
+                "ProjectState",
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, location),
+              ),
             defaultValue = "active",
           ),
           GeneratedParameter(
@@ -1180,7 +1213,11 @@ class RamlToGeneratedApiTest {
           GeneratedParameter(
             name = "options",
             location = GeneratedParameter.Location.QUERY,
-            type = GeneratedTypeRef.named("SearchOptions"),
+            type =
+              GeneratedTypeRef.named(
+                "SearchOptions",
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, location),
+              ),
             defaultValue =
               mapOf(
                 "archived" to false,
@@ -1197,19 +1234,31 @@ class RamlToGeneratedApiTest {
         ),
       requestBody =
         GeneratedPayload(
-          type = GeneratedTypeRef.named("ProjectPatch"),
+          type =
+            GeneratedTypeRef.named(
+              "ProjectPatch",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, location),
+            ),
           mediaTypes = listOf("application/json"),
         ),
       responses =
         listOf(
           GeneratedResponse(
             status = 200,
-            type = GeneratedTypeRef.named("ProjectPatch"),
+            type =
+              GeneratedTypeRef.named(
+                "ProjectPatch",
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, location),
+              ),
             mediaTypes = listOf("application/json"),
           ),
           GeneratedResponse(
             status = 202,
-            type = GeneratedTypeRef.named("ProjectTagList"),
+            type =
+              GeneratedTypeRef.named(
+                "ProjectTagList",
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, location),
+              ),
             mediaTypes = listOf("application/cbor"),
           ),
         ),
@@ -1231,6 +1280,7 @@ class RamlToGeneratedApiTest {
       GeneratedProblem(
         name = "InvalidIdProblem",
         sourceName = "invalid_id",
+        declarationUri = sourceLocation + "#/(sunday.problemTypes)/invalid_id",
         source =
           GeneratedSourceSpec(
             kind = GeneratedSourceSpec.Kind.RAML,
@@ -1277,6 +1327,7 @@ class RamlToGeneratedApiTest {
       GeneratedProblem(
         name = "UnavailableProblem",
         sourceName = "unavailable",
+        declarationUri = sourceLocation + "#/(sunday.problemTypes)/unavailable",
         source =
           GeneratedSourceSpec(
             kind = GeneratedSourceSpec.Kind.RAML,

@@ -22,4 +22,8 @@ import java.net.URI
 data class GeneratedOutputOrigin(
   val category: GeneratedTypeCategory,
   val ownerUris: Set<URI>,
+  /** Source declarations used in naming and output collision diagnostics. */
+  val declarationUris: Set<String> = emptySet(),
+  /** A nested declaration and its companions require every enclosing declaration to be selected. */
+  val enclosing: GeneratedOutputOrigin? = null,
 )

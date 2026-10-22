@@ -124,6 +124,7 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "libraries/common.raml"),
             ),
           ),
       )
@@ -200,6 +201,7 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
                   ),
                   GeneratedModelProperty("instance", GeneratedTypeRef.scalar("string", format = "uri")),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "BadRequestProblem",
@@ -218,6 +220,7 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -311,6 +314,7 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )

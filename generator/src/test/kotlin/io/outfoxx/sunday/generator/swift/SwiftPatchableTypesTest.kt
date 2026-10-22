@@ -64,6 +64,7 @@ class SwiftPatchableTypesTest {
               patchable = true,
               properties =
                 listOf(GeneratedModelProperty(property, GeneratedTypeRef.scalar("string"), required = required)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

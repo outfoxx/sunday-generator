@@ -37,6 +37,10 @@ class PythonLitestarRenderer(
   api: GeneratedApi? = null,
 ) {
 
+  private val declarationImports =
+    PythonImportBindings(
+      api?.models.orEmpty().map { PythonSymbol(it.pythonModule(packageName), it.name.pythonTypeName) },
+    )
   private val apiIndex = api?.let(::GeneratedApiIndex)
   private val modelProperties = GeneratedModelProperties { type -> apiIndex?.modelOrNull(type) }
   private val nominalTypes = GeneratedNominalTypes { type -> apiIndex?.modelOrNull(type) }
@@ -47,8 +51,9 @@ class PythonLitestarRenderer(
     authentication: Map<String, GeneratedEndpointAccess> = emptyMap(),
     securityPolicies: Map<String, GeneratedEndpointPolicy?>? = null,
   ): PythonModule {
-    val moduleName = service.pythonServiceServerModuleName
-    val module = PythonModuleBuilder("$packageName/$moduleName.py")
+    val location = service.pythonModule(packageName, server = true)
+    val module =
+      PythonModuleBuilder(location + ".py", packageName.takeUnless { location.substringBeforeLast('.') == it })
     val serviceName = "${service.pythonServiceBaseName.pythonTypeName}Service"
     val routerFactoryName = service.pythonServiceRouterFactoryName
 
@@ -276,11 +281,21 @@ class PythonLitestarRenderer(
           renderServiceReturnType(),
         )
       } else {
-        PythonCodeBlock.of(
-          "    async def %L(self) -> %C: ...",
-          id.pythonIdentifierName,
-          renderServiceReturnType(),
-        )
+        val inline =
+          PythonCodeBlock.of(
+            "    async def %L(self) -> %C: ...",
+            id.pythonIdentifierName,
+            renderServiceReturnType(),
+          )
+        if (inline.render(PythonRenderContext(PythonImportSet())).length <= 120) {
+          inline
+        } else {
+          PythonCodeBlock.of(
+            "    async def %L(\n        self,\n    ) -> %C: ...",
+            id.pythonIdentifierName,
+            renderServiceReturnType(),
+          )
+        }
       }
     } else {
       if (hasServiceParameters()) {
@@ -900,7 +915,15 @@ class PythonLitestarRenderer(
   private fun GeneratedTypeRef.renderServerPythonType(nullable: Boolean = true): PythonCodeBlock {
     val type =
       when (kind) {
-        GeneratedTypeRef.Kind.NAMED -> PythonCodeBlock.of("%T", PythonSymbol(".models", name.pythonTypeName))
+        GeneratedTypeRef.Kind.NAMED ->
+          PythonCodeBlock.of(
+            "%T",
+            declarationImports
+              .symbol(
+                apiIndex?.modelOrNull(this)?.pythonModule(packageName) ?: "$packageName.models",
+                name.pythonTypeName,
+              ).let { if (it.module == "$packageName.models") it.copy(module = ".models") else it },
+          )
         GeneratedTypeRef.Kind.ARRAY ->
           PythonCodeBlock.of(
             "list[%C]",

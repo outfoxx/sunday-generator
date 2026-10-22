@@ -29,11 +29,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedPayloadOption
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -71,7 +73,7 @@ class PythonContentTypeTest : PythonTest() {
     val modules =
       PythonLitestarIrGenerator(
         api.copy(services = listOf(service)),
-        PythonGeneratorOptions(packageName = "uploads_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("uploads_api")),
       ).generateModules(
         GeneratedOutputSelection(
           GeneratedTypeCategory.entries.toSet(),
@@ -148,7 +150,12 @@ class PythonContentTypeTest : PythonTest() {
     val uri = javaClass.getResource("/openapi/ir/content-type.yaml")!!.toURI()
     val api = GeneratedApiIrExporter().export(uri)
     val alias =
-      GeneratedModel("BinaryAlias", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(GeneratedTypeRef.scalar("file")))
+      GeneratedModel(
+        "BinaryAlias",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(GeneratedTypeRef.scalar("file")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val envelope =
       GeneratedModel(
         "BinaryEnvelope",
@@ -157,6 +164,7 @@ class PythonContentTypeTest : PythonTest() {
           listOf(
             GeneratedModelProperty("payload", GeneratedTypeRef.scalar("string", format = "byte"), required = true),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val operations =
       listOf(
@@ -192,7 +200,7 @@ class PythonContentTypeTest : PythonTest() {
           models = listOf(alias, envelope),
           services = listOf(api.services.first().copy(name = "Uploads", operations = operations)),
         ),
-        PythonGeneratorOptions(packageName = "uploads_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("uploads_api")),
       ).generateModules(
         GeneratedOutputSelection(
           GeneratedTypeCategory.entries.toSet(),
@@ -237,8 +245,18 @@ class PythonContentTypeTest : PythonTest() {
     val api = GeneratedApiIrExporter().export(uri)
     val models =
       listOf(
-        GeneratedModel("Mixed", GeneratedModel.Kind.UNION, aliases = listOf(binary, structured)),
-        GeneratedModel("Alias", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(GeneratedTypeRef.named("Mixed"))),
+        GeneratedModel(
+          "Mixed",
+          GeneratedModel.Kind.UNION,
+          aliases = listOf(binary, structured),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
+        GeneratedModel(
+          "Alias",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.named("Mixed")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
       )
     val body =
       when (kind) {

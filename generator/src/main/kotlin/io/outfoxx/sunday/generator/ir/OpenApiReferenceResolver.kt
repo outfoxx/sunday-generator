@@ -102,14 +102,14 @@ class OpenApiReferenceResolver(
       prepareDiscriminatorMappings()
       rootSchemas.forEach { (name, schema) -> schemas[name] = normalize(schema, Kind.SCHEMA) }
 
-      val result = root.objectValue().toMutableMap()
+      val result = (if (schemasOnly) root.sourceObject() else root.objectValue()).toMutableMap()
       if (!schemasOnly && root.value.has("servers")) result["servers"] = normalizedServers(root.child("servers"))
       if (!schemasOnly) {
         result["paths"] =
           root.child("paths").children().mapValues { (_, path) -> normalize(path, Kind.PATH_ITEM) }
       }
       result["components"] =
-        components.objectValue().toMutableMap().apply {
+        (if (schemasOnly) components.sourceObject() else components.objectValue()).toMutableMap().apply {
           componentKinds.forEach { (section, kind) ->
             if (!schemasOnly && kind != Kind.SCHEMA && components.value.has(section)) {
               this[section] = components.child(section).children().mapValues { (_, node) -> normalize(node, kind) }
@@ -163,7 +163,8 @@ class OpenApiReferenceResolver(
             node.takeIf { it.isSchemaAlias() }?.let { schemaName(reference(it, kind)) },
           )
         } else {
-          result
+          val origin = if (node.value.has("\$ref")) terminal(node, kind) else node
+          OpenApiSourceObject(result, origin.document.schemaSource, origin.pointer)
         }
       } finally {
         resolving.remove(key)
@@ -775,6 +776,18 @@ class OpenApiReferenceResolver(
           usesBooleanExclusiveBounds ?: (scope.dialect == OAS_30_DIALECT),
           declarationReference,
         ).also { normalizedSchemas.add(it) }
+
+      // AsyncAPI protocol objects are interpreted by its own converter; retain their
+      // lexical locations without applying OpenAPI normalization rules to them.
+      fun sourceObject(): OpenApiSourceObject =
+        OpenApiSourceObject(children().mapValues { (_, child) -> child.sourceValue() }, document.schemaSource, pointer)
+
+      private fun sourceValue(): Any? =
+        when {
+          value.isObject -> sourceObject()
+          value.isArray -> elements().map { it.sourceValue() }
+          else -> rawValue()
+        }
 
       fun rawValue(): Any? = mapper.convertValue(value, Any::class.java)
 

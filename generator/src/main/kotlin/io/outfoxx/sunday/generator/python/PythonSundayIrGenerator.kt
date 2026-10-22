@@ -28,36 +28,45 @@ import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
+import io.outfoxx.sunday.generator.ir.orInvocation
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates transport-neutral Python Sunday client modules from generated IR. */
 class PythonSundayIrGenerator(
-  private val api: GeneratedApi,
+  sourceApi: GeneratedApi,
   private val options: PythonGeneratorOptions = PythonGeneratorOptions(),
 ) {
+
+  private val api =
+    io.outfoxx.sunday.generator.ir
+      .GeneratedPlacementResolver(
+        sourceApi.placementConfiguration.orInvocation(options.placement),
+        generationLanguage = "python",
+        generationRole = "client",
+      ).resolve(sourceApi)
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(listOf("application/json"))
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<PythonModule> {
     options.requireBrokerServicesSupported("Python/Sunday")
-    val packageName = api.pythonPackageName(options)
+    val packageName = api.pythonPackageName()
     val services = api.pythonHttpServices()
 
     fun selected(service: GeneratedService): Boolean {
       val origin = service.outputOrigin(api)
-      return selection.includes(origin.category, origin.ownerUris)
+      return selection.includes(origin)
     }
     val sharedOrigin = api.outputOrigin()
-    val includeShared = selection.includes(sharedOrigin.category, sharedOrigin.ownerUris)
+    val includeShared = selection.includes(sharedOrigin)
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
     val selectedModels =
       api.models
         .filter { model ->
           val origin = model.outputOrigin(api)
-          selection.includes(origin.category, origin.ownerUris)
+          selection.includes(origin)
         }.toSet()
     if (selectedModels.isNotEmpty() ||
       (
@@ -66,16 +75,24 @@ class PythonSundayIrGenerator(
       )
     ) {
       modules +=
-        PythonModelRenderer(
-          packageName,
-          options.preserveUnknownFields,
-          options.defaultTolerance,
-        ).renderModels(api.models) { it in selectedModels }
+        if (selectedModels.isEmpty()) {
+          listOf(
+            PythonModelRenderer(
+              packageName,
+              options.preserveUnknownFields,
+              options.defaultTolerance,
+            ).renderModels(api.models) {
+              false
+            },
+          )
+        } else {
+          renderPlacedModels(api.models, selectedModels, packageName, options)
+        }
     }
     val problems =
       api.problems.filter { problem ->
         val origin = problem.outputOrigin(api)
-        selection.includes(origin.category, origin.ownerUris)
+        selection.includes(origin)
       }
     if (problems.isNotEmpty() ||
       (
@@ -83,7 +100,7 @@ class PythonSundayIrGenerator(
           (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories)
       )
     ) {
-      modules += PythonProblemRenderer(packageName).renderProblems(problems)
+      modules += renderPlacedProblems(problems, packageName)
     }
 
     if (services.isNotEmpty() &&
@@ -94,6 +111,7 @@ class PythonSundayIrGenerator(
         PythonClientRenderer(
           packageName,
           registerProblems = api.problems.isNotEmpty(),
+          problems = api.problems,
           models = api.models,
           defaultMediaTypes = defaultMediaTypes,
           profile = options.profile,
@@ -138,7 +156,7 @@ class PythonSundayIrGenerator(
       }
     }
 
-    return modules
+    return modules.withPackageInitializers()
   }
 
   private fun renderAggregate(
@@ -199,7 +217,7 @@ class PythonSundayIrGenerator(
               """.trimMargin(),
               service.pythonServiceIdentifierName,
               PythonSymbol(
-                ".${service.pythonServiceModuleName}",
+                service.pythonImportModule(packageName),
                 "${service.pythonServiceBaseName.pythonTypeName}Client",
               ),
             )

@@ -22,11 +22,12 @@ import io.outfoxx.sunday.generator.ir.GeneratedProblem
 /** Renders IR problem declarations into catchable Python exceptions backed by Pydantic payloads. */
 class PythonProblemRenderer(
   private val packageName: String,
+  private val moduleName: String = "$packageName.problems",
 ) {
 
   /** Renders the given problems into the package `problems.py` module. */
   fun renderProblems(problems: List<GeneratedProblem>): PythonModule {
-    val module = PythonModuleBuilder("$packageName/problems.py")
+    val module = PythonModuleBuilder(moduleName.replace('.', '/') + ".py")
 
     module.addExport("ProblemPayload")
     module.addExport("Problem")

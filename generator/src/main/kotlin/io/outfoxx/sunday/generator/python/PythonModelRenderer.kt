@@ -42,6 +42,7 @@ class PythonModelRenderer(
   private val packageName: String,
   private val preserveUnknownFields: Boolean = true,
   private val defaultTolerance: Tolerance = Tolerance.Response,
+  private val moduleName: String = "$packageName.models",
 ) {
 
   private var patchHelpers = PythonPatchHelpers(emptyList())
@@ -61,11 +62,18 @@ class PythonModelRenderer(
   ): PythonModule = renderNormalizedModels(GeneratedPatchModels.normalizeFields(models), include)
 
   private fun renderNormalizedModels(
-    allModels: List<GeneratedModel>,
+    declarations: List<GeneratedModel>,
     include: (GeneratedModel) -> Boolean,
   ): PythonModule {
-    val models = allModels.filter(include)
-    val module = PythonModuleBuilder("$packageName/models.py")
+    val bindings = PythonDeclarationBindings(declarations, packageName, moduleName)
+    val models = declarations.filter(include).map(bindings::model)
+    val allModels = declarations.map(bindings::model)
+    val module = PythonModuleBuilder(moduleName.replace('.', '/') + ".py")
+    models.flatMap { it.placementDependencies() }.distinct().forEach { name ->
+      val dependency = allModels.firstOrNull { it.name == name } ?: return@forEach
+      val owner = dependency.pythonModule(packageName)
+      if (owner != moduleName) bindings.symbol(name)?.let(module::addImport)
+    }
     customValidators.clear()
     modelIndex = allModels.associateBy { model -> model.name }
     patchHelpers = PythonPatchHelpers(models)
@@ -212,6 +220,7 @@ class PythonModelRenderer(
 
   private fun List<GeneratedModel>.orderedForInheritance(): List<GeneratedModel> {
     val remaining = toMutableList()
+    val localNames = map { it.name }.toSet()
     val emitted = mutableSetOf<String>()
     val ordered = mutableListOf<GeneratedModel>()
     while (remaining.isNotEmpty()) {
@@ -219,6 +228,7 @@ class PythonModelRenderer(
         remaining.filter { model ->
           model.inherits.none { inherited ->
             inherited.kind == GeneratedTypeRef.Kind.NAMED &&
+              inherited.name in localNames &&
               modelIndex[inherited.name]?.isObjectClass() == true &&
               inherited.name !in emitted
           }
@@ -1292,7 +1302,8 @@ class PythonModelRenderer(
         }
         addAll(baseProperties)
       }
-    val fieldsModel = GeneratedModel(modelName, GeneratedModel.Kind.OBJECT, properties = exposedProperties)
+    val fieldsModel =
+      GeneratedModel(modelName, GeneratedModel.Kind.OBJECT, source = hierarchy.source, properties = exposedProperties)
     val propertyBlocks =
       exposedProperties.map { property ->
         val basePropertyType = property.type.renderPythonType(nullable = false)

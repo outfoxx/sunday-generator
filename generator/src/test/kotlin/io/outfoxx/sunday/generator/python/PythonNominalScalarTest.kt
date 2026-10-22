@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.nominalScalarApi
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -111,14 +112,14 @@ class PythonNominalScalarTest : PythonTest() {
     val clients =
       PythonSundayIrGenerator(
         api,
-        PythonGeneratorOptions(packageName = "client_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("client_api")),
       ).generateModules(
         GeneratedOutputSelection(categories),
       )
     val servers =
       PythonLitestarIrGenerator(
         api,
-        PythonGeneratorOptions(packageName = "server_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("server_api")),
       ).generateModules(
         GeneratedOutputSelection(categories),
       )

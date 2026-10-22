@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Project Surface API"
 source:
   kind: "OPENAPI"
@@ -76,6 +76,7 @@ services:
       documentation:
         description: "Updated project response."
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1projects~1%7BprojectId%7D/patch"
   media: {}
   servers:
   - url: "https://api.example.com/v1"
@@ -114,3 +115,5 @@ media: {}
 servers:
 - url: "https://api.example.com/v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

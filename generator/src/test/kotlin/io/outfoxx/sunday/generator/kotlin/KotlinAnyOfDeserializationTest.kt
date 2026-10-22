@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.anyOfDeserializationApi
 import io.outfoxx.sunday.generator.tools.anyOfInvalidWires
 import io.outfoxx.sunday.generator.tools.anyOfValidWires
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -52,7 +53,6 @@ class KotlinAnyOfDeserializationTest {
   ) {
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         if (target == "server") GenerationMode.Server else GenerationMode.Client,
         buildSet {
@@ -68,7 +68,12 @@ class KotlinAnyOfDeserializationTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test.service", "http://example.com/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test.service"),
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -81,7 +86,7 @@ class KotlinAnyOfDeserializationTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "http://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",

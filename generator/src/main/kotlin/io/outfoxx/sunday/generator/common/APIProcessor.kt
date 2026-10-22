@@ -191,6 +191,8 @@ class InheritanceTransformationStep(
   private val resolvedInheriting = mutableMapOf<String, MutableSet<String>>()
 
   private fun index(element: DomainElement) {
+    // Recursive property placeholders can share the declaration's IDs; retain the concrete shape.
+    if (element is RecursiveShape) return
     val internal = element._internal()
     val ids = listOf(element.id(), internal.sourceId(), internal.uniqueId())
     for (id in ids) {

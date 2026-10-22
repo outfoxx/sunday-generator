@@ -3,7 +3,10 @@ usage: Shared nested type linking regression library
 uses:
   sun: https://outfoxx.github.io/sunday-generator/sunday.raml
 
-(sun.kotlinModelPackage): io.test
+(sun.placement):
+  kotlin:
+    models:
+      package: io.test
 
 types:
   Message:

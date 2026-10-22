@@ -92,7 +92,10 @@ class SundayServiceProvidersTest {
           framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
           mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
           quarkus.set(true)
-          pkgName.set('io.test')
+          placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+            text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.test']]])
+            it
+          })
           clientConfigurationFileName.set('config/client.properties')
         }
       }
@@ -102,6 +105,8 @@ class SundayServiceProvidersTest {
       }
       """.trimIndent(),
     )
+
+    var lastBuildOutput = ""
 
     fun build() =
       GradleRunner
@@ -114,9 +119,12 @@ class SundayServiceProvidersTest {
             "resourceJar",
             "--configuration-cache",
             "--build-cache",
+            // Rescan rapid fixture rewrites instead of racing asynchronous filesystem notifications.
+            "--no-watch-fs",
             "--stacktrace",
           ),
         ).build()
+        .also { lastBuildOutput = it.output }
 
     fun descriptor(): String? =
       JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
@@ -128,7 +136,7 @@ class SundayServiceProvidersTest {
             .toList()
         assertTrue(archives.size <= 1)
         val registration = jar.getEntry("config/client.properties")
-        assertTrue(registration != null)
+        assertTrue(registration != null, lastBuildOutput)
         assertTrue(
           jar
             .getInputStream(registration)
@@ -163,7 +171,7 @@ class SundayServiceProvidersTest {
       script.writeText(enabled + "\nsundayGenerations.client.$setting.set(false)\n")
       build()
       JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
-        assertEquals(null, jar.getEntry("config/client.properties"))
+        assertEquals(null, jar.getEntry("config/client.properties"), lastBuildOutput)
       }
       script.writeText(enabled)
       build()
@@ -174,8 +182,8 @@ class SundayServiceProvidersTest {
     )
     build()
     JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
-      assertEquals(null, jar.getEntry("config/client.properties"))
-      assertTrue(jar.getEntry("config/renamed.properties") != null)
+      assertEquals(null, jar.getEntry("config/client.properties"), "$directory\n$lastBuildOutput")
+      assertTrue(jar.getEntry("config/renamed.properties") != null, "$directory\n$lastBuildOutput")
     }
   }
 

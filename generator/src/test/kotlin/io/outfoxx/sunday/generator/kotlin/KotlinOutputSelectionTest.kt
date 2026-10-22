@@ -7,9 +7,11 @@ import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -58,7 +60,6 @@ class KotlinOutputSelectionTest {
     val api = GeneratedApiIrExporter().export(input.toUri())
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -68,7 +69,12 @@ class KotlinOutputSelectionTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://test/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://test/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
@@ -102,6 +108,7 @@ class KotlinOutputSelectionTest {
         directory.resolve("shared.yaml"),
         """
         openapi: 3.1.0
+        x-sunday-placement: {kotlin: {package: example.shared}}
         info: {title: Shared, version: '1'}
         paths: {}
         components:
@@ -127,6 +134,7 @@ class KotlinOutputSelectionTest {
         directory.resolve("service.yaml"),
         """
         openapi: 3.1.0
+        x-sunday-placement: {kotlin: {package: example.consumer}}
         info: {title: Service, version: '1'}
         paths:
           /item:
@@ -157,7 +165,6 @@ class KotlinOutputSelectionTest {
       val api = GeneratedApiIrExporter().export(input.toUri())
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           setOf(
@@ -197,28 +204,28 @@ class KotlinOutputSelectionTest {
     val consumer =
       compileTypesResult(emptyMap(), sourceDirectory = consumerSources, additionalClasspath = listOf(artifact.toFile()))
     assertEquals(KotlinCompilation.ExitCode.OK, consumer.exitCode, consumer.messages)
-    assertTrue(Files.exists(consumerSources.resolve("io/test/Item.kt")))
-    assertFalse(Files.exists(consumerSources.resolve("io/test/SharedImpact.kt")))
+    assertTrue(Files.exists(consumerSources.resolve("example/consumer/Item.kt")))
+    assertFalse(Files.exists(consumerSources.resolve("example/shared/SharedImpact.kt")))
     val mapper =
       com.fasterxml.jackson.module.kotlin
         .jacksonObjectMapper()
-    val itemClass = consumer.classLoader.loadClass("io.test.Item")
+    val itemClass = consumer.classLoader.loadClass("example.consumer.Item")
     val decoded = mapper.readValue("""{"impact":{"kind":"special","reason":"example","severity":2}}""", itemClass)
     assertEquals(
       mapper.readTree("""{"impact":{"kind":"special","reason":"example","severity":2},"label":"local"}"""),
       mapper.readTree(mapper.writeValueAsString(decoded)),
     )
     assertEquals(
-      "io.test.SpecialImpact",
+      "example.shared.SpecialImpact",
       itemClass
         .getMethod("getImpact")
         .invoke(decoded)
         .javaClass.name,
     )
     assertEquals(
-      "io.test.SharedImpact",
+      "example.shared.SharedImpact",
       consumer.classLoader
-        .loadClass("io.test.Item")
+        .loadClass("example.consumer.Item")
         .getMethod("getImpact")
         .returnType.name,
     )
@@ -232,7 +239,6 @@ class KotlinOutputSelectionTest {
         .OutputSelectionFixture(directory, kind)
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel),
@@ -262,12 +268,12 @@ class KotlinOutputSelectionTest {
               status = 404,
               title = "Missing",
               detail = "Missing resource",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel),
@@ -306,7 +312,6 @@ class KotlinOutputSelectionTest {
     inputs.forEachIndexed { index, input ->
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           setOf(KotlinTypeRegistry.Option.ImplementModel),

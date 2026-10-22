@@ -41,8 +41,10 @@ listOf("first", "second", "native", "client", "web", "composite").forEach { name
         if (name == "client") "client" else "server",
         "-quarkus",
         "-suppress-public-api-warnings",
-        "-pkg",
-        "io.test.packaged.$name",
+        "--placement-config",
+        layout.projectDirectory
+          .file("src/main/placement/io.test.packaged.$name.yaml")
+          .asFile.absolutePath,
         "-out",
         output.get().asFile.absolutePath,
         contract.asFile.absolutePath,
@@ -87,3 +89,8 @@ tasks.named<Jar>("sourcesJar") { exclude("META-INF/**") }
 
 // Exercise the archive used by publication on every PR check.
 tasks.check { dependsOn(tasks.named("sourcesJar")) }
+
+// Placement files participate in generation cache invalidation.
+tasks.withType<JavaExec>().configureEach {
+  inputs.files(fileTree("src/main/placement"))
+}

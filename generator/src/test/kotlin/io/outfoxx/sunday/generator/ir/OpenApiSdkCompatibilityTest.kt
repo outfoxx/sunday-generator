@@ -183,8 +183,8 @@ class OpenApiSdkCompatibilityTest {
         )
       }
       assertEquals(
-        outputs[0].models.map { it.copy(source = null, declarationUri = null) },
-        outputs[1].models.map { it.copy(source = null, declarationUri = null) },
+        outputs[0].models.map { it.copy(source = outputs[0].source, declarationUri = null) },
+        outputs[1].models.map { it.copy(source = outputs[0].source, declarationUri = null) },
       )
     }
   }
@@ -311,7 +311,15 @@ class OpenApiSdkCompatibilityTest {
       GeneratedApi(
         name = "Values",
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-        models = listOf(GeneratedModel("Value", GeneratedModel.Kind.OBJECT, properties = listOf(property))),
+        models =
+          listOf(
+            GeneratedModel(
+              "Value",
+              GeneratedModel.Kind.OBJECT,
+              properties = listOf(property),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
+          ),
       )
     assertEquals(api, GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)))
     val old =

@@ -125,9 +125,10 @@ class SundayGenerateBrokerOptionsTest {
           source.set(fileTree('src/main/sunday') { it.include('**/*.yaml') })
           framework.set(${framework.name})
           mode.set(Client)
-          pkgName.set('io.test')
-          modelPkgName.set('io.test.model')
-          servicePkgName.set('io.test.service')
+          placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+            text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.test', models: ['package': 'io.test.model'], services: ['package': 'io.test.service']]]])
+            it
+          })
           ${generateBrokerServices?.let { value -> "generateBrokerServices.set($value)" }.orEmpty()}
         }
       }

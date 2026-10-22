@@ -30,8 +30,10 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
+import io.outfoxx.sunday.generator.ir.emit.GeneratedProblemIndex
 import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
@@ -42,6 +44,7 @@ import io.outfoxx.sunday.generator.ir.emit.isNullableParameter
 class PythonClientRenderer(
   private val packageName: String,
   private val registerProblems: Boolean = false,
+  private val problems: List<io.outfoxx.sunday.generator.ir.GeneratedProblem> = emptyList(),
   models: List<GeneratedModel> = emptyList(),
   private val defaultMediaTypes: List<String> = listOf("application/json"),
   private val profile: String? = null,
@@ -49,22 +52,51 @@ class PythonClientRenderer(
   private val security: (GeneratedService, GeneratedOperation) -> GeneratedClientSecurity? = { _, _ -> null },
 ) {
 
-  private val modelIndex = models.associateBy { model -> model.name }
-  private val nominalTypes = GeneratedNominalTypes { modelIndex[it.name] }
-  private val modelProperties = GeneratedModelProperties { modelIndex[it.name] }
+  private val modelIndex = GeneratedModelIndex(models)
+  private val problemIndex = GeneratedProblemIndex(problems)
+  private val declarationImports =
+    PythonImportBindings(
+      models.map { PythonSymbol(it.pythonModule(packageName), it.name.pythonTypeName) } +
+        problems.map { PythonSymbol(it.pythonModule(packageName), it.name.pythonTypeName) },
+    )
+
+  private fun model(reference: GeneratedTypeRef): GeneratedModel? = modelIndex.modelOrNull(reference)
+
+  private val nominalTypes = GeneratedNominalTypes(::model)
+  private val modelProperties = GeneratedModelProperties(::model)
 
   private var adapterNames = emptyMap<Pair<String, String>, String>()
 
   /** Renders one generated service client. */
   fun renderService(service: GeneratedService): PythonModule {
-    val module = PythonModuleBuilder("$packageName/${service.pythonServiceModuleName}.py")
+    val location = service.pythonModule(packageName)
+    val module =
+      PythonModuleBuilder(location + ".py", packageName.takeUnless { location.substringBeforeLast('.') == it })
     val className = "${service.pythonServiceBaseName.pythonTypeName}Client"
     val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
     val problemRegistration =
       if (registerProblems) {
-        PythonCodeBlock.of(
-          "\n        %T(self.transport)",
-          PythonSymbol(".problems", "register_problems"),
+        val modules =
+          problems
+            .map {
+              it.pythonModule(
+                packageName,
+              )
+            }.distinct()
+            .ifEmpty { listOf("$packageName.problems") }
+        PythonCodeBlock.join(
+          modules.mapIndexed { index, owner ->
+            val local = owner == "$packageName.problems"
+            PythonCodeBlock.of(
+              "\n        %T(self.transport)",
+              PythonSymbol(
+                if (local) ".problems" else owner,
+                "register_problems",
+                if (modules.size > 1) "register_problems_$index" else null,
+              ),
+            )
+          },
+          separator = "",
         )
       } else {
         PythonCodeBlock.of("")
@@ -319,7 +351,14 @@ class PythonClientRenderer(
       val problemTypes =
         nullify.problems.mapNotNull { problem ->
           problem.takeIf { type -> type.kind == GeneratedTypeRef.Kind.NAMED }?.let { type ->
-            PythonCodeBlock.of("%T", PythonSymbol(".problems", type.name.pythonTypeName))
+            PythonCodeBlock.of(
+              "%T",
+              declarationImports
+                .symbol(
+                  problemIndex.problemOrNull(type)?.pythonModule(packageName) ?: "$packageName.problems",
+                  type.name.pythonTypeName,
+                ).let { if (it.module == "$packageName.problems") it.copy(module = ".problems") else it },
+            )
           }
         }
       PythonCodeBlock.of(
@@ -1066,7 +1105,15 @@ class PythonClientRenderer(
   private fun GeneratedTypeRef.renderClientPythonType(nullable: Boolean = true): PythonCodeBlock {
     val type =
       when (kind) {
-        GeneratedTypeRef.Kind.NAMED -> PythonCodeBlock.of("%T", PythonSymbol(".models", name.pythonTypeName))
+        GeneratedTypeRef.Kind.NAMED ->
+          PythonCodeBlock.of(
+            "%T",
+            declarationImports
+              .symbol(
+                model(this)?.pythonModule(packageName) ?: "$packageName.models",
+                name.pythonTypeName,
+              ).let { if (it.module == "$packageName.models") it.copy(module = ".models") else it },
+          )
         GeneratedTypeRef.Kind.ARRAY ->
           PythonCodeBlock.of(
             "%L[%C]",
@@ -1179,7 +1226,7 @@ class PythonClientRenderer(
 
   private fun GeneratedTypeRef.eventDiscriminatorMappings(): List<Pair<String, GeneratedTypeRef>> {
     if (kind == GeneratedTypeRef.Kind.NAMED) {
-      val mappings = modelIndex[name]?.discriminatorMappings.orEmpty()
+      val mappings = model(this)?.discriminatorMappings.orEmpty()
       if (mappings.isNotEmpty()) {
         return mappings.toList()
       }
@@ -1187,7 +1234,7 @@ class PythonClientRenderer(
     return flattenedUnionTypes()
       .filter { type -> type.kind == GeneratedTypeRef.Kind.NAMED }
       .map { type ->
-        (modelIndex[type.name]?.discriminatorValue ?: type.name.pythonTypeName) to type
+        (model(type)?.discriminatorValue ?: type.name.pythonTypeName) to type
       }
   }
 

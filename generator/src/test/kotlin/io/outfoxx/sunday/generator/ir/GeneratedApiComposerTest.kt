@@ -88,7 +88,13 @@ class GeneratedApiComposerTest {
         listOf(
           first,
           second.copy(
-            api = second.api.copy(models = listOf(projectModel(property.copy(allowedValues = listOf(false))))),
+            api =
+              second.api.copy(
+                models =
+                  listOf(
+                    projectModel(property.copy(allowedValues = listOf(false))).copy(source = second.api.source),
+                  ),
+              ),
           ),
         ),
       )
@@ -184,7 +190,22 @@ class GeneratedApiComposerTest {
         .map { it.id },
       equalTo(listOf("getProject", "projectChanged")),
     )
-    assertThat(api.models, equalTo(listOf(projectModel)))
+    assertThat(
+      api.models,
+      equalTo(
+        listOf(
+          projectModel.copy(
+            source = openApi.api.source,
+            ownerUris = setOf(openApi.api.source.location, asyncApi.api.source.location),
+            placementDeclarations =
+              listOf(
+                projectModel.copy(source = openApi.api.source),
+                projectModel.copy(source = asyncApi.api.source),
+              ),
+          ),
+        ),
+      ),
+    )
   }
 
   @Test
@@ -463,7 +484,21 @@ class GeneratedApiComposerTest {
     val idProperty = scopeSummaries.single().properties.single { property -> property.name == "id" }
 
     assertThat(scopeSummaries.size, equalTo(1))
-    assertThat(idProperty.type, equalTo(GeneratedTypeRef.named("UniqueId")))
+    assertThat(
+      idProperty.type,
+      equalTo(
+        GeneratedTypeRef.named(
+          "UniqueId",
+          source =
+            openApi.api.source.copy(
+              location =
+                io.outfoxx.sunday.generator.GeneratedDocumentUri
+                  .canonical(openApiUri)
+                  .toString(),
+            ),
+        ),
+      ),
+    )
     assertThat(idProperty.validation, equalTo(mapOf("pattern" to "^[A-Z2-7]{26}$")))
   }
 
@@ -487,7 +522,7 @@ class GeneratedApiComposerTest {
   }
 
   @Test
-  fun `rejects real OpenAPI and AsyncAPI model collisions with override guidance`(
+  fun `rejects real OpenAPI and AsyncAPI model collisions after placement`(
     @ResourceUri("openapi/ir/composition-identity-3.1.yaml") openApiUri: URI,
     @ResourceUri("asyncapi/ir/composition-model-collision.yaml") asyncApiUri: URI,
   ) {
@@ -496,13 +531,12 @@ class GeneratedApiComposerTest {
     val asyncApi = AsyncApiToGeneratedApi().convertFragment(asyncApiUri)
 
     val failure =
-      assertThrows(GeneratedApiCompositionException::class.java) {
-        GeneratedApiComposer().compose(listOf(openApi, asyncApi))
+      assertThrows(IllegalArgumentException::class.java) {
+        GeneratedPlacementResolver().resolve(GeneratedApiComposer().compose(listOf(openApi, asyncApi)))
       }
 
-    assertThat(failure.message, containsString("project"))
     assertThat(failure.message, containsString("Project"))
-    assertThat(failure.message, containsString("x-sunday-modelName"))
+    assertThat(failure.message, containsString("same identity"))
   }
 
   @Test
@@ -542,7 +576,10 @@ class GeneratedApiComposerTest {
       equalTo(
         first.api.models
           .single()
-          .copy(ownerUris = setOf(openApiSource.location, asyncApiSource.location)),
+          .copy(
+            ownerUris = setOf(openApiSource.location, asyncApiSource.location),
+            placementDeclarations = first.api.models + second.api.models,
+          ),
       ),
     )
   }
@@ -576,7 +613,7 @@ class GeneratedApiComposerTest {
     val api = GeneratedApiComposer().compose(listOf(first, second))
 
     assertThat(api.models.map { composedModel -> composedModel.name }, equalTo(listOf("Project")))
-    assertThat(api.models.single(), equalTo(model))
+    assertThat(api.models.single(), equalTo(first.api.models.single()))
   }
 
   @Test
@@ -794,7 +831,16 @@ class GeneratedApiComposerTest {
           name = apiName,
           source = GeneratedSourceSpec(kind = kind, location = "$apiName.yaml"),
           services = services,
-          models = models,
+          models =
+            models.map { model ->
+              if (model.source.location ==
+                "memory"
+              ) {
+                model.copy(source = GeneratedSourceSpec(kind, "$apiName.yaml"))
+              } else {
+                model
+              }
+            },
           jaxrs = apiJaxrs,
         ),
       apiId = apiId,
@@ -835,6 +881,7 @@ class GeneratedApiComposerTest {
             required = true,
           ),
         ) + extraProperties,
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
 
   private fun projectModelWithSource(
@@ -877,5 +924,6 @@ class GeneratedApiComposerTest {
             type = GeneratedTypeRef.scalar("string"),
           ),
         ),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
 }

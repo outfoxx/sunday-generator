@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Zanzibar API"
 source:
   kind: "RAML"
@@ -32,6 +32,7 @@ services:
           - "sub"
           principalFallback: true
     media: {}
+    declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/get"
   auth:
     zanzibar:
       resourceType: "project"
@@ -56,3 +57,5 @@ auth:
       - "sub"
       principalFallback: true
 media: {}
+placementConfiguration:
+  defaults: {}

@@ -588,6 +588,7 @@ class SwiftSundayIrGeneratorTest : SwiftSundayIrTestSupport() {
                     documentation = GeneratedDocumentation(description = "Stable project identifier."),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory:docs.yaml"),
             ),
           ),
       )

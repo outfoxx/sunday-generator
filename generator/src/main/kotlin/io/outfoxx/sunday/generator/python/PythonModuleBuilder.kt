@@ -19,7 +19,43 @@ package io.outfoxx.sunday.generator.python
 /** Builds a Python module while keeping imports tied to rendered symbol references. */
 class PythonModuleBuilder(
   private val path: String,
+  private val relativeImportBase: String? = null,
 ) {
+
+  internal data class Content(
+    val exports: Set<String>,
+    val blocks: List<PythonCodeBlock>,
+    val imports: Set<PythonSymbol>,
+    val relativeImportBase: String?,
+    val headers: List<String> = emptyList(),
+  )
+
+  internal fun addContent(content: Content): PythonModuleBuilder =
+    apply {
+      require(exports.intersect(content.exports).isEmpty()) {
+        "Conflicting Python declarations at '$path': ${exports.intersect(content.exports)}"
+      }
+      exports += content.exports
+      headers += content.headers
+      if (relativeImportBase == content.relativeImportBase) {
+        blocks += content.blocks
+        explicitImports += content.imports
+      } else {
+        val imports = PythonImportSet(content.relativeImportBase, path.removeSuffix(".py").replace('/', '.'))
+        content.imports.forEach(imports::reference)
+        val context = PythonRenderContext(imports)
+        blocks += content.blocks.map { PythonCodeBlock.of("%L", it.render(context)) }
+        explicitImports += imports.collected()
+      }
+    }
+
+  private val explicitImports = linkedSetOf<PythonSymbol>()
+  private val headers = linkedSetOf<String>()
+
+  /** Registers a reference used by generated forward annotations. */
+  fun addImport(symbol: PythonSymbol) {
+    explicitImports.add(symbol)
+  }
 
   private val blocks = mutableListOf<PythonCodeBlock>()
   private val exports = linkedSetOf<String>()
@@ -38,7 +74,8 @@ class PythonModuleBuilder(
 
   /** Renders the module. */
   fun build(): PythonModule {
-    val imports = PythonImportSet()
+    val imports = PythonImportSet(relativeImportBase, path.removeSuffix(".py").replace('/', '.'))
+    explicitImports.forEach(imports::reference)
     val context = PythonRenderContext(imports)
     val body =
       buildString {
@@ -63,6 +100,11 @@ class PythonModuleBuilder(
           append(imports.render())
           append("\n")
         }
+        if (headers.isNotEmpty()) {
+          append("\n")
+          append(headers.joinToString("\n"))
+          append("\n")
+        }
         if (body.isNotEmpty()) {
           append("\n")
           append(body)
@@ -70,7 +112,10 @@ class PythonModuleBuilder(
         }
       }
 
-    return PythonModule(path, source)
+    return PythonModule(path.removeSuffix(".py").replace('.', '/') + ".py", source).also {
+      it.content =
+        Content(exports.toSet(), blocks.toList(), explicitImports.toSet(), relativeImportBase, headers.toList())
+    }
   }
 
   private fun StringBuilder.appendExports() {

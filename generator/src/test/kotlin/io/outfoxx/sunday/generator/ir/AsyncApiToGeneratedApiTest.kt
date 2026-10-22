@@ -188,6 +188,7 @@ class AsyncApiToGeneratedApiTest {
             listOf(
               GeneratedOperation(
                 id = "projectChanged",
+                declarationUri = fragment.api.source.location + "#/channels/project.changed/subscribe",
                 method = "SUBSCRIBE",
                 path = "project.changed",
                 responses =
@@ -213,6 +214,7 @@ class AsyncApiToGeneratedApiTest {
             name = "ProjectChanged",
             kind = GeneratedModel.Kind.OBJECT,
             source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
+            declarationUri = fragment.api.source.location + "#/channels/project.changed/subscribe/message/payload",
             properties =
               listOf(
                 GeneratedModelProperty(
@@ -354,6 +356,7 @@ class AsyncApiToGeneratedApiTest {
         listOf(
           GeneratedOperation(
             id = "sendProjectCommand",
+            declarationUri = fragment.api.source.location + "#/channels/project.commands/publish",
             method = "PUBLISH",
             path = "project.commands",
             parameters =
@@ -388,6 +391,7 @@ class AsyncApiToGeneratedApiTest {
           ),
           GeneratedOperation(
             id = "projectCommandAccepted",
+            declarationUri = fragment.api.source.location + "#/channels/project.command.accepted/subscribe",
             method = "SUBSCRIBE",
             path = "project.command.accepted",
             responses =
@@ -595,6 +599,7 @@ class AsyncApiToGeneratedApiTest {
       equalTo(
         GeneratedOperation(
           id = "streamEvents",
+          declarationUri = fragment.api.source.location + "#/operations/streamEvents",
           method = "SUBSCRIBE",
           path = "/events",
           responses =

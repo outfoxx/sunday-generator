@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Problem URI Parity API"
 source:
   kind: "RAML"
@@ -24,6 +24,9 @@ services:
       type:
         kind: "NAMED"
         name: "Project"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     problems:
@@ -36,6 +39,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/get"
   media:
     request:
     - "application/json"
@@ -47,7 +51,10 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/Project"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Project"
   properties:
   - name: "id"
     type:
@@ -112,6 +119,7 @@ problems:
   documentation:
     summary: "Invalid Id"
     description: "The id contains one or more invalid characters."
+  declarationUri: "SOURCE_LOCATION_REFERENCE#/(sunday.problemTypes)/invalid_id"
 - name: "ProjectNotFoundProblem"
   sourceName: "project_not_found"
   source:
@@ -160,6 +168,7 @@ problems:
   documentation:
     summary: "Project Not Found"
     description: "The requested project does not exist."
+  declarationUri: "SOURCE_LOCATION#/(sunday.problemTypes)/project_not_found"
 media:
   request:
   - "application/json"
@@ -168,3 +177,5 @@ media:
 servers:
 - url: "https://api.example.com/v1/"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

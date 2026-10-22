@@ -112,6 +112,7 @@ class TypeScriptSundayIrResponsesTest : TypeScriptSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("offendingId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )

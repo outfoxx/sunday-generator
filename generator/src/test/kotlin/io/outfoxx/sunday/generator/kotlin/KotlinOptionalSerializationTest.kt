@@ -25,6 +25,7 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.optionalSerializationApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -49,7 +50,6 @@ class KotlinOptionalSerializationTest {
     val api = optionalSerializationApi(directory)
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         if (target == "jaxrs-server") GenerationMode.Server else GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -59,7 +59,12 @@ class KotlinOptionalSerializationTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://example.test/", emptyList(), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://example.test/",
+          emptyList(),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -72,7 +77,7 @@ class KotlinOptionalSerializationTest {
           false,
           null,
           false,
-          "io.test",
+          kotlinPlacement("io.test", "io.test"),
           "https://example.test/",
           emptyList(),
           "API",

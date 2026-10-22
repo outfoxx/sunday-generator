@@ -25,6 +25,5 @@ internal fun resolveServiceModulePath(
 ): String =
   when {
     explicitModulePath == null -> serviceSimpleName.camelCaseToKebabCase()
-    explicitModulePath.endsWith(".ts") -> explicitModulePath.removeSuffix(".ts")
     else -> "$explicitModulePath/${serviceSimpleName.camelCaseToKebabCase()}"
   }

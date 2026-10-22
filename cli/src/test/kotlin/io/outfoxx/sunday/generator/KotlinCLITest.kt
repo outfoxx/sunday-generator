@@ -40,8 +40,8 @@ class KotlinCLITest {
     private val emptyFile = KotlinCLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-pkg",
-        "io.test",
+        "--placement-config",
+        placementConfig("io.test"),
         "-out",
         emptyFile.resolve("..").path,
         emptyFile.path,
@@ -56,15 +56,34 @@ class KotlinCLITest {
   }
 
   @Test
-  fun `--pkg option`() {
-
-    val command = KotlinGenerateCommandTest()
-    assertDoesNotThrow { command.parse(requiredOptions) }
-    assertThat(command.packageName, equalTo("io.test"))
+  fun `one placement configuration is accepted per invocation`() {
+    val result =
+      KotlinGenerateCommandTest().test(
+        requiredOptions.toList() +
+          listOf("--placement-config", placementConfig("another.package")),
+      )
+    org.junit.jupiter.api.Assertions
+      .assertNotEquals(0, result.statusCode)
+    assertThat(result.output, containsStringIgnoringCase("one placement"))
   }
 
   @Test
-  fun `--pkg option not required when annotations present`() {
+  fun `placement configuration option`() {
+
+    val command = KotlinGenerateCommandTest()
+    assertDoesNotThrow { command.parse(requiredOptions) }
+    assertThat(
+      io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
+        .read(
+          command.placementConfig!!.toPath(),
+        ).defaults.kotlin
+        ?.packageName,
+      equalTo("io.test"),
+    )
+  }
+
+  @Test
+  fun `placement configuration not required when annotations present`() {
 
     val testFile = KotlinCLITest::class.java.getResource("/test-pkgs.raml")!!.toURI()!!
 
@@ -82,7 +101,7 @@ class KotlinCLITest {
   }
 
   @Test
-  fun `--pkg option missing and no annotation, generation fails`() {
+  fun `missing package placement fails generation`() {
 
     val testFile = KotlinCLITest::class.java.getResource("/test.raml")!!.toURI()!!
 
@@ -103,23 +122,7 @@ class KotlinCLITest {
   }
 
   @Test
-  fun `--model-pkg option`() {
-
-    val command = KotlinGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-model-pkg", "io.test.model", *requiredOptions)) }
-    assertThat(command.modelPackageName, equalTo("io.test.model"))
-  }
-
-  @Test
-  fun `--service-pkg option`() {
-
-    val command = KotlinGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-service-pkg", "io.test.service", *requiredOptions)) }
-    assertThat(command.servicePackageName, equalTo("io.test.service"))
-  }
-
-  @Test
-  fun `--service-pkg option and --pkg option missing, generation fails`() {
+  fun `service only defaults do not supply model placement`() {
 
     val testFile = KotlinCLITest::class.java.getResource("/test.raml")!!.toURI()!!
 
@@ -129,8 +132,8 @@ class KotlinCLITest {
     val command = KotlinJAXRSGenerateCommand()
     val options =
       arrayOf(
-        "-service-pkg",
-        "io.test",
+        "--placement-config",
+        placementConfig("io.test", category = "services"),
         "-out",
         tempDir.absolutePath,
         testFile.path,

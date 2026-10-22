@@ -54,7 +54,6 @@ import io.outfoxx.sunday.generator.ir.emit.clientFactoryAlternatives
 import io.outfoxx.sunday.generator.ir.emit.clientFactoryProfiles
 import io.outfoxx.sunday.generator.ir.emit.clientFactorySecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
-import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
@@ -144,6 +143,7 @@ import io.outfoxx.swiftpoet.INT
 import io.outfoxx.swiftpoet.Modifier.CLASS
 import io.outfoxx.swiftpoet.Modifier.FILEPRIVATE
 import io.outfoxx.swiftpoet.Modifier.FINAL
+import io.outfoxx.swiftpoet.Modifier.OPEN
 import io.outfoxx.swiftpoet.Modifier.OVERRIDE
 import io.outfoxx.swiftpoet.Modifier.PRIVATE
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
@@ -169,12 +169,20 @@ import io.outfoxx.swiftpoet.tag
  * Swift/Sunday service generator that renders service declarations from Sunday IR.
  */
 class SwiftSundayIrGenerator(
-  api: GeneratedApi,
+  sourceApi: GeneratedApi,
   private val typeRegistry: SwiftTypeOutputRegistry,
   private val options: SwiftSundayOptions,
 ) {
 
-  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+  private val api =
+    io.outfoxx.sunday.generator.ir
+      .GeneratedPlacementResolver(
+        sourceApi.placementConfiguration,
+        generationLanguage = "swift",
+      ).resolve(sourceApi)
+      .let {
+        it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
+      }
 
   private val transportTypeVariable = typeVariable("TransportType", bound(TRANSPORT))
 
@@ -210,12 +218,23 @@ class SwiftSundayIrGenerator(
       }
     }.associateBy { fallback -> fallback.hierarchy }
   }
+
+  // SwiftPoet's file-local import collector cannot see declarations in other files of the current module.
+  private val moduleAmbiguousModelNames by lazy {
+    api.models
+      .filter { it.scope == null && it.nested == null && it.target("swift", "swift")?.typeName == null }
+      .groupBy { it.name.toUpperCamelCase() }
+      .filterValues { declarations ->
+        declarations.map { it.target("swift", "swift")?.modelModuleName.orEmpty() }.distinct().size > 1
+      }.keys
+  }
+
   private val scopedModelNames = mutableMapOf<GeneratedModel, DeclaredTypeName>()
   private val swiftEnumEntriesByModel = mutableMapOf<GeneratedModel, List<SwiftEnumEntry>>()
 
   private fun GeneratedModel.modelOutputOrigin() =
-    outputOrigin(api).let { origin ->
-      if (isProblemModel) origin.copy(category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem) else origin
+    outputOrigin(api) { model, category ->
+      if (model.isProblemModel) io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem else category
     }
 
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */
@@ -226,9 +245,18 @@ class SwiftSundayIrGenerator(
     val services = api.swiftSundayServices()
     services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Swift/Sunday")
     services.forEach { service ->
-      val serviceName = DeclaredTypeName.typeName(".${service.typeSimpleName()}")
+      val serviceName =
+        DeclaredTypeName.typeName(
+          "${service.target("swift", "swift")?.moduleName.orEmpty()}.${service.typeSimpleName()}",
+        )
       apiIndex.referencedScopedModels(service).forEach { model ->
-        scopedModelNames[model] = serviceName.nestedType(model.name.toUpperCamelCase())
+        val module = model.target("swift", "swift")?.modelModuleName
+        scopedModelNames[model] =
+          if (module != null && module != serviceName.moduleName) {
+            DeclaredTypeName.typeName("$module.${model.name.toUpperCamelCase()}")
+          } else {
+            serviceName.nestedType(model.name.toUpperCamelCase())
+          }
       }
     }
     api.models.forEach { model ->
@@ -241,7 +269,10 @@ class SwiftSundayIrGenerator(
 
     val serviceTypes =
       services.map { service ->
-        val serviceTypeName = DeclaredTypeName.typeName(".${service.typeSimpleName()}")
+        val serviceTypeName =
+          DeclaredTypeName.typeName(
+            "${service.target("swift", "swift")?.moduleName.orEmpty()}.${service.typeSimpleName()}",
+          )
         val serviceTypeBuilder = generateServiceType(serviceTypeName, service)
 
         typeRegistry.outputOwnership.bind(serviceTypeName, service.outputOrigin(api))
@@ -324,7 +355,7 @@ class SwiftSundayIrGenerator(
 
     api
       .models
-      .filter { model -> model.scope == null }
+      .filter { model -> model.scope == null || scopedModelNames[model]?.let { it.topLevelTypeName() == it } == true }
       .mapNotNull { model ->
         val outputDirectory = model.swiftOutputDirectory(model.swiftModelKey() in eventModelKeys)
         val outputGroup = modelOutputGroups[model.swiftModelKey()]
@@ -333,24 +364,26 @@ class SwiftSundayIrGenerator(
           ?.let { typeBuilder -> GeneratedSwiftModel(model, outputDirectory, outputGroup, typeBuilder) }
       }.forEach { generatedModel ->
         val (model, outputDirectory, outputGroup, typeBuilder) = generatedModel
-        val typeName = model.swiftDeclaredTypeName()
-        if (!model.isProtocolHierarchyRootModel) patchHelpers.add(model, typeBuilder, model.isSwiftValueModel)
-        typeRegistry.addModelType(
-          typeName,
-          typeBuilder,
-          outputDirectory = outputDirectory,
-          outputGroup = outputGroup,
-        )
-        discriminatorFallbacks[model]?.let { fallback ->
+        typeRegistry.outputOwnership.within(model.modelOutputOrigin()) {
+          val typeName = model.swiftDeclaredTypeName()
+          if (!model.isProtocolHierarchyRootModel) patchHelpers.add(model, typeBuilder, model.isSwiftValueModel)
           typeRegistry.addModelType(
-            model
-              .swiftFallbackTypeName(
-                fallback,
-              ).also { typeRegistry.outputOwnership.bind(it, model.modelOutputOrigin()) },
-            model.swiftFallbackTypeSpec(fallback, outputDirectory, outputGroup),
+            typeName,
+            typeBuilder,
             outputDirectory = outputDirectory,
             outputGroup = outputGroup,
           )
+          discriminatorFallbacks[model]?.let { fallback ->
+            typeRegistry.addModelType(
+              model
+                .swiftFallbackTypeName(
+                  fallback,
+                ).also { typeRegistry.outputOwnership.bind(it, model.modelOutputOrigin()) },
+              model.swiftFallbackTypeSpec(fallback, outputDirectory, outputGroup),
+              outputDirectory = outputDirectory,
+              outputGroup = outputGroup,
+            )
+          }
         }
       }
   }
@@ -358,7 +391,6 @@ class SwiftSundayIrGenerator(
   private fun GeneratedModel.swiftFallbackTypeName(fallback: GeneratedDiscriminatorFallback): DeclaredTypeName {
     val moduleName =
       target("swift", "swift")?.modelModuleName
-        ?: api.target("swift", "swift")?.modelModuleName
         ?: ""
     return DeclaredTypeName.typeName("${if (moduleName.isBlank()) "" else moduleName}.${fallback.modelName}")
   }
@@ -382,6 +414,7 @@ class SwiftSundayIrGenerator(
       GeneratedModel(
         fallback.modelName,
         GeneratedModel.Kind.OBJECT,
+        source = source,
         properties = exposedProperties,
         patternProperties = modelProperties.patternProperties(this),
         additionalProperties = additionalProperties,
@@ -806,15 +839,10 @@ class SwiftSundayIrGenerator(
   }
 
   private val swiftHierarchyCaseModelsByRootKey: Map<SwiftModelKey, List<GeneratedModel>> by lazy {
-    swiftObjectModelsByKey.mapValues { (_, model) ->
-      val mapped =
-        model.discriminatorMappings.values.mapNotNull { type ->
-          type.modelOrNull(apiIndex)?.takeIf { it.kind == GeneratedModel.Kind.OBJECT }
-        }
-      val children =
-        model.discriminatorChildren(apiIndex) { swiftInheritingModelsByParentKey[it.swiftModelKey()].orEmpty() }
-      (children + mapped).distinct()
-    }
+    val hierarchy =
+      io.outfoxx.sunday.generator.ir.emit
+        .GeneratedModelHierarchy(apiIndex)
+    swiftObjectModelsByKey.mapValues { (_, model) -> hierarchy.cases(model) }
   }
 
   private val protocolHierarchyRootModelKeys: Set<SwiftModelKey> by lazy {
@@ -916,7 +944,12 @@ class SwiftSundayIrGenerator(
   }
 
   private fun aggregateServiceTypeName(): DeclaredTypeName =
-    DeclaredTypeName.typeName(".${(options.aggregateServiceName ?: options.serviceSuffix).ifBlank { "API" }}")
+    DeclaredTypeName.typeName(
+      "${api.target(
+        "swift",
+        "swift",
+      )?.moduleName.orEmpty()}.${(options.aggregateServiceName ?: options.serviceSuffix).ifBlank { "API" }}",
+    )
 
   private fun generateAggregateServiceType(
     aggregateTypeName: DeclaredTypeName,
@@ -1056,78 +1089,107 @@ class SwiftSundayIrGenerator(
   }
 
   private fun generateClientConfigurations() {
-    clientConfigurations.forEach { plan ->
-      val type = DeclaredTypeName.typeName(".${plan.name}")
-      val builder =
-        TypeSpec
-          .structBuilder(type)
-          .addModifiers(PUBLIC)
-          .addSuperType(SENDABLE)
-          .addDoc("Server variables for ${plan.name}.")
-      val init = FunctionSpec.constructorBuilder().addModifiers(PUBLIC).addDoc("Creates server configuration values.")
-      if (plan.requiresDocumentBaseUri) {
-        builder.addProperty(PropertySpec.builder("documentBaseURL", URL, PUBLIC).build())
-        init.addParameter("documentBaseURL", URL).addStatement("self.documentBaseURL = documentBaseURL")
-      }
-      plan.variables.forEach { variable ->
-        val name = variable.name.swiftIdentifierName
-        val variableType = variable.type.swiftTypeName().makeNonOptional()
-        builder.addProperty(
-          PropertySpec.builder(name, variableType, PUBLIC).addSwiftDoc(variable.documentation).build(),
-        )
-        init
-          .addParameter(
-            ParameterSpec
-              .builder(name, variableType)
-              .apply {
-                variable.defaultValue?.let { defaultValue(it.swiftValueCode(variableType, variable.type)) }
-              }.build(),
-          ).addStatement("self.%N = %N", name, name)
-      }
-      builder.addFunction(init.build())
-      val endpoint =
-        FunctionSpec
-          .builder("baseURL")
-          .addModifiers(PUBLIC)
-          .throws(true)
-          .returns(URL)
-          .addDoc("Validates variables and resolves this server's endpoint.")
-      plan.variables.forEach { variable ->
-        variable.allowedValues?.let { values ->
-          endpoint.addCode(
-            "guard [%L].contains(%N) else { throw %T() }\n",
-            values
-              .map {
-                requireNotNull(it).swiftValueCode(variable.type.swiftTypeName().makeNonOptional(), variable.type)
-              }.joinToCode(", "),
-            variable.name.swiftIdentifierName,
-            DeclaredTypeName.typeName("Sunday.TokenProviderError"),
-          )
-        }
-      }
-      val variables =
-        plan.variables.map { variable ->
-          CodeBlock.of(
-            "%S: String(describing: %N)",
-            variable.serializationName ?: variable.name,
-            variable.name.swiftIdentifierName,
-          )
-        }
-      endpoint.addCode(
-        "return try %T.serverURL(template: %S, variables: %L, documentBaseURL: %L)\n",
-        clientSettingsType,
-        plan.server.url,
-        if (variables.isEmpty()) CodeBlock.of("[:]") else CodeBlock.of("[%L]", variables.joinToCode(", ")),
+    clientConfigurations
+      .flatMap { plan ->
+        val modules =
+          api
+            .swiftSundayServices()
+            .filter { it.name in plan.services }
+            .map { it.target("swift", "swift")?.moduleName.orEmpty() } +
+            if (options.aggregateServices &&
+              api.swiftSundayServices().size > 1
+            ) {
+              listOf(aggregateServiceTypeName().moduleName)
+            } else {
+              emptyList()
+            }
+        modules.distinct().map { plan to it }
+      }.forEach { (plan, module) ->
+        val type = DeclaredTypeName.typeName("$module.${plan.name}")
+        val builder =
+          TypeSpec
+            .structBuilder(type)
+            .addModifiers(PUBLIC)
+            .addSuperType(SENDABLE)
+            .addDoc("Server variables for ${plan.name}.")
+        val init = FunctionSpec.constructorBuilder().addModifiers(PUBLIC).addDoc("Creates server configuration values.")
         if (plan.requiresDocumentBaseUri) {
-          CodeBlock.of("documentBaseURL")
-        } else {
-          plan.documentBaseUri?.let { CodeBlock.of("%T(string: %S)!", URL, it) }
-            ?: CodeBlock.of("nil")
-        },
-      )
-      builder.addFunction(endpoint.build())
-      typeRegistry.addServiceType(type, builder)
-    }
+          builder.addProperty(PropertySpec.builder("documentBaseURL", URL, PUBLIC).build())
+          init.addParameter("documentBaseURL", URL).addStatement("self.documentBaseURL = documentBaseURL")
+        }
+        plan.variables.forEach { variable ->
+          val name = variable.name.swiftIdentifierName
+          val variableType = variable.type.swiftTypeName().makeNonOptional()
+          builder.addProperty(
+            PropertySpec.builder(name, variableType, PUBLIC).addSwiftDoc(variable.documentation).build(),
+          )
+          init
+            .addParameter(
+              ParameterSpec
+                .builder(name, variableType)
+                .apply {
+                  variable.defaultValue?.let { defaultValue(it.swiftValueCode(variableType, variable.type)) }
+                }.build(),
+            ).addStatement("self.%N = %N", name, name)
+        }
+        builder.addFunction(init.build())
+        val endpoint =
+          FunctionSpec
+            .builder("baseURL")
+            .addModifiers(PUBLIC)
+            .throws(true)
+            .returns(URL)
+            .addDoc("Validates variables and resolves this server's endpoint.")
+        plan.variables.forEach { variable ->
+          variable.allowedValues?.let { values ->
+            endpoint.addCode(
+              "guard [%L].contains(%N) else { throw %T() }\n",
+              values
+                .map {
+                  requireNotNull(it).swiftValueCode(variable.type.swiftTypeName().makeNonOptional(), variable.type)
+                }.joinToCode(", "),
+              variable.name.swiftIdentifierName,
+              DeclaredTypeName.typeName("Sunday.TokenProviderError"),
+            )
+          }
+        }
+        val variables =
+          plan.variables.map { variable ->
+            CodeBlock.of(
+              "%S: String(describing: %N)",
+              variable.serializationName ?: variable.name,
+              variable.name.swiftIdentifierName,
+            )
+          }
+        endpoint.addCode(
+          "return try %T.serverURL(template: %S, variables: %L, documentBaseURL: %L)\n",
+          clientSettingsType,
+          plan.server.url,
+          if (variables.isEmpty()) CodeBlock.of("[:]") else CodeBlock.of("[%L]", variables.joinToCode(", ")),
+          if (plan.requiresDocumentBaseUri) {
+            CodeBlock.of("documentBaseURL")
+          } else {
+            plan.documentBaseUri?.let { CodeBlock.of("%T(string: %S)!", URL, it) }
+              ?: CodeBlock.of("nil")
+          },
+        )
+        builder.addFunction(endpoint.build())
+        val owners =
+          api.swiftSundayServices().filter {
+            it.name in plan.services &&
+              (
+                it.target("swift", "swift")?.moduleName.orEmpty() == module ||
+                  (
+                    options.aggregateServices &&
+                      api.swiftSundayServices().size > 1 &&
+                      aggregateServiceTypeName().moduleName == module
+                  )
+              )
+          }
+        typeRegistry.outputOwnership.within(api.copy(services = owners).outputOrigin()) {
+          typeRegistry.addServiceType(type, builder)
+        }
+      }
   }
 
   private fun configurationFactories(
@@ -1157,7 +1219,7 @@ class SwiftSundayIrGenerator(
     require(schemes.map { it.name.swiftIdentifierName }.distinct().size == schemes.size) {
       "Client credential field name collision"
     }
-    val credentialType = DeclaredTypeName.typeName(".${serviceType.simpleName}Credentials")
+    val credentialType = DeclaredTypeName.typeName("${serviceType.moduleName}.${serviceType.simpleName}Credentials")
     val credentials =
       TypeSpec
         .structBuilder(credentialType)
@@ -1191,7 +1253,10 @@ class SwiftSundayIrGenerator(
     }
     credentials.addFunction(init.build())
     typeRegistry.addServiceType(credentialType, credentials)
-    val alternativeType = DeclaredTypeName.typeName(".${serviceType.simpleName}SecurityAlternative")
+    val alternativeType =
+      DeclaredTypeName.typeName(
+        "${serviceType.moduleName}.${serviceType.simpleName}SecurityAlternative",
+      )
     val alternative =
       TypeSpec
         .enumBuilder(alternativeType)
@@ -1232,8 +1297,10 @@ class SwiftSundayIrGenerator(
           .addTypeVariable(transportTypeVariable)
           .throws(true)
           .returns(serviceType.parameterizedBy(transportTypeVariable))
-          .addParameter("config", DeclaredTypeName.typeName(".${plan.name}"))
           .addParameter(
+            "config",
+            DeclaredTypeName.typeName("${serviceType.moduleName}.${plan.name}"),
+          ).addParameter(
             "transportFactory",
             DeclaredTypeName.typeName("Sunday.ClientTransportFactory").parameterizedBy(transportTypeVariable),
           ).addParameter(ParameterSpec.builder("credentials", credentialType).defaultValue(".init()").build())
@@ -1487,6 +1554,7 @@ class SwiftSundayIrGenerator(
   private fun GeneratedService.localTypeSpecs(): List<TypeSpec> =
     apiIndex
       .referencedScopedModels(this)
+      .filter { it.swiftDeclaredTypeName().let { name -> name.topLevelTypeName() != name } }
       .mapNotNull { model -> model.swiftTypeSpecBuilderOrNull()?.build() }
 
   private fun GeneratedModel.swiftTypeSpecBuilderOrNull(
@@ -1616,12 +1684,13 @@ class SwiftSundayIrGenerator(
       )
       return
     }
-    addFunction(SwiftModelValidation.instance(name, inherited))
+    addFunction(SwiftModelValidation.instance(name, inherited, model.hasExternalSwiftSubclass))
     if (model in normalizedValidationModels) {
       if (model.kind == GeneratedModel.Kind.OBJECT) {
         addFunction(
           FunctionSpec
             .builder("_sundayValidationValue")
+            .apply { if (model.hasPublicSwiftSupport) addModifiers(model.swiftMemberAccess) }
             .addDoc("Supplies current wire fields without serialization or model construction.\n")
             .apply { if (inherited) addModifiers(OVERRIDE) }
             .returns(SwiftValueConstraints.valueType)
@@ -1909,6 +1978,7 @@ class SwiftSundayIrGenerator(
         FunctionSpec
           .builder("view")
           .addModifiers(STATIC)
+          .apply { if (name.moduleName.isNotBlank()) addModifiers(PUBLIC) }
           .addDoc(
             if (encodesCustomValue) {
               "Encodes custom storage for wire-schema validation.\n"
@@ -2910,6 +2980,30 @@ class SwiftSundayIrGenerator(
             isExternalDiscriminatorEnvelopeValueModel
         )
 
+  // Swift requires both the base class and overridden members to be open when
+  // descendants are compiled in another module, including through intermediate bases.
+  private val GeneratedModel.hasExternalSwiftSubclass: Boolean
+    get() {
+      if (!isSwiftClassModel) return false
+      val module = swiftDeclaredTypeName().moduleName
+      val pending = ArrayDeque(swiftInheritingModelsByParentKey[swiftModelKey()].orEmpty())
+      val visited = mutableSetOf<GeneratedModel>()
+      while (pending.isNotEmpty()) {
+        val child = pending.removeFirst()
+        if (!visited.add(child)) continue
+        if (child.isSwiftClassModel && child.swiftDeclaredTypeName().moduleName != module) return true
+        pending.addAll(swiftInheritingModelsByParentKey[child.swiftModelKey()].orEmpty())
+      }
+      return false
+    }
+
+  private val GeneratedModel.swiftMemberAccess get() = if (hasExternalSwiftSubclass) OPEN else PUBLIC
+
+  private val GeneratedModel.hasPublicSwiftSupport: Boolean
+    get() =
+      hasExternalSwiftSubclass ||
+        inherits.mapNotNull { it.modelOrNull(apiIndex) }.any { it.hasPublicSwiftSupport }
+
   private val GeneratedModel.isSwiftClassModel: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
@@ -3526,7 +3620,7 @@ class SwiftSundayIrGenerator(
     }
     val typeBuilder =
       baseTypeBuilder
-        .addModifiers(PUBLIC)
+        .addModifiers(swiftMemberAccess)
         .addSwiftDoc(documentation)
         .apply {
           if (isProblemHierarchyProtocolModel) {
@@ -3638,6 +3732,7 @@ class SwiftSundayIrGenerator(
             effectiveInheritedProperties + localProperties
           },
           inheritedTypeName != null && !flattensInheritedProperties,
+          hasExternalSwiftSubclass,
         ),
       )
       typeBuilder.addFunction(
@@ -4437,9 +4532,10 @@ class SwiftSundayIrGenerator(
     typeName: DeclaredTypeName,
     properties: List<GeneratedModelProperty>,
     override: Boolean = false,
+    open: Boolean = false,
   ): PropertySpec =
     PropertySpec
-      .builder("debugDescription", STRING, PUBLIC)
+      .builder("debugDescription", STRING, if (open) OPEN else PUBLIC)
       .apply {
         if (override) {
           addModifiers(OVERRIDE)
@@ -4755,6 +4851,7 @@ class SwiftSundayIrGenerator(
         PropertySpec
           .builder("_sundayAllowedPropertyNames", SET.parameterizedBy(STRING), CLASS)
           .apply {
+            if (model.hasPublicSwiftSupport) addModifiers(model.swiftMemberAccess)
             if (model.inherits.mapNotNull { it.modelOrNull(apiIndex) }.any {
                 it.isSwiftClassModel && (modelProperties.isClosed(it) || it.preservesExtensions())
               }
@@ -5088,9 +5185,9 @@ class SwiftSundayIrGenerator(
       .builder("encode")
       .addModifiers(
         *if (inheritedTypeName == null && !isRootProblemModel) {
-          arrayOf(PUBLIC)
+          arrayOf(model.swiftMemberAccess)
         } else {
-          arrayOf(PUBLIC, OVERRIDE)
+          arrayOf(model.swiftMemberAccess, OVERRIDE)
         },
       ).addParameter("to", "encoder", ENCODER)
       .throws(true)
@@ -5292,7 +5389,7 @@ class SwiftSundayIrGenerator(
   ): FunctionSpec =
     FunctionSpec
       .builder("with${property.name.toUpperCamelCase()}")
-      .addModifiers(PUBLIC)
+      .addModifiers(model.swiftMemberAccess)
       .throws(validates)
       .apply {
         if (override) {
@@ -5875,7 +5972,7 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedProblem.swiftProblemTypeName(): DeclaredTypeName =
     DeclaredTypeName
-      .typeName(".${name.toUpperCamelCase()}")
+      .typeName("${target("swift", "swift")?.modelModuleName.orEmpty()}.${name.toUpperCamelCase()}")
 
   private fun GeneratedProblem.hasDuplicateSwiftProblemTypeName(): Boolean =
     api.problems
@@ -5952,7 +6049,7 @@ class SwiftSundayIrGenerator(
     }
     api.models.filter { it.target("swift", "swift")?.typeName != null }.associateWith { model ->
       // Imported schemas can share a name while identifying different declarations.
-      val type = model.copy(targets = model.targets - "swift").swiftDeclaredTypeName()
+      val type = model.swiftDeclaredTypeName(ignoreExternalType = true)
       val name = allocator(type).newName(type.simpleName, model)
       type.enclosingTypeName()?.nestedType(name) ?: DeclaredTypeName.typeName("${type.moduleName}.$name")
     }
@@ -5961,13 +6058,13 @@ class SwiftSundayIrGenerator(
   private fun GeneratedModel.swiftValidationTypeName(): DeclaredTypeName =
     customValidationTypeNames[this] ?: swiftDeclaredTypeName()
 
-  private fun GeneratedModel.swiftDeclaredTypeName(): DeclaredTypeName {
+  private fun GeneratedModel.swiftDeclaredTypeName(ignoreExternalType: Boolean = false): DeclaredTypeName {
     if (scope != null) {
       return scopedModelNames[this] ?: DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
     }
 
     val target = target("swift", "swift")
-    val explicitTypeName = target?.typeName
+    val explicitTypeName = target?.typeName.takeUnless { ignoreExternalType }
     if (explicitTypeName != null && "." in explicitTypeName) {
       return DeclaredTypeName.typeName(explicitTypeName)
     }
@@ -5975,14 +6072,14 @@ class SwiftSundayIrGenerator(
     val nested = nested
     if (nested != null) {
       if (isProtocolHierarchyRootModel || isProblemHierarchyProtocolModel) {
-        return DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
+        return DeclaredTypeName.typeName("${target?.modelModuleName.orEmpty()}.${name.toUpperCamelCase()}")
       }
       val enclosingModel =
         nested.enclosedIn
           ?.modelOrNull(apiIndex)
           ?: genError("Nested model '$name' references unknown enclosing type '${nested.enclosedIn?.name}'")
       if (enclosingModel.isProtocolHierarchyRootModel || enclosingModel.isProblemHierarchyProtocolModel) {
-        return DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
+        return DeclaredTypeName.typeName("${target?.modelModuleName.orEmpty()}.${name.toUpperCamelCase()}")
       }
       val enclosingType = enclosingModel.swiftDeclaredTypeName()
       val nestedName = nested.name ?: genError("Nested model '$name' is missing a nested type name")
@@ -5991,10 +6088,12 @@ class SwiftSundayIrGenerator(
 
     val moduleName =
       target?.modelModuleName
-        ?: api.target("swift", "swift")?.modelModuleName
         ?: ""
     val simpleName = explicitTypeName ?: name.toUpperCamelCase()
-    return DeclaredTypeName.typeName("${if (moduleName.isBlank()) "" else moduleName}.$simpleName")
+    return DeclaredTypeName.typeName(
+      "${if (moduleName.isBlank()) "" else moduleName}.$simpleName",
+      alwaysQualify = moduleName.isNotBlank() && simpleName in moduleAmbiguousModelNames,
+    )
   }
 
   private fun GeneratedTypeRef.swiftTypeName(): TypeName {
@@ -6401,8 +6500,10 @@ class SwiftSundayIrGenerator(
       }
       PropertySpec
         .builder(name, field.declaration.swiftTypeName().makeOptional(), CLASS)
-        .apply { if (owner != this@decodingDefaultProperties) addModifiers(OVERRIDE) }
-        .getter(FunctionSpec.getterBuilder().addStatement("return %L", default ?: CodeBlock.of("nil")).build())
+        .apply {
+          if (hasPublicSwiftSupport) addModifiers(swiftMemberAccess)
+          if (owner != this@decodingDefaultProperties) addModifiers(OVERRIDE)
+        }.getter(FunctionSpec.getterBuilder().addStatement("return %L", default ?: CodeBlock.of("nil")).build())
         .build()
     }
   }

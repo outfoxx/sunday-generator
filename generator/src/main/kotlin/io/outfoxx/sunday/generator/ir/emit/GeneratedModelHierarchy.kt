@@ -52,3 +52,22 @@ internal fun GeneratedModel.discriminatorChildren(
   }
   return selected.toList()
 }
+
+/** The concrete wire cases used by discriminator emission and module dependency validation. */
+internal class GeneratedModelHierarchy(
+  private val index: GeneratedApiIndex,
+) {
+  private val children =
+    index.api.models
+      .filter { it.kind == GeneratedModel.Kind.OBJECT }
+      .flatMap { model -> model.inherits.mapNotNull(index::modelOrNull).map { it to model } }
+      .groupBy({ it.first }, { it.second })
+
+  fun cases(model: GeneratedModel): List<GeneratedModel> =
+    (
+      model.discriminatorChildren(index) { children[it].orEmpty() } +
+        model.discriminatorMappings.values
+          .mapNotNull(index::modelOrNull)
+          .filter { it.kind == GeneratedModel.Kind.OBJECT }
+    ).distinct()
+}

@@ -30,10 +30,7 @@ internal class OpenApiSchema(
   val usesBooleanExclusiveBounds: Boolean = false,
   /** Original declaration for an expanded alias, kept outside serialized schema fields. */
   val declarationReference: String? = null,
-) : LinkedHashMap<String, Any?>(fields) {
-  /** Original declaration location, independent of bundled component names. */
-  val declarationUri: String get() = GeneratedDocumentUri.canonical(URI(source.uri)).toString() + "#" + pointer
-
+) : OpenApiSourceObject(fields, source, pointer) {
   fun withFields(
     fields: Map<String, Any?>,
     usesBooleanExclusiveBounds: Boolean = this.usesBooleanExclusiveBounds,
@@ -48,6 +45,30 @@ internal class OpenApiSchema(
     val uri: String,
     private val bytes: ByteArray,
   ) {
+    private val tree by lazy {
+      com.fasterxml.jackson.databind
+        .ObjectMapper(YAMLFactory())
+        .readTree(bytes)
+    }
+
+    fun placementScopes(pointer: String): List<GeneratedPlacementScope> {
+      val ancestors =
+        generateSequence(pointer) {
+          it.takeIf(String::isNotEmpty)?.substringBeforeLast('/', "")
+        }.toList().asReversed()
+      return ancestors.mapNotNull { ancestor ->
+        val node = tree.at(ancestor)
+        if (!node.has("x-sunday-placement")) return@mapNotNull null
+        val value =
+          com.fasterxml.jackson.databind.ObjectMapper().convertValue(
+            node["x-sunday-placement"],
+            Any::class.java,
+          )
+        val declaration = sourceDeclarationUri(GeneratedDocumentUri.canonical(URI(uri)).toString(), ancestor)
+        GeneratedPlacementScope(declaration, GeneratedPlacement.read(value, declaration))
+      }
+    }
+
     fun location(pointer: String): JsonLocation {
       YAMLFactory().createParser(bytes).use { parser ->
         while (parser.nextToken() != null) {

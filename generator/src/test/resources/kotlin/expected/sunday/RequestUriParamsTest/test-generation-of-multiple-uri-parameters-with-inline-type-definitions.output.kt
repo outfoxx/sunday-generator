@@ -9,6 +9,8 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.operation
 import io.outfoxx.sunday.security.ClientSettings
 import io.outfoxx.sunday.withSecurity
+import io.test.FetchTestCategoryUriParam
+import io.test.FetchTestTypeUriParam
 import kotlin.Any
 import kotlin.String
 import kotlin.Unit
@@ -36,24 +38,4 @@ public class API<Req : Request> @JvmOverloads constructor(
       acceptTypes = this.defaultAcceptTypes
     )
   )
-
-  public enum class FetchTestCategoryUriParam(
-    private val wireValue: String,
-  ) {
-    Politics("politics"),
-    Science("science"),
-    ;
-
-    public override fun toString(): String = wireValue
-  }
-
-  public enum class FetchTestTypeUriParam(
-    private val wireValue: String,
-  ) {
-    All("all"),
-    Limited("limited"),
-    ;
-
-    public override fun toString(): String = wireValue
-  }
 }

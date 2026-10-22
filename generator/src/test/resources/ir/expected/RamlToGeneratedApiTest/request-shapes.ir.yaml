@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Request Shapes API"
 source:
   kind: "RAML"
@@ -29,11 +29,17 @@ services:
       type:
         kind: "NAMED"
         name: "SearchToken"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
     - name: "state"
       location: "QUERY"
       type:
         kind: "NAMED"
         name: "ProjectState"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       defaultValue: "active"
     - name: "labels"
       location: "QUERY"
@@ -51,6 +57,9 @@ services:
       type:
         kind: "NAMED"
         name: "SearchOptions"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       defaultValue:
         archived: false
         labels:
@@ -66,6 +75,9 @@ services:
       type:
         kind: "NAMED"
         name: "ProjectPatch"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     responses:
@@ -73,12 +85,18 @@ services:
       type:
         kind: "NAMED"
         name: "ProjectPatch"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     - status: 202
       type:
         kind: "NAMED"
         name: "ProjectTagList"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/cbor"
     media:
@@ -86,6 +104,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/patch"
   media:
     request:
     - "application/json"
@@ -94,7 +113,10 @@ services:
 models:
 - name: "ProjectPatch"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectPatch"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectPatch"
   properties:
   - name: "name"
     type:
@@ -104,10 +126,16 @@ models:
     type:
       kind: "NAMED"
       name: "ProjectState"
+      source:
+        kind: "RAML"
+        location: "SOURCE_LOCATION"
   - name: "tags"
     type:
       kind: "NAMED"
       name: "ProjectTagList"
+      source:
+        kind: "RAML"
+        location: "SOURCE_LOCATION"
   - name: "metadata"
     type:
       kind: "SCALAR"
@@ -115,19 +143,28 @@ models:
       nullable: true
 - name: "ProjectState"
   kind: "ENUM"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectPatch/property/state/scalar/ProjectState"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectState"
   values:
   - "active"
   - "archived"
 - name: "ProjectTagList"
   kind: "ARRAY"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectPatch/property/tags/array/ProjectTagList"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectTagList"
   aliases:
   - kind: "SCALAR"
     name: "string"
 - name: "SearchOptions"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/parameter/parameter/query/options/shape/schema/shape/SearchOptions"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/SearchOptions"
   properties:
   - name: "archived"
     type:
@@ -144,7 +181,10 @@ models:
     required: true
 - name: "SearchToken"
   kind: "UNION"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/parameter/parameter/query/token/union/SearchToken"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/SearchToken"
   aliases:
   - kind: "SCALAR"
     name: "string"
@@ -155,3 +195,5 @@ media:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

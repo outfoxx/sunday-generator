@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -259,7 +260,6 @@ class KotlinCascadedValidationTest {
   ): KotlinTypeRegistry {
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         buildSet {
@@ -278,7 +278,7 @@ class KotlinCascadedValidationTest {
         false,
         null,
         false,
-        "io.test",
+        kotlinPlacement("io.test", "io.test"),
         "https://example.test/",
         emptyList(),
         "API",

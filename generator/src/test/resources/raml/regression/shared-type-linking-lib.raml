@@ -3,7 +3,10 @@ usage: Shared type linking regression library
 uses:
   sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
 
-(sunday.kotlinModelPackage): io.test
+(sunday.placement):
+  kotlin:
+    models:
+      package: io.test
 
 types:
   Shared-Priority:

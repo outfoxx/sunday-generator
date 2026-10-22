@@ -51,8 +51,8 @@ class GeneratedOutputProvenanceTest {
       )
     val api = GeneratedApiIrExporter().export(service.toUri())
     val models = api.models.associateBy { it.name }
-    assertEquals(GeneratedDocumentUri.canonical(shared.toUri()).toString(), models.getValue("Shared").source?.location)
-    assertEquals(GeneratedDocumentUri.canonical(service.toUri()).toString(), models.getValue("Item").source?.location)
+    assertEquals(GeneratedDocumentUri.canonical(shared.toUri()).toString(), models.getValue("Shared").source.location)
+    assertEquals(GeneratedDocumentUri.canonical(service.toUri()).toString(), models.getValue("Item").source.location)
     assertEquals(api, GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)))
     assertEquals(1, api.models.count { it.name == "Shared" })
     assertTrue(models.getValue("Shared").declarationUri!!.endsWith("#/components/schemas/Shared"))
@@ -70,7 +70,7 @@ class GeneratedOutputProvenanceTest {
       restored.models
         .single { it.name == "Shared" }
         .source
-        ?.location,
+        .location,
     )
   }
 

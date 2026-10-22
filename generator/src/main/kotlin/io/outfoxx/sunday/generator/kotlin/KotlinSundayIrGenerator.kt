@@ -99,6 +99,7 @@ import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.ir.orInvocation
 import io.outfoxx.sunday.generator.kotlin.utils.AssociatedFunctions
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_DESERIALIZATION_CONTEXT
@@ -185,12 +186,21 @@ import java.util.UUID
  * Kotlin/Sunday service generator that reads the durable Sunday IR contract.
  */
 class KotlinSundayIrGenerator(
-  api: GeneratedApi,
+  sourceApi: GeneratedApi,
   private val typeRegistry: KotlinTypeOutputRegistry,
   private val options: KotlinSundayOptions,
 ) {
 
-  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+  private val api =
+    io.outfoxx.sunday.generator.ir
+      .GeneratedPlacementResolver(
+        sourceApi.placementConfiguration.orInvocation(options.placement),
+        generationLanguage = "kotlin",
+        generationRole = typeRegistry.generationMode.name.lowercase(),
+      ).resolve(sourceApi)
+      .let {
+        it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
+      }
 
   private val clientSettingsType = ClassName("io.outfoxx.sunday.security", "ClientSettings")
   private val clientConfigurations by lazy {
@@ -268,14 +278,8 @@ class KotlinSundayIrGenerator(
   }
 
   private fun GeneratedModel.modelOutputOrigin() =
-    outputOrigin(api).let { origin ->
-      if (isProblemModel()) {
-        origin.copy(
-          category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem,
-        )
-      } else {
-        origin
-      }
+    outputOrigin(api) { model, category ->
+      if (model.isProblemModel()) io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem else category
     }
 
   /**
@@ -306,7 +310,7 @@ class KotlinSundayIrGenerator(
 
     val serviceTypes =
       services.map { service ->
-        val servicePackageName = servicePackageName()
+        val servicePackageName = servicePackageName(service)
         val serviceTypeName = ClassName.bestGuess("$servicePackageName.${service.typeSimpleName()}")
         val serviceTypeBuilder = generateServiceType(serviceTypeName, service)
 
@@ -329,7 +333,7 @@ class KotlinSundayIrGenerator(
     val serviceTypeNames = serviceTypes.map { serviceType -> serviceType.typeName.simpleName }.toSet()
     if (options.generateBrokerServices) {
       brokerServices.forEach { service ->
-        val servicePackageName = servicePackageName()
+        val servicePackageName = servicePackageName(service)
         val serviceTypeName =
           ClassName.bestGuess("$servicePackageName.${service.brokerTypeSimpleName(serviceTypeNames)}")
         val serviceTypeBuilder = generateBrokerServiceType(serviceTypeName, service)
@@ -406,6 +410,7 @@ class KotlinSundayIrGenerator(
 
   private val nativePayloads by lazy {
     KotlinNativePayloads(
+      api.source,
       modelProperties,
       typeRegistry.beanValidationTypes,
       { it.modelOrNull(apiIndex) },
@@ -419,7 +424,11 @@ class KotlinSundayIrGenerator(
     // Dependency-owned value classes cannot contain generated validation helpers.
     val owner =
       if (target("kotlinClient", "kotlin")?.typeName != null) {
-        ClassName(typeRegistry.defaultModelPackageName ?: servicePackageName(), name.toUpperCamelCase())
+        ClassName(
+          target("kotlinClient", "kotlin")?.modelPackageName
+            ?: genError("No payload validation package specified"),
+          name.toUpperCamelCase(),
+        )
       } else {
         kotlinClassName()
       }
@@ -442,7 +451,7 @@ class KotlinSundayIrGenerator(
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
         nativePayloads.register(
-          GeneratedTypeRef.named(model.name, scope = model.scope),
+          GeneratedTypeRef.named(model.name, scope = model.scope, source = model.source),
           model.nativeValidationName().also { typeRegistry.outputOwnership.bind(it, model.modelOutputOrigin()) },
           shapeType = { it.commonSchemaOwner() },
           commonRules =
@@ -456,17 +465,18 @@ class KotlinSundayIrGenerator(
               listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type) +
                 operation.parameters.map { it.type }
             ).filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
-              .map { it to service.outputOrigin(api) }
+              .map { (it to servicePackageName(service)) to service.outputOrigin(api) }
           }
         }.groupBy({ it.first }, { it.second })
         .entries
-        .forEachIndexed { index, (reference, origins) ->
-          val name = ClassName(servicePackageName(), "Payload${index + 1}Validation")
+        .forEachIndexed { index, (placedReference, origins) ->
+          val (reference, placement) = placedReference
+          val name = ClassName(placement, "Payload${index + 1}Validation")
           typeRegistry.outputOwnership.bind(
             name,
             api.outputOrigin().copy(ownerUris = origins.flatMap { it.ownerUris }.toSet()),
           )
-          nativePayloads.register(reference, name)
+          nativePayloads.register(reference, name, placement = placement)
         }
     }
     val modelTypes =
@@ -564,7 +574,7 @@ class KotlinSundayIrGenerator(
     api.models.filter { model -> model.scope == null } +
       services
         .flatMap { service -> apiIndex.referencedScopedModels(service) }
-        .distinctBy { model -> model.name to model.scope }
+        .distinctBy { model -> model.kotlinClassName() }
 
   private fun generateProblemTypes(services: List<GeneratedService>) {
     val referencedProblems =
@@ -613,9 +623,9 @@ class KotlinSundayIrGenerator(
     }
   }
 
-  private fun servicePackageName(): String =
-    api.target("kotlinClient", "kotlin")?.packageName
-      ?: options.defaultServicePackageName
+  private fun servicePackageName(service: GeneratedService? = null): String =
+    service?.target("kotlinClient", "kotlin")?.packageName
+      ?: api.target("kotlinClient", "kotlin")?.packageName?.takeIf { service == null }
       ?: genError("No service package specified, one must be specified via options or in source IR")
 
   private fun aggregateServiceTypeName(): ClassName {
@@ -770,81 +780,109 @@ class KotlinSundayIrGenerator(
     }
 
   private fun generateClientConfigurations() {
-    clientConfigurations.forEach { plan ->
-      val typeName = ClassName(servicePackageName(), plan.name)
-      val type = TypeSpec.classBuilder(typeName).addKdoc("Server variables for %L.\n", plan.name)
-      val constructor = FunSpec.constructorBuilder()
-      plan.variables.forEach { variable ->
-        val variableType = variable.type.kotlinTypeName().copy(nullable = false)
-        val parameter =
-          ParameterSpec
-            .builder(variable.name.kotlinIdentifierName, variableType)
-            .apply {
-              variable.defaultValue?.let { defaultValue("%L", variable.baseUriDefaultValueCode(it, variableType)) }
-            }.build()
-        constructor.addParameter(parameter)
-        type.addProperty(
-          PropertySpec
-            .builder(parameter.name, parameter.type)
-            .initializer("%N", parameter.name)
-            .addKdoc(
-              "%L\n",
-              variable.documentation?.description ?: "Server variable ${variable.serializationName ?: variable.name}.",
-            ).build(),
-        )
-        variable.allowedValues?.let { values ->
-          type.addInitializerBlock(
-            CodeBlock.of(
-              "require(%L in listOf(%L)) { %S }\n",
-              variable.clientConfigStringCode(),
-              values.map { CodeBlock.of("%S", it.toString()) }.joinToCode(),
-              "Invalid server variable '${variable.name}'",
-            ),
+    val services = api.kotlinSundayServices()
+    clientConfigurations
+      .flatMap { plan ->
+        val packages =
+          services.filter { it.name in plan.services }.map { servicePackageName(it) } +
+            if (options.aggregateServices &&
+              services.size > 1
+            ) {
+              listOf(aggregateServiceTypeName().packageName)
+            } else {
+              emptyList()
+            }
+        packages.distinct().map { plan to it }
+      }.forEach { (plan, packageName) ->
+        val typeName = ClassName(packageName, plan.name)
+        val type = TypeSpec.classBuilder(typeName).addKdoc("Server variables for %L.\n", plan.name)
+        val constructor = FunSpec.constructorBuilder()
+        plan.variables.forEach { variable ->
+          val variableType = variable.type.kotlinTypeName().copy(nullable = false)
+          val parameter =
+            ParameterSpec
+              .builder(variable.name.kotlinIdentifierName, variableType)
+              .apply {
+                variable.defaultValue?.let { defaultValue("%L", variable.baseUriDefaultValueCode(it, variableType)) }
+              }.build()
+          constructor.addParameter(parameter)
+          type.addProperty(
+            PropertySpec
+              .builder(parameter.name, parameter.type)
+              .initializer("%N", parameter.name)
+              .addKdoc(
+                "%L\n",
+                variable.documentation?.description
+                  ?: "Server variable ${variable.serializationName ?: variable.name}.",
+              ).build(),
+          )
+          variable.allowedValues?.let { values ->
+            type.addInitializerBlock(
+              CodeBlock.of(
+                "require(%L in listOf(%L)) { %S }\n",
+                variable.clientConfigStringCode(),
+                values.map { CodeBlock.of("%S", it.toString()) }.joinToCode(),
+                "Invalid server variable '${variable.name}'",
+              ),
+            )
+          }
+        }
+        val uri = ClassName("java.net", "URI")
+        if (plan.requiresDocumentBaseUri) {
+          constructor.addParameter("documentBaseURL", uri)
+          type.addProperty(
+            PropertySpec
+              .builder(
+                "documentBaseURL",
+                uri,
+              ).initializer(
+                "documentBaseURL",
+              ).addKdoc("HTTP retrieval location for resolving a relative server URL.\n")
+              .build(),
           )
         }
-      }
-      val uri = ClassName("java.net", "URI")
-      if (plan.requiresDocumentBaseUri) {
-        constructor.addParameter("documentBaseURL", uri)
-        type.addProperty(
-          PropertySpec
+        type.primaryConstructor(constructor.build())
+        val variables =
+          plan.variables
+            .map {
+              CodeBlock.of("%S to %L", it.serializationName ?: it.name, it.clientConfigStringCode())
+            }.joinToCode()
+        val documentBase =
+          when {
+            plan.requiresDocumentBaseUri -> CodeBlock.of("documentBaseURL")
+            plan.documentBaseUri != null -> CodeBlock.of("%T(%S)", uri, plan.documentBaseUri)
+            else -> CodeBlock.of("null")
+          }
+        type.addFunction(
+          FunSpec
             .builder(
-              "documentBaseURL",
-              uri,
-            ).initializer(
-              "documentBaseURL",
-            ).addKdoc("HTTP retrieval location for resolving a relative server URL.\n")
-            .build(),
+              "baseURL",
+            ).returns(uri)
+            .addKdoc("Resolves the server endpoint without constructing a transport.\n")
+            .addStatement(
+              "return %T.serverURL(%S, mapOf(%L), %L)",
+              clientSettingsType,
+              plan.server.url,
+              variables,
+              documentBase,
+            ).build(),
         )
-      }
-      type.primaryConstructor(constructor.build())
-      val variables =
-        plan.variables
-          .map {
-            CodeBlock.of("%S to %L", it.serializationName ?: it.name, it.clientConfigStringCode())
-          }.joinToCode()
-      val documentBase =
-        when {
-          plan.requiresDocumentBaseUri -> CodeBlock.of("documentBaseURL")
-          plan.documentBaseUri != null -> CodeBlock.of("%T(%S)", uri, plan.documentBaseUri)
-          else -> CodeBlock.of("null")
+        val owners =
+          services.filter {
+            it.name in plan.services &&
+              (
+                servicePackageName(it) == packageName ||
+                  (
+                    options.aggregateServices &&
+                      services.size > 1 &&
+                      aggregateServiceTypeName().packageName == packageName
+                  )
+              )
+          }
+        typeRegistry.outputOwnership.within(api.copy(services = owners).outputOrigin()) {
+          typeRegistry.addServiceType(typeName, type)
         }
-      type.addFunction(
-        FunSpec
-          .builder(
-            "baseURL",
-          ).returns(uri)
-          .addKdoc("Resolves the server endpoint without constructing a transport.\n")
-          .addStatement(
-            "return %T.serverURL(%S, mapOf(%L), %L)",
-            clientSettingsType,
-            plan.server.url,
-            variables,
-            documentBase,
-          ).build(),
-      )
-      typeRegistry.addServiceType(typeName, type)
-    }
+      }
   }
 
   private fun clientFactoryFunctions(
@@ -943,7 +981,7 @@ class KotlinSundayIrGenerator(
             serviceType.simpleName,
           ).addTypeVariable(requestTypeVariable)
           .returns(serviceType.parameterizedBy(requestTypeVariable))
-          .addParameter("config", ClassName(servicePackageName(), plan.name))
+          .addParameter("config", ClassName(serviceType.packageName, plan.name))
           .addParameter(
             "transportFactory",
             LambdaTypeName.get(parameters = arrayOf(clientSettingsType), returnType = transportType),
@@ -1104,6 +1142,7 @@ class KotlinSundayIrGenerator(
           serviceTypeBuilder.addFunction(
             generateOperation(
               operation,
+              servicePackageName(service),
               operationParameters,
               api
                 .clientConstructorSecurity(
@@ -2680,6 +2719,7 @@ class KotlinSundayIrGenerator(
 
   private fun generateOperation(
     operation: GeneratedOperation,
+    validationPackage: String,
     operationParameters: List<GeneratedOperationParameter>,
     transport: CodeBlock,
   ): FunSpec {
@@ -2717,7 +2757,7 @@ class KotlinSundayIrGenerator(
     val responseTypeName = operation.returnTypeName(response)
     functionBuilder.returns(responseTypeName)
 
-    functionBuilder.addCode(operation.transportCall(response, operationParameters, transport))
+    functionBuilder.addCode(operation.transportCall(response, operationParameters, transport, validationPackage))
 
     return functionBuilder.build()
   }
@@ -2726,9 +2766,10 @@ class KotlinSundayIrGenerator(
     response: GeneratedResponse?,
     operationParameters: List<GeneratedOperationParameter>,
     transport: CodeBlock,
+    validationPackage: String,
   ): CodeBlock {
     if (streaming == null && exchange == null) {
-      return operationCall(response, operationParameters, transport)
+      return operationCall(response, operationParameters, transport, validationPackage)
     }
 
     val factoryMethod =
@@ -2746,7 +2787,7 @@ class KotlinSundayIrGenerator(
     builder.add("method = %T.%L", SUNDAY_METHOD, sundayRequestMethod())
     builder.add(",\n")
     builder.add("pathTemplate = %S", path)
-    parameterValidation(operationParameters)?.let { builder.add(",\nparameterValidation = %L", it) }
+    parameterValidation(operationParameters, validationPackage)?.let { builder.add(",\nparameterValidation = %L", it) }
 
     operationParameters
       .withLocation(GeneratedParameter.Location.PATH)
@@ -2773,7 +2814,10 @@ class KotlinSundayIrGenerator(
         !requestBody.isKotlinStreamingRequestBody &&
         typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
       ) {
-        builder.add(",\nrequestValidation = %L", nativePayloads.callback(requestBody.type, request = true))
+        builder.add(
+          ",\nrequestValidation = %L",
+          nativePayloads.callback(requestBody.type, request = true, placement = validationPackage),
+        )
       }
     }
 
@@ -2809,6 +2853,7 @@ class KotlinSundayIrGenerator(
     response: GeneratedResponse?,
     operationParameters: List<GeneratedOperationParameter>,
     transport: CodeBlock,
+    validationPackage: String,
   ): CodeBlock {
     val requestType = requestBody?.kotlinTypeName()?.copy(nullable = false) ?: UNIT
     val responseType = responseBodyTypeName(response)
@@ -2820,7 +2865,7 @@ class KotlinSundayIrGenerator(
     builder.add("%T(⇥\n", SUNDAY_OPERATION_SPEC)
     builder.add("method = %T.%L", SUNDAY_METHOD, sundayRequestMethod())
     builder.add(",\npathTemplate = %S", path)
-    parameterValidation(operationParameters)?.let { builder.add(",\nparameterValidation = %L", it) }
+    parameterValidation(operationParameters, validationPackage)?.let { builder.add(",\nparameterValidation = %L", it) }
 
     operationParameters
       .withLocation(GeneratedParameter.Location.PATH)
@@ -2844,14 +2889,20 @@ class KotlinSundayIrGenerator(
       if (!requestBody.isKotlinStreamingRequestBody &&
         typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
       ) {
-        builder.add(",\nrequestValidation = %L", nativePayloads.callback(requestBody.type, request = true))
+        builder.add(
+          ",\nrequestValidation = %L",
+          nativePayloads.callback(requestBody.type, request = true, placement = validationPackage),
+        )
       }
     }
 
     if (response?.takeUnless { it.isNoContent }?.type != null) {
       builder.add(",\nacceptTypes = %L", acceptTypesCode(response))
       if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
-        builder.add(",\nresponseValidation = %L", nativePayloads.callback(response.type!!, request = false))
+        builder.add(
+          ",\nresponseValidation = %L",
+          nativePayloads.callback(response.type!!, request = false, placement = validationPackage),
+        )
       }
     }
 
@@ -2925,12 +2976,15 @@ class KotlinSundayIrGenerator(
       ?: valueCode(defaultValue)
   }
 
-  private fun parameterValidation(parameters: List<GeneratedOperationParameter>): CodeBlock? {
+  private fun parameterValidation(
+    parameters: List<GeneratedOperationParameter>,
+    validationPackage: String,
+  ): CodeBlock? {
     if (KotlinTypeRegistry.Option.ValidationConstraints !in typeRegistry.options) return null
     val checked =
       parameters.filter {
         !it.isConstant &&
-          (it.type.requiresCascadedValidation() || nativePayloads.name(it.type) != null)
+          (it.type.requiresCascadedValidation() || nativePayloads.name(it.type, validationPackage) != null)
       }
     if (checked.isEmpty()) return null
     return CodeBlock
@@ -2939,7 +2993,7 @@ class KotlinSundayIrGenerator(
       .indent()
       .apply {
         checked.forEach { parameter ->
-          val schema = nativePayloads.name(parameter.type)
+          val schema = nativePayloads.name(parameter.type, validationPackage)
           val nullable = parameter.shouldFilterNullValue
           if (nullable) beginControlFlow("%N?.let", parameter.name)
           add(
@@ -3112,8 +3166,7 @@ class KotlinSundayIrGenerator(
 
   private fun GeneratedProblem.typeName(): ClassName {
     val packageName =
-      api.target("kotlinClient", "kotlin")?.modelPackageName
-        ?: typeRegistry.defaultModelPackageName
+      target("kotlinClient", "kotlin")?.modelPackageName
         ?: genError("No model package specified, one must be specified via options or in source IR")
 
     return ClassName(packageName, name.toUpperCamelCase())
@@ -3277,7 +3330,6 @@ class KotlinSundayIrGenerator(
 
     val packageName =
       api.target("kotlinClient", "kotlin")?.modelPackageName
-        ?: typeRegistry.defaultModelPackageName
         ?: genError("No model package specified, one must be specified via options or in source IR")
 
     return ClassName(packageName, name.toUpperCamelCase())
@@ -3326,10 +3378,14 @@ class KotlinSundayIrGenerator(
         api.services.firstOrNull { service -> service.name == scope.service }
           ?: genError("No service found for scoped model $name")
       val servicePackageName =
-        api.target("kotlinClient", "kotlin")?.packageName
-          ?: options.defaultServicePackageName
+        service.target("kotlinClient", "kotlin")?.packageName
+
           ?: genError("No service package specified, one must be specified via options or in source IR")
 
+      val modelPackageName = target("kotlinClient", "kotlin")?.modelPackageName
+      if (modelPackageName != null && modelPackageName != servicePackageName) {
+        return ClassName(modelPackageName, scopedSimpleName())
+      }
       return ClassName(servicePackageName, service.typeSimpleName(), scopedSimpleName())
     }
 
@@ -3341,8 +3397,6 @@ class KotlinSundayIrGenerator(
 
     val packageName =
       target?.modelPackageName
-        ?: api.target("kotlinClient", "kotlin")?.modelPackageName
-        ?: typeRegistry.defaultModelPackageName
         ?: genError("No model package specified, one must be specified via options or in source IR")
     val simpleName = explicitTypeName ?: name.toUpperCamelCase()
     return ClassName(packageName, simpleName)

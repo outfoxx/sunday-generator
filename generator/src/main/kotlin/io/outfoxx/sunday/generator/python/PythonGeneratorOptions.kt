@@ -19,10 +19,12 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.BrokerGenerationOptions
 import io.outfoxx.sunday.generator.EnvironmentGenerationOptions
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 
 /** Options shared by Python IR-backed generators. */
 data class PythonGeneratorOptions(
-  val packageName: String? = null,
+  /** Invocation placement, shared with source exporters and other backends. */
+  val placement: GeneratedPlacementConfiguration = GeneratedPlacementConfiguration(),
   val aggregateServices: Boolean = false,
   val aggregateServiceName: String? = null,
   override val generateBrokerServices: Boolean = false,

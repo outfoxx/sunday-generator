@@ -9,7 +9,7 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.operation
 import io.outfoxx.sunday.security.ClientSettings
 import io.outfoxx.sunday.withSecurity
-import kotlin.String
+import io.test.FetchTestResponseBody
 import kotlin.Unit
 import kotlin.collections.List
 import kotlin.jvm.JvmOverloads
@@ -29,8 +29,4 @@ public class API<Req : Request> @JvmOverloads constructor(
       acceptTypes = this.defaultAcceptTypes
     )
   )
-
-  public interface FetchTestResponseBody {
-    public val `value`: String
-  }
 }

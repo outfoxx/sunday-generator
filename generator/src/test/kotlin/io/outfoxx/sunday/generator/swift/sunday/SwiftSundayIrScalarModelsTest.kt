@@ -79,6 +79,7 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
                 defaultValue = "2.0",
               ),
             ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
       )
     val child =
       GeneratedModel(
@@ -89,6 +90,7 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
           listOf(
             count.copy(defaultValue = "2.0", allowedValues = listOf(2), validation = mapOf("minimum" to "2")),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
       )
     val api =
       GeneratedApi(
@@ -103,17 +105,20 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
               GeneratedModel.Kind.OBJECT,
               properties = listOf(count, defaults.properties.last()),
               patchable = true,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             defaults,
             GeneratedModel(
               "IntegerAlias",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.named("IntegerValue")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               "IntegerValue",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("integer")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -291,6 +296,7 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("localDateTime", GeneratedTypeRef.scalar("datetime-only"), required = true),
                   GeneratedModelProperty("timestamp", GeneratedTypeRef.scalar("datetime"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -414,6 +420,7 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -469,6 +476,7 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )

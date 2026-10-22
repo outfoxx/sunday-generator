@@ -1,0 +1,3 @@
+defaults:
+  kotlin:
+    package: io.test.packaged.web

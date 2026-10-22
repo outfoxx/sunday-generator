@@ -24,12 +24,14 @@ import io.outfoxx.sunday.generator.ir.GeneratedPolicy
 import io.outfoxx.sunday.generator.ir.GeneratedPolicySetting
 import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.scopedPolicyApi
 import io.smallrye.faulttolerance.api.RateLimit
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker
@@ -141,6 +143,7 @@ class KotlinScopedPolicyTest {
               status = 401,
               title = "Unauthorized",
               detail = "Authentication required",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedProblem(
               "ForbiddenProblem",
@@ -149,6 +152,7 @@ class KotlinScopedPolicyTest {
               status = 403,
               title = "Forbidden",
               detail = "Access denied",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         services =
@@ -217,7 +221,6 @@ class KotlinScopedPolicyTest {
 
   private fun registry(mode: GenerationMode) =
     KotlinTypeRegistry(
-      "io.test",
       null,
       mode,
       setOf(KotlinTypeRegistry.Option.UseJakartaPackages),
@@ -235,7 +238,7 @@ class KotlinScopedPolicyTest {
     explicitSecurityParameters = false,
     baseUriMode = null,
     alwaysUseResponseReturn = false,
-    defaultServicePackageName = "io.test",
+    placement = kotlinPlacement("io.test", "io.test"),
     defaultProblemBaseUri = "https://example.test/problems/",
     defaultMediaTypes = listOf("application/json"),
     serviceSuffix = "API",

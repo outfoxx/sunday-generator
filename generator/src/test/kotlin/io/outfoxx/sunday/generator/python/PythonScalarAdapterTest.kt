@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -94,7 +95,7 @@ class PythonScalarAdapterTest : PythonTest() {
     )
     val api = GeneratedApiIrExporter().export(spec.toUri())
     val modules =
-      PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "header_fixture"))
+      PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("header_fixture")))
         .generateModules(
           GeneratedOutputSelection(
             GeneratedTypeCategory.entries.toSet(),

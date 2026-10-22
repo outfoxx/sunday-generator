@@ -70,6 +70,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("---"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -97,6 +98,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
               name = "Kind",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("known"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "Entity",
@@ -110,12 +112,14 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UnknownEntity",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("Entity")),
               discriminatorValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -143,11 +147,13 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
               name = "InvalidValueCode",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("invalid-value"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "MissingValueCode",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("missing-value"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "InvalidValueProblem",
@@ -157,6 +163,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("code", GeneratedTypeRef.named("InvalidValueCode"), required = true),
                   GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "MissingValueProblem",
@@ -166,6 +173,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("code", GeneratedTypeRef.named("MissingValueCode"), required = true),
                   GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "GraphValidationProblem",
@@ -176,6 +184,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedTypeRef.named("MissingValueProblem"),
                 ),
               discriminator = "code",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -238,32 +247,38 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("active", "inactive"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextAlias",
               kind = GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextList",
               kind = GeneratedModel.Kind.ARRAY,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextSet",
               kind = GeneratedModel.Kind.ARRAY,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
               collection = GeneratedCollectionKind.SET,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextMap",
               kind = GeneratedModel.Kind.MAP,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextUnion",
               kind = GeneratedModel.Kind.UNION,
               aliases = listOf(GeneratedTypeRef.scalar("string"), GeneratedTypeRef.scalar("number")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "AliasContainer",
@@ -277,6 +292,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("map", GeneratedTypeRef.named("TextMap"), required = true),
                   GeneratedModelProperty("union", GeneratedTypeRef.named("TextUnion"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -415,6 +431,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("one", "two"),
               enumValueNames = listOf("same", "same"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -575,6 +592,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("wire"),
               enumValueNames = listOf("type"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -603,6 +621,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("123"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

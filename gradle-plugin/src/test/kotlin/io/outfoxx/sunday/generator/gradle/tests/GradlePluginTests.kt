@@ -72,9 +72,10 @@ class GradlePluginTests {
         includes.set(fileTree('src/main/sunday-includes') { it.include('**/*.raml') })
         framework.set(Sunday)
         mode.set(Client)
-        pkgName.set('io.outfoxx.test.client')
-        modelPkgName.set('io.outfoxx.test.client.model')
-        servicePkgName.set('io.outfoxx.test.client.api')
+        placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+          text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.outfoxx.test.client', models: ['package': 'io.outfoxx.test.client.model'], services: ['package': 'io.outfoxx.test.client.api']]]])
+          it
+        })
 
         outputCategories.set([])
         serviceSuffix.set('API')
@@ -101,7 +102,10 @@ class GradlePluginTests {
         framework.set(JAXRS)
         mode.set(Server)
         reactiveResponseType.set("${CompletableFuture::class.java.canonicalName}")
-        pkgName.set('io.outfoxx.test.server')
+        placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+          text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.outfoxx.test.server']]])
+          it
+        })
       }
     }
 
@@ -154,9 +158,10 @@ class GradlePluginTests {
         source.set(fileTree('src/main/sunday') { it.include('**/*.raml') })
         framework.set(Sunday)
         mode.set(Client)
-        pkgName.set('io.outfoxx.test.client')
-        modelPkgName.set('io.outfoxx.test.client.model')
-        servicePkgName.set('io.outfoxx.test.client.api')
+        placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+          text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.outfoxx.test.client', models: ['package': 'io.outfoxx.test.client.model'], services: ['package': 'io.outfoxx.test.client.api']]]])
+          it
+        })
 
         outputCategories.set([])
         serviceSuffix.set('API')
@@ -183,7 +188,10 @@ class GradlePluginTests {
         framework.set(JAXRS)
         mode.set(Server)
         reactiveResponseType.set("${CompletableFuture::class.java.canonicalName}")
-        pkgName.set('io.outfoxx.test.server')
+        placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+          text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.outfoxx.test.server']]])
+          it
+        })
       }
     }
 
@@ -444,8 +452,10 @@ class GradlePluginTests {
           source.set(fileTree('src/main/sunday') { it.include('**/*.yaml') })
           framework.set(Sunday)
           mode.set(Client)
-          pkgName.set('io.outfoxx.test.client')
-          servicePkgName.set('io.outfoxx.test.client.api')
+          placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+            text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.outfoxx.test.client', services: ['package': 'io.outfoxx.test.client.api']]]])
+            it
+          })
           servicesFromTags.set(true)
           aggregateServices.set(true)
           aggregateServiceName.set('TaggedAPI')
@@ -593,8 +603,10 @@ class GradlePluginTests {
           source.set(fileTree('src/main/sunday') { it.include('**/*.yaml') })
           framework.set(Sunday)
           mode.set(Client)
-          pkgName.set('io.outfoxx.test.client')
-          servicePkgName.set('io.outfoxx.test.client.api')
+          placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+            text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.outfoxx.test.client', services: ['package': 'io.outfoxx.test.client.api']]]])
+            it
+          })
           defaultMediaTypes.set(["application/json"])
           outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
           disableValidationConstraints.set(true)
@@ -927,9 +939,10 @@ class GradlePluginTests {
         source.set(fileTree('src/main/sunday') { it.include('**/*.yaml') })
         framework.set(Sunday)
         mode.set(Client)
-        pkgName.set('io.outfoxx.test.parallel.project$index')
-        modelPkgName.set('io.outfoxx.test.parallel.project$index.model')
-        servicePkgName.set('io.outfoxx.test.parallel.project$index.api')
+        placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+          text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.outfoxx.test.parallel.project$index', models: ['package': 'io.outfoxx.test.parallel.project$index.model'], services: ['package': 'io.outfoxx.test.parallel.project$index.api']]]])
+          it
+        })
         outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
         disableValidationConstraints.set(true)
         disableJacksonAnnotations.set(true)

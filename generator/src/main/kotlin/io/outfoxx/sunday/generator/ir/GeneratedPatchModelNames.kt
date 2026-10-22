@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelIndex
+
 /** Allocates companion names against the complete composition without renaming source declarations. */
 internal object GeneratedPatchModelNames {
 
@@ -55,7 +57,18 @@ internal object GeneratedPatchModelNames {
         fragment
       } else {
         fragment.copy(
-          api = if (changed) References(renamed).rewrite(fragment.api) else fragment.api,
+          api =
+            if (changed) {
+              GeneratedTypeReferenceRewriter(fragment.api.source, { reference, _ ->
+                if (reference.kind == GeneratedTypeRef.Kind.NAMED) {
+                  reference.copy(name = renamed[reference.name] ?: reference.name)
+                } else {
+                  reference
+                }
+              }, { renamed[it] ?: it }).rewrite(fragment.api)
+            } else {
+              fragment.api
+            },
           modelIdentities =
             fragment.modelIdentities.filterKeys { it !in renamed } +
               renamed.values.associateWith { name ->
@@ -66,98 +79,25 @@ internal object GeneratedPatchModelNames {
     }
   }
 
-  private class References(
-    private val names: Map<String, String>,
-  ) {
-    fun rewrite(api: GeneratedApi): GeneratedApi =
-      api.copy(
-        models = api.models.map(::model),
-        services = api.services.map(::service),
-        problems =
-          api.problems.map { problem ->
-            problem.copy(
-              model = problem.model?.let(::type),
-              fields = problem.fields.map(::field),
-              payload = problem.payload?.let { it.copy(type = type(it.type), fields = it.fields.map(::field)) },
-            )
-          },
-        auth = api.auth?.let(::auth),
+  /** Binds ambiguous compact references in their lexical document before composition merges names. */
+  fun qualifyDeclarations(fragments: List<GeneratedApiFragment>): List<GeneratedApiFragment> {
+    val ambiguous =
+      fragments
+        .flatMap { fragment ->
+          fragment.api.models.flatMap { it.placementDeclarations.ifEmpty { listOf(it) } }
+        }.groupBy { it.name to it.scope }
+        .filterValues { declarations -> declarations.map { it.source.documentIdentity() }.distinct().size > 1 }
+        .keys
+    if (ambiguous.isEmpty()) return fragments
+    return fragments.map { fragment ->
+      val declarations = fragment.api.models.flatMap { it.placementDeclarations.ifEmpty { listOf(it) } }
+      val index = GeneratedModelIndex(declarations)
+      fragment.copy(
+        api =
+          GeneratedTypeReferenceRewriter(fragment.api.source, { reference, owner ->
+            if (reference.name to reference.scope in ambiguous) index.bind(reference, owner) else reference
+          }).rewrite(fragment.api),
       )
-
-    private fun type(reference: GeneratedTypeRef): GeneratedTypeRef =
-      reference.copy(
-        name =
-          if (reference.kind ==
-            GeneratedTypeRef.Kind.NAMED
-          ) {
-            names[reference.name] ?: reference.name
-          } else {
-            reference.name
-          },
-        arguments = reference.arguments.map(::type),
-      )
-
-    private fun field(property: GeneratedModelProperty) = property.copy(type = type(property.type))
-
-    private fun parameter(parameter: GeneratedParameter) = parameter.copy(type = type(parameter.type))
-
-    private fun option(option: GeneratedPayloadOption) = option.copy(type = type(option.type))
-
-    private fun model(model: GeneratedModel): GeneratedModel =
-      model.copy(
-        name = names[model.name] ?: model.name,
-        properties = model.properties.map(::field),
-        inherits = model.inherits.map(::type),
-        aliases = model.aliases.map(::type),
-        patchOf = model.patchOf?.let(::type),
-        additionalProperties = model.additionalProperties?.let { it.copy(type = it.type?.let(::type)) },
-        patternProperties = model.patternProperties.map { it.copy(type = type(it.type)) },
-        discriminatorMappings = model.discriminatorMappings.mapValues { type(it.value) },
-        nested = model.nested?.let { it.copy(enclosedIn = it.enclosedIn?.let(::type)) },
-      )
-
-    private fun service(service: GeneratedService): GeneratedService =
-      service.copy(
-        baseUriParameters = service.baseUriParameters.map(::parameter),
-        operations = service.operations.map(::operation),
-        auth = service.auth?.let(::auth),
-      )
-
-    private fun operation(operation: GeneratedOperation): GeneratedOperation =
-      operation.copy(
-        parameters = operation.parameters.map(::parameter),
-        queryString = operation.queryString?.let(::type),
-        requestBody =
-          operation.requestBody?.let {
-            it.copy(
-              type = type(it.type),
-              payloads = it.payloads.map(::option),
-            )
-          },
-        responses =
-          operation.responses.map { response ->
-            response.copy(
-              type = response.type?.let(::type),
-              payloads = response.payloads.map(::option),
-              headers = response.headers.map(::parameter),
-            )
-          },
-        problems = operation.problems.map(::type),
-        nullify = operation.nullify?.let { it.copy(problems = it.problems.map(::type)) },
-        auth = operation.auth?.let(::auth),
-      )
-
-    private fun auth(auth: GeneratedAuth): GeneratedAuth =
-      auth.copy(
-        securitySchemes =
-          auth.securitySchemes.map { scheme ->
-            scheme.copy(
-              headers = scheme.headers.map(::parameter),
-              queryParameters = scheme.queryParameters.map(::parameter),
-              cookieParameters = scheme.cookieParameters.map(::parameter),
-              queryString = scheme.queryString?.let(::type),
-            )
-          },
-      )
+    }
   }
 }

@@ -144,13 +144,11 @@ class SundayGeneratorPlugin : Plugin<Project> {
           genTask.outputCategories.set(gen.outputCategories)
           genTask.outputOwners.set(gen.outputOwners)
           gen.generateBrokerServices.takeIf { it.isPresent }?.let { genTask.generateBrokerServices.set(it) }
-          gen.pkgName.takeIf { it.isPresent }?.let { genTask.pkgName.set(it) }
-          gen.servicePkgName.takeIf { it.isPresent }?.let { genTask.servicePkgName.set(it) }
+          gen.placementConfig.takeIf { it.isPresent }?.let { genTask.placementConfig.set(it) }
           gen.serviceSuffix.takeIf { it.isPresent }?.let { genTask.serviceSuffix.set(it) }
           gen.aggregateServices.takeIf { it.isPresent }?.let { genTask.aggregateServices.set(it) }
           gen.aggregateServiceName.takeIf { it.isPresent }?.let { genTask.aggregateServiceName.set(it) }
           gen.servicesFromTags.takeIf { it.isPresent }?.let { genTask.servicesFromTags.set(it) }
-          gen.modelPkgName.takeIf { it.isPresent }?.let { genTask.modelPkgName.set(it) }
           gen.problemBaseUri.takeIf { it.isPresent }?.let { genTask.problemBaseUri.set(it) }
           gen.problemLibrary.takeIf { it.isPresent }?.let { genTask.problemLibrary.set(it) }
           gen.problemRfc.takeIf { it.isPresent }?.let { genTask.problemRfc.set(it) }

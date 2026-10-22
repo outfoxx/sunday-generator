@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
@@ -112,6 +113,7 @@ open class KotlinJAXRSGenerateCommand :
     val api =
       GeneratedApiIrExporter(
         GeneratedApiIrOptions(
+          placement = placementConfiguration(),
           openApiReferences = openApiReferenceOptions(),
           deriveServicesFromTags = servicesFromTags,
           autoPatchable = autoPatchable,
@@ -140,7 +142,7 @@ open class KotlinJAXRSGenerateCommand :
       explicitSecurityParameters,
       baseUriPathMode,
       alwaysUseResponseReturn,
-      servicePackageName ?: packageName,
+      GeneratedPlacementConfiguration(),
       problemBaseUri,
       mediaTypes.toList(),
       serviceSuffix,

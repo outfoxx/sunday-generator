@@ -749,7 +749,7 @@ class OpenApiToGeneratedApiTest {
       .writeString(api)
       .let { yaml ->
         api.models
-          .mapNotNull { model -> model.source?.location }
+          .mapNotNull { model -> model.source.location }
           .distinct()
           .filterNot { location -> location == api.source.location }
           .sorted()

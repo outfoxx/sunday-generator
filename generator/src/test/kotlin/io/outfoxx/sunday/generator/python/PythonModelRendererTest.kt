@@ -113,13 +113,20 @@ class PythonModelRendererTest : PythonTest() {
       GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = listOf(GeneratedTypeRef.scalar("any")))
     val property =
       GeneratedModelProperty("wireValues", GeneratedTypeRef.named("ArrayAlias"), serializationName = "wire-values")
-    val base = GeneratedModel(name = "ListBase", kind = GeneratedModel.Kind.OBJECT, properties = listOf(property))
+    val base =
+      GeneratedModel(
+        name = "ListBase",
+        kind = GeneratedModel.Kind.OBJECT,
+        properties = listOf(property),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val child =
       GeneratedModel(
         name = "UniqueList",
         kind = GeneratedModel.Kind.OBJECT,
         inherits = listOf(GeneratedTypeRef.named("ListBase")),
         properties = listOf(property.copy(validation = mapOf("uniqueItems" to "true"), defaultValue = "[2, 1]")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val models =
       listOf(
@@ -127,11 +134,13 @@ class PythonModelRendererTest : PythonTest() {
           name = "ArrayValue",
           kind = GeneratedModel.Kind.ARRAY,
           aliases = array.arguments,
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "ArrayAlias",
           kind = GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.named("ArrayValue")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         base,
         child,
@@ -156,6 +165,7 @@ class PythonModelRendererTest : PythonTest() {
                   ),
               ),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     assertTrue(
@@ -205,6 +215,7 @@ class PythonModelRendererTest : PythonTest() {
           kind = GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.scalar("string")),
           validation = mapOf("minLength" to "+002"),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "Tags",
@@ -212,17 +223,20 @@ class PythonModelRendererTest : PythonTest() {
           aliases = listOf(GeneratedTypeRef.scalar("string")),
           collection = GeneratedCollectionKind.SET,
           validation = mapOf("minItems" to "1", "uniqueItems" to "true"),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "Scores",
           kind = GeneratedModel.Kind.MAP,
           aliases = listOf(GeneratedTypeRef.scalar("integer")),
           validation = mapOf("maxProperties" to "2"),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "BaseRecord",
           kind = GeneratedModel.Kind.OBJECT,
           properties = listOf(GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true)),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "ChildRecord",
@@ -245,6 +259,7 @@ class PythonModelRendererTest : PythonTest() {
               ),
             ),
           closed = true,
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "PatternRecord",
@@ -258,6 +273,7 @@ class PythonModelRendererTest : PythonTest() {
               ),
             ),
           additionalProperties = GeneratedAdditionalProperties(allowed = false),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "Node",
@@ -274,6 +290,7 @@ class PythonModelRendererTest : PythonTest() {
                 ),
               ),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val modelsModule = PythonModelRenderer("turnpost_api").renderModels(models)
@@ -354,6 +371,7 @@ class PythonModelRendererTest : PythonTest() {
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
         aliases = listOf(GeneratedTypeRef.scalar("number")),
         validation = mapOf("minimum" to expression),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val error =
       assertThrows(GenerationException::class.java) {
@@ -383,6 +401,7 @@ class PythonModelRendererTest : PythonTest() {
                     documentation = GeneratedDocumentation(description = description),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         )
@@ -423,11 +442,13 @@ class PythonModelRendererTest : PythonTest() {
               name = "ProjectStatus",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("active", "archived", "pending-review"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UniqueId",
               kind = GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ProjectView",
@@ -464,6 +485,7 @@ class PythonModelRendererTest : PythonTest() {
                     ),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserSummaryResponse",
@@ -473,6 +495,7 @@ class PythonModelRendererTest : PythonTest() {
                   GeneratedModelProperty("userId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("email", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserSelfResponse",
@@ -487,6 +510,7 @@ class PythonModelRendererTest : PythonTest() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserResponse",
@@ -496,6 +520,7 @@ class PythonModelRendererTest : PythonTest() {
                   GeneratedTypeRef.named("UserSelfResponse"),
                   GeneratedTypeRef.named("UserSummaryResponse"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserIdentity",
@@ -506,6 +531,7 @@ class PythonModelRendererTest : PythonTest() {
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("userId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ServiceIdentity",
@@ -516,6 +542,7 @@ class PythonModelRendererTest : PythonTest() {
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("serviceId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "Identity",
@@ -526,6 +553,7 @@ class PythonModelRendererTest : PythonTest() {
                   "user" to GeneratedTypeRef.named("UserIdentity"),
                   "service" to GeneratedTypeRef.named("ServiceIdentity"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -540,6 +568,7 @@ class PythonModelRendererTest : PythonTest() {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
@@ -549,6 +578,7 @@ class PythonModelRendererTest : PythonTest() {
                   "project.created" to GeneratedTypeRef.named("ProjectCreatedData"),
                   "project.deleted" to GeneratedTypeRef.named("ProjectDeletedData"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ProjectCreatedData",
@@ -559,6 +589,7 @@ class PythonModelRendererTest : PythonTest() {
                 listOf(
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ProjectDeletedData",
@@ -570,6 +601,7 @@ class PythonModelRendererTest : PythonTest() {
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string")),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         )
@@ -784,6 +816,7 @@ class PythonModelRendererTest : PythonTest() {
                 kind = GeneratedModel.Kind.ENUM,
                 values = listOf("one", "two"),
                 enumValueNames = listOf("same", "same"),
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
               ),
             ),
           )
@@ -812,6 +845,7 @@ class PythonModelRendererTest : PythonTest() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("pending", "running", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -913,11 +947,13 @@ class PythonModelRendererTest : PythonTest() {
           kind = GeneratedModel.Kind.ENUM,
           values = listOf("started", "paused", "unknown"),
           unknownValue = "unknown",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "EventIdentity",
           kind = GeneratedModel.Kind.OBJECT,
           properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true)),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "JobProgress",
@@ -940,6 +976,7 @@ class PythonModelRendererTest : PythonTest() {
             ),
           discriminator = "phase",
           discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "JobStarted",
@@ -947,6 +984,7 @@ class PythonModelRendererTest : PythonTest() {
           inherits = listOf(GeneratedTypeRef.named("JobProgress")),
           discriminatorValue = "started",
           properties = listOf(GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true)),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "JobPaused",
@@ -962,6 +1000,7 @@ class PythonModelRendererTest : PythonTest() {
               ),
               GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "JobEvent",
@@ -973,6 +1012,7 @@ class PythonModelRendererTest : PythonTest() {
               "started" to GeneratedTypeRef.named("JobStarted"),
               "paused" to GeneratedTypeRef.named("JobPaused"),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val modelsModule = PythonModelRenderer("turnpost_api").renderModels(models)
@@ -1067,6 +1107,7 @@ class PythonModelRendererTest : PythonTest() {
           kind = GeneratedModel.Kind.ENUM,
           values = listOf("created", "unknown"),
           unknownValue = "unknown",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "EventData",
@@ -1077,6 +1118,7 @@ class PythonModelRendererTest : PythonTest() {
               GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
             ),
           discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "CreatedData",
@@ -1087,6 +1129,7 @@ class PythonModelRendererTest : PythonTest() {
             listOf(
               GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "EventEnvelope",
@@ -1101,6 +1144,7 @@ class PythonModelRendererTest : PythonTest() {
                 externalDiscriminator = "type",
               ),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val modelsModule = PythonModelRenderer("turnpost_api").renderModels(models)
@@ -1233,6 +1277,7 @@ class PythonModelRendererTest : PythonTest() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         )
@@ -1297,6 +1342,7 @@ class PythonModelRendererTest : PythonTest() {
                 kind = GeneratedModel.Kind.ENUM,
                 values = listOf("wire"),
                 enumValueNames = listOf("---"),
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
               ),
             ),
           )
@@ -1317,6 +1363,7 @@ class PythonModelRendererTest : PythonTest() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("123"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         )
@@ -1335,6 +1382,7 @@ class PythonModelRendererTest : PythonTest() {
                 name = "Status",
                 kind = GeneratedModel.Kind.ENUM,
                 values = listOf("---"),
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
               ),
             ),
           )

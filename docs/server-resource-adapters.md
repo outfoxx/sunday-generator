@@ -7,7 +7,7 @@ Server generation can keep endpoint behavior in generated code while application
 Opt in with the CLI:
 
 ```sh
-sunday kotlin/jaxrs -mode server -resource-adapters -quarkus -pkg example.api -out generated api.yaml
+sunday kotlin/jaxrs -mode server -resource-adapters -quarkus --placement-config placement.yaml -out generated api.yaml
 ```
 
 Omit `-quarkus` for standard JAX-RS; use `-use-jakarta-packages` for Jakarta packages instead of `javax` packages. In the Gradle plugin, set `framework = JAXRS`, `mode = Server`, and `resourceAdapters.set(true)` on a generation. Quarkus remains a separate option, `quarkus.set(true)`.
@@ -44,7 +44,7 @@ OpenAPI specifies that explicit `Content-Type` header parameters are ignored. Su
 Litestar generation already provides an application service `Protocol` and a `create_users_router(service)` factory with concrete generated route handlers. Enable resolved endpoint authentication on those handlers with:
 
 ```sh
-sunday python/litestar -enforce-endpoint-security -pkg example_api -out generated api.yaml
+sunday python/litestar -enforce-endpoint-security --placement-config placement.yaml -out generated api.yaml
 ```
 
 The programmatic option is `PythonGeneratorOptions(enforceEndpointSecurity = true)`. Aggregate routers preserve the per-operation guards. The service protocol and delegate signatures stay unchanged.
@@ -133,3 +133,5 @@ custom media types through both operation result APIs. Mixed unions retain media
 preserve nonempty binary downloads by their native `ByteArray`/`Data` return types, but deliberately reject empty typed
 responses with their no-data errors. TypeScript and Python accept empty successful 200 binary bodies. These empty-body
 contracts are tested explicitly; byte-preservation parity does not imply identical empty-body behavior.
+
+Package defaults and overrides are configured in [declaration placement](declaration-placement.md).

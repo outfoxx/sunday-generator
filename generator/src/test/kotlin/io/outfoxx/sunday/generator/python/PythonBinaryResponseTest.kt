@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -161,12 +162,14 @@ class PythonBinaryResponseTest : PythonTest() {
           },
       )
     val modules =
-      PythonSundayIrGenerator(api.copy(services = listOf(service)), PythonGeneratorOptions(packageName = "binary_api"))
-        .generateModules(
-          GeneratedOutputSelection(
-            GeneratedTypeCategory.entries.toSet(),
-          ),
-        )
+      PythonSundayIrGenerator(
+        api.copy(services = listOf(service)),
+        PythonGeneratorOptions(placement = pythonPlacement("binary_api")),
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     val methods =
       service.operations
         .filter {

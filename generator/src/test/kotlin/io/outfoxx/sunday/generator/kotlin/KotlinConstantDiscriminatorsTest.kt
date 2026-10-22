@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.constantDiscriminatorsApi
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -53,7 +54,6 @@ class KotlinConstantDiscriminatorsTest {
     val api = constantDiscriminatorsApi(directory, frontend, problemFields = true)
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(
@@ -67,7 +67,12 @@ class KotlinConstantDiscriminatorsTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://example.test/", emptyList(), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://example.test/",
+          emptyList(),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -80,7 +85,7 @@ class KotlinConstantDiscriminatorsTest {
           false,
           null,
           false,
-          "io.test",
+          kotlinPlacement("io.test", "io.test"),
           "https://example.test/",
           emptyList(),
           "API",

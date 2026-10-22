@@ -392,6 +392,7 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
               name = "EntityType",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("character", "location"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntitySummary",
@@ -402,12 +403,14 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("type", GeneratedTypeRef.named("EntityType"), required = true),
                   GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CharacterSummary",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("EntitySummary")),
               discriminatorValue = "character",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "LocationSummary",
@@ -418,11 +421,13 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("parent", GeneratedTypeRef.named("LocationSummary"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityStatePropertyType",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("list", "value"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityStateProperty",
@@ -432,6 +437,7 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("type", GeneratedTypeRef.named("EntityStatePropertyType"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityStatePropertyList",
@@ -450,6 +456,7 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityStatePropertyValue",
@@ -460,6 +467,7 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("value", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

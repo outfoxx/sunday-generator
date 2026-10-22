@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -78,6 +79,7 @@ class SwiftObjectUnionValidationTest {
             ),
             GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val branch =
       GeneratedModel(
@@ -94,6 +96,7 @@ class SwiftObjectUnionValidationTest {
               validation = mapOf("minLength" to "2"),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val holder =
       GeneratedModel(
@@ -101,6 +104,7 @@ class SwiftObjectUnionValidationTest {
         GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("problem", GeneratedTypeRef.named(root.name), required = false)),
         additionalProperties = GeneratedAdditionalProperties(type = GeneratedTypeRef.named(root.name)),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(

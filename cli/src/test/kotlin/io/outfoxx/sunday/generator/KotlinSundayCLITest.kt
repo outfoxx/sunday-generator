@@ -35,8 +35,8 @@ class KotlinSundayCLITest {
     private val emptyFile = KotlinSundayCLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-pkg",
-        "io.test",
+        "--placement-config",
+        placementConfig("io.test"),
         "-out",
         emptyFile.resolve("..").path,
         emptyFile.path,
@@ -129,8 +129,8 @@ class KotlinSundayCLITest {
       KotlinSundayGenerateCommand()
         .test(
           arrayOf(
-            "-pkg",
-            "io.test",
+            "--placement-config",
+            placementConfig("io.test"),
             "-services-from-tags",
             "-out",
             output.toString(),
@@ -187,8 +187,8 @@ class KotlinSundayCLITest {
       KotlinSundayGenerateCommand()
         .test(
           arrayOf(
-            "-pkg",
-            "io.test",
+            "--placement-config",
+            placementConfig("io.test"),
             "-aggregate-services",
             "-aggregate-service-name",
             "TurnPostAPI",

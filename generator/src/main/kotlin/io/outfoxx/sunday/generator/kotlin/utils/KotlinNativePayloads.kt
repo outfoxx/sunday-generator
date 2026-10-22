@@ -32,6 +32,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 
 /** Supplies native metadata for values whose JVM classes cannot carry their source-schema constraints. */
 internal class KotlinNativePayloads(
+  private val source: io.outfoxx.sunday.generator.ir.GeneratedSourceSpec,
   private val properties: GeneratedModelProperties,
   private val types: BeanValidationTypes,
   private val modelFor: (GeneratedTypeRef) -> GeneratedModel?,
@@ -39,16 +40,18 @@ internal class KotlinNativePayloads(
   private val annotations: (GeneratedModelProperty) -> List<AnnotationSpec>,
   private val register: (ClassName, TypeSpec.Builder) -> Unit,
 ) {
-  private val views = linkedMapOf<GeneratedTypeRef, ClassName>()
+  private val views = linkedMapOf<Pair<GeneratedTypeRef, String?>, ClassName>()
 
   fun register(
     reference: GeneratedTypeRef,
     name: ClassName,
     shapeType: (GeneratedTypeRef) -> TypeName = annotatedType,
     commonRules: Boolean = false,
+    placement: String? = null,
   ) {
-    if (reference in views) return
-    views[reference] = name
+    val key = key(reference) to placement
+    if (key in views) return
+    views[key] = name
     val field = property(reference)
     val valueType = annotatedType(reference)
     register(
@@ -97,14 +100,33 @@ internal class KotlinNativePayloads(
     )
   }
 
-  fun name(reference: GeneratedTypeRef): ClassName? = views[reference.copy(nullable = false)] ?: views[reference]
+  private fun key(reference: GeneratedTypeRef): GeneratedTypeRef = bindSource(reference).copy(nullable = false)
+
+  private fun bindSource(reference: GeneratedTypeRef): GeneratedTypeRef =
+    reference.copy(
+      source =
+        if (reference.kind ==
+          GeneratedTypeRef.Kind.NAMED
+        ) {
+          modelFor(reference)?.source ?: reference.source
+        } else {
+          reference.source
+        },
+      arguments = reference.arguments.map(::bindSource),
+    )
+
+  fun name(
+    reference: GeneratedTypeRef,
+    placement: String? = null,
+  ): ClassName? = views[key(reference) to placement] ?: views[key(reference) to null]
 
   fun callback(
     reference: GeneratedTypeRef,
     request: Boolean,
+    placement: String? = null,
   ): CodeBlock {
     val mode = if (request) "request" else "response"
-    val view = name(reference) ?: return CodeBlock.of("%T::%L", types.modelValidation, mode)
+    val view = name(reference, placement) ?: return CodeBlock.of("%T::%L", types.modelValidation, mode)
     return CodeBlock.of("{ %T.%L(it, %T::class.java) }", types.modelValidation, mode, view)
   }
 
@@ -113,7 +135,12 @@ internal class KotlinNativePayloads(
     val property = GeneratedModelProperty("value", reference, required = true, validation = model?.validation.orEmpty())
     return properties
       .fields(
-        GeneratedModel("ValidationValue", GeneratedModel.Kind.OBJECT, properties = listOf(property)),
+        GeneratedModel(
+          "ValidationValue",
+          GeneratedModel.Kind.OBJECT,
+          source = model?.source ?: source,
+          properties = listOf(property),
+        ),
       ).single()
       .effective
   }

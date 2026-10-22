@@ -36,7 +36,7 @@ import java.net.URI
 class ServiceModulePathTest {
 
   @Test
-  fun `directory typeScriptModule appends service file name in node-next mode`(
+  fun `directory placement appends service file name in node-next mode`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-ts-module.raml") testUri: URI,
   ) {
@@ -58,7 +58,7 @@ class ServiceModulePathTest {
   }
 
   @Test
-  fun `explicit ts module path uses file path directly in node-next mode`(
+  fun `ts suffix in directory placement retains service filename in node-next mode`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-body-param-inline-type-module-file.raml") testUri: URI,
   ) {
@@ -68,11 +68,11 @@ class ServiceModulePathTest {
     val builtTypes =
       generateSunday(testUri, typeRegistry, compiler, typeScriptSundayTestOptions)
 
-    val typeSpec = findTypeMod("API@!explicit/client.js", builtTypes)
+    val typeSpec = findTypeMod("API@!explicit/client.ts/api.js", builtTypes)
     val output =
       buildString {
         FileSpec
-          .get(typeSpec, "explicit/client.js")
+          .get(typeSpec, "explicit/client.ts/api.js")
           .writeTo(this)
       }
 

@@ -127,8 +127,10 @@ class SharedModelModulesTest {
             framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.${if (module == "events") "Sunday" else "JAXRS"})
             mode.set(io.outfoxx.sunday.generator.GenerationMode.${if (module == "server") "Server" else "Client"})
             outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.${if (module == "models") "Model" else "Service"}])
-            modelPkgName.set('test.model')
-            servicePkgName.set('test.$module')
+            placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+              text = groovy.json.JsonOutput.toJson([defaults: [kotlin: [models: ['package': 'test.model'], services: ['package': 'test.$module']]]])
+              it
+            })
             useJakartaPackages.set(true)
             disableJacksonAnnotations.set(true)
             disableValidationConstraints.set(true)

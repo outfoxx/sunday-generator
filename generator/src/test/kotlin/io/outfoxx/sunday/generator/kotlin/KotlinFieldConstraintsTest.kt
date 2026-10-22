@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.fieldConstraintsApi
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -61,7 +62,6 @@ class KotlinFieldConstraintsTest {
     val api = fieldConstraintsApi(directory, sourceKind)
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         if (target == "jaxrs-server") GenerationMode.Server else GenerationMode.Client,
         setOf(
@@ -75,7 +75,12 @@ class KotlinFieldConstraintsTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://example.test/", emptyList(), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://example.test/",
+          emptyList(),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -88,7 +93,7 @@ class KotlinFieldConstraintsTest {
           false,
           null,
           false,
-          "io.test",
+          kotlinPlacement("io.test", "io.test"),
           "https://example.test/",
           emptyList(),
           "API",

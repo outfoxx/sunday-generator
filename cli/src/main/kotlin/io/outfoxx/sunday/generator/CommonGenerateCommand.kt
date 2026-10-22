@@ -39,6 +39,20 @@ abstract class CommonGenerateCommand(
   generateBrokerServicesDefault: Boolean = false,
 ) : CliktCommand(name = name) {
 
+  /** Shared placement defaults and relocation rules. */
+  private val placementConfigs by option("--placement-config", help = "Placement configuration YAML")
+    .file(mustExist = true, canBeFile = true, canBeDir = false)
+    .multiple()
+    .validate { require(it.size <= 1) { "Specify one placement configuration per invocation" } }
+
+  /** The single invocation placement file, when supplied. */
+  val placementConfig get() = placementConfigs.singleOrNull()
+
+  protected fun placementConfiguration(): io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration =
+    placementConfig?.toPath()?.let(io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration::read)
+      ?: io.outfoxx.sunday.generator.ir
+        .GeneratedPlacementConfiguration()
+
   private val referenceOptions by OpenApiReferenceOptionGroup()
 
   /** Explicit cache directory, or null when using the default. */

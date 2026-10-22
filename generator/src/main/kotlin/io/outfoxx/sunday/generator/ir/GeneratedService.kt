@@ -34,4 +34,28 @@ data class GeneratedService(
   val documentation: GeneratedDocumentation? = null,
   /** Effective server alternatives shared by every operation in this service. */
   val servers: List<GeneratedServer> = listOf(),
-)
+  /** Resolved target metadata for this declaration. */
+  val targets: Map<String, GeneratedTarget> = emptyMap(),
+  /** Original lexical placement scopes; references do not add scopes. */
+  val placementScopes: List<GeneratedPlacementScope> = emptyList(),
+  /** Tags that actually established this service grouping. */
+  val placementTags: Set<String> = emptySet(),
+  /** Source objects explicitly declaring this service, such as tag definitions. */
+  val declarationUris: Set<String> = emptySet(),
+  /** Individual source contributions retained when composition combines a service. */
+  val placementDeclarations: List<PlacementContribution> = emptyList(),
+) {
+  /** Placement provenance retained without copying operation behavior or security policy. */
+  data class PlacementContribution(
+    val operationUris: List<String> = emptyList(),
+    val placementScopes: List<GeneratedPlacementScope> = emptyList(),
+    val targets: Map<String, GeneratedTarget> = emptyMap(),
+  )
+
+  internal fun placementContribution() =
+    PlacementContribution(
+      operations.flatMap { it.declarationUris() },
+      placementScopes,
+      targets,
+    )
+}

@@ -69,7 +69,10 @@ class SundayAutoPatchableOptionsTest {
           source.set(files('api.yaml'))
           framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
           mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
-          pkgName.set('test.model')
+          placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+            text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'test.model']]])
+            it
+          })
           outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
           disableJacksonAnnotations.set(true)
           disableValidationConstraints.set(true)

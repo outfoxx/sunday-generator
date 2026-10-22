@@ -55,7 +55,12 @@ internal fun TypeSpec.Builder.addNativeDynamicProperties(
     val effective =
       properties
         .fields(
-          GeneratedModel("DynamicValue", GeneratedModel.Kind.OBJECT, properties = listOf(property)),
+          GeneratedModel(
+            "DynamicValue",
+            GeneratedModel.Kind.OBJECT,
+            source = model.source,
+            properties = listOf(property),
+          ),
         ).single()
         .effective
     val annotation = KotlinNativeSchema.annotation(effective, properties, types)

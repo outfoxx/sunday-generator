@@ -39,8 +39,10 @@ val generateDefaultModels by tasks.registering(JavaExec::class) {
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
   args(
     "kotlin/sunday",
-    "-pkg",
-    "io.test.defaults",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.defaults.yaml")
+      .asFile.absolutePath,
     "-out",
     defaultModels.get().asFile.absolutePath,
     defaultModelsContract.asFile.absolutePath,
@@ -64,8 +66,10 @@ val generateApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.api",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.api.yaml")
+      .asFile.absolutePath,
     "-out",
     generatedSources.get().asFile.absolutePath,
     contract.asFile.absolutePath,
@@ -91,8 +95,10 @@ val generateSecuredApi by tasks.registering(JavaExec::class) {
     "-resource-adapters",
     "-enforce-security-schemes",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.secure",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.secure.yaml")
+      .asFile.absolutePath,
     "-out",
     securedSources.get().asFile.absolutePath,
     securedContract.asFile.absolutePath,
@@ -116,8 +122,10 @@ val generateAsyncApi by tasks.registering(JavaExec::class) {
     "-resource-adapters",
     "-enforce-security-schemes",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.asyncapi",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.asyncapi.yaml")
+      .asFile.absolutePath,
     "-out",
     asyncSources.get().asFile.absolutePath,
   )
@@ -137,8 +145,10 @@ val generateUploadApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.uploads",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.uploads.yaml")
+      .asFile.absolutePath,
     "-out",
     uploadSources.get().asFile.absolutePath,
     uploadContract.asFile.absolutePath,
@@ -158,8 +168,10 @@ val generateNominalApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.nominal",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.nominal.yaml")
+      .asFile.absolutePath,
     "-out",
     nominalSources.get().asFile.absolutePath,
     nominalContract.asFile.absolutePath,
@@ -182,8 +194,10 @@ val generateNativePayloads by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.payloads",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.payloads.yaml")
+      .asFile.absolutePath,
     "-out",
     output.get().asFile.absolutePath,
     nativePayloadContract.asFile.absolutePath,
@@ -209,8 +223,10 @@ val generateAnyOfApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.checkout",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.checkout.yaml")
+      .asFile.absolutePath,
     "-out",
     anyOfSources.get().asFile.absolutePath,
     anyOfContract.asFile.absolutePath,
@@ -230,8 +246,10 @@ val generateCustomTypeApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-use-jakarta-packages",
-    "-pkg",
-    "io.test.jaxrs.custom",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.custom.yaml")
+      .asFile.absolutePath,
     "-out",
     customTypeSources.get().asFile.absolutePath,
     customTypeContract.asFile.absolutePath,
@@ -285,4 +303,9 @@ ktlint {
   filter {
     exclude { it.file.path.contains("/generated/") }
   }
+}
+
+// Placement files participate in generation cache invalidation.
+tasks.withType<JavaExec>().configureEach {
+  inputs.files(fileTree("src/main/placement"))
 }

@@ -108,13 +108,14 @@ class SundayGeneration(
   /** Exact owner filenames or document URIs; empty selects every owner. */
   val outputOwners: SetProperty<String> = objects.setProperty(String::class.java).convention(emptySet())
   val generateBrokerServices: Property<Boolean> = objects.property(Boolean::class.java)
-  val pkgName: Property<String> = objects.property(String::class.java)
-  val servicePkgName: Property<String> = objects.property(String::class.java)
+
+  /** Shared declaration placement configuration. */
+  val placementConfig: org.gradle.api.file.RegularFileProperty = objects.fileProperty()
+
   val serviceSuffix: Property<String> = objects.property(String::class.java)
   val aggregateServices: Property<Boolean> = objects.property(Boolean::class.java)
   val aggregateServiceName: Property<String> = objects.property(String::class.java)
   val servicesFromTags: Property<Boolean> = objects.property(Boolean::class.java)
-  val modelPkgName: Property<String> = objects.property(String::class.java)
   val problemBaseUri: Property<String> = objects.property(String::class.java)
   val problemLibrary: Property<KotlinProblemLibrary> = objects.property(KotlinProblemLibrary::class.java)
   val problemRfc: Property<KotlinProblemRfc> = objects.property(KotlinProblemRfc::class.java)

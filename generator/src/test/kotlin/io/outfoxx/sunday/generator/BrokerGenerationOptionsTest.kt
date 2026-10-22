@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.python.PythonSundayIrGenerator
 import io.outfoxx.sunday.generator.swift.SwiftSundayIrGenerator
 import io.outfoxx.sunday.generator.swift.SwiftSundayOptions
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayIrGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayOptions
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
@@ -84,7 +85,6 @@ class BrokerGenerationOptionsTest {
   private fun kotlinTypeRegistry(): KotlinTypeRegistry =
     KotlinTypeRegistry(
       null,
-      null,
       GenerationMode.Server,
       setOf(),
       KotlinProblemLibrary.ZALANDO,
@@ -99,7 +99,7 @@ class BrokerGenerationOptionsTest {
       explicitSecurityParameters = false,
       baseUriMode = null,
       alwaysUseResponseReturn = false,
-      defaultServicePackageName = null,
+      placement = kotlinPlacement(null, null),
       defaultProblemBaseUri = "http://example.com/",
       defaultMediaTypes = listOf("application/json"),
       serviceSuffix = "API",

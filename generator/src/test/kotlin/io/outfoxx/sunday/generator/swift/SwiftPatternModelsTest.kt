@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -59,6 +60,7 @@ class SwiftPatternModelsTest {
         GeneratedModel.Kind.ENUM,
         values = listOf("active", "unknown"),
         unknownValue = "unknown",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val numbers =
       GeneratedModel(
@@ -66,6 +68,7 @@ class SwiftPatternModelsTest {
         GeneratedModel.Kind.ARRAY,
         aliases = listOf(GeneratedTypeRef.scalar("number", nullable = true)),
         validation = mapOf("minItems" to "1", "minimum" to "2", "multipleOf" to "2"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val strings =
       GeneratedModel(
@@ -73,6 +76,7 @@ class SwiftPatternModelsTest {
         GeneratedModel.Kind.ARRAY,
         aliases = listOf(GeneratedTypeRef.scalar("string")),
         validation = mapOf("minItems" to "1", "minLength" to "3", "pattern" to "^ok"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val code =
       GeneratedModel(
@@ -81,6 +85,7 @@ class SwiftPatternModelsTest {
         nominal = true,
         aliases = listOf(GeneratedTypeRef.scalar("string")),
         validation = mapOf("pattern" to "^code-", "minLength" to "7"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val identity = code.copy(name = "DynamicId", validation = mapOf("pattern" to "^id-", "minLength" to "5"))
     val identifier =
@@ -89,6 +94,7 @@ class SwiftPatternModelsTest {
         GeneratedModel.Kind.UNION,
         aliases = listOf(GeneratedTypeRef.named(code.name), GeneratedTypeRef.named(identity.name)),
         unionMode = GeneratedModel.UnionMode.ONE_OF,
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val problem =
       GeneratedModel(
@@ -111,6 +117,7 @@ class SwiftPatternModelsTest {
             GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = false),
             GeneratedModelProperty("instance", GeneratedTypeRef.scalar("string", format = "uri"), required = false),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val api =
       source.copy(
@@ -153,7 +160,10 @@ class SwiftPatternModelsTest {
       SwiftSundayOptions("http://example.com/", listOf("application/json"), "API", preserveUnknownFields = preserve),
     ).generateServiceTypes()
     registry.generateFiles(
-      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      // The pattern regression also exercises anonymous request declarations owned by the service.
+      GeneratedOutputSelection(
+        setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem, GeneratedTypeCategory.Service),
+      ),
       compiler.srcDir,
     )
     Files.createDirectories(compiler.testsDir)

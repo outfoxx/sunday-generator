@@ -9,6 +9,7 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OutputSelectionFixture
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -30,7 +31,7 @@ class PythonOutputSelectionTest : PythonTest() {
   ) {
     val fixture = OutputSelectionFixture(directory, kind)
     val modules =
-      PythonSundayIrGenerator(fixture.api, PythonGeneratorOptions(packageName = "test_api"))
+      PythonSundayIrGenerator(fixture.api, PythonGeneratorOptions(placement = pythonPlacement("test_api")))
         .generateModules(fixture.selection)
     assertTrue(compileModules(compiler, modules, listOf("test_api.models")))
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "test_api/models.py")
@@ -66,7 +67,7 @@ class PythonOutputSelectionTest : PythonTest() {
         """.trimIndent(),
       )
     val api = GeneratedApiIrExporter().export(input.toUri())
-    val options = PythonGeneratorOptions(packageName = "test_api")
+    val options = PythonGeneratorOptions(placement = pythonPlacement("test_api"))
     val category = if (mode.endsWith("models")) GeneratedTypeCategory.Model else GeneratedTypeCategory.Problem
     val selection = GeneratedOutputSelection(setOf(category))
     val modules =
@@ -111,7 +112,7 @@ class PythonOutputSelectionTest : PythonTest() {
     val modules =
       PythonSundayIrGenerator(
         GeneratedApiIrExporter().export(input.toUri()),
-        PythonGeneratorOptions(packageName = "test_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("test_api")),
       ).generateModules(GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)))
     assertTrue(compileModules(compiler, modules, listOf("test_api.example")))
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "test_api/example.py")

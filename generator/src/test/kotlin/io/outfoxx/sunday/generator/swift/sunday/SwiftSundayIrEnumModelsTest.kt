@@ -73,32 +73,38 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("OPEN", "PULL_REQUEST_OPEN", "lower_snake_case", "mixed-kebab.case"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextAlias",
               kind = GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextList",
               kind = GeneratedModel.Kind.ARRAY,
               aliases = listOf(GeneratedTypeRef.named("TextAlias")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextSet",
               kind = GeneratedModel.Kind.ARRAY,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
               collection = GeneratedCollectionKind.SET,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextMap",
               kind = GeneratedModel.Kind.MAP,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextUnion",
               kind = GeneratedModel.Kind.UNION,
               aliases = listOf(GeneratedTypeRef.scalar("string"), GeneratedTypeRef.scalar("integer")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "ContainerValue",
@@ -112,6 +118,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("map", GeneratedTypeRef.named("TextMap"), required = true),
                   GeneratedModelProperty("union", GeneratedTypeRef.named("TextUnion"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -168,6 +175,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("one", "two"),
               enumValueNames = listOf("same", "same"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -292,6 +300,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("123"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -343,6 +352,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("active"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -407,6 +417,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserSummaryResponse",
@@ -417,6 +428,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("email", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserProfile",
@@ -426,6 +438,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
                   GeneratedTypeRef.named("UserSelfResponse"),
                   GeneratedTypeRef.named("UserSummaryResponse"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -477,6 +490,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "WorkingGraphNotFoundProblem",
@@ -487,6 +501,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CheckoutTargetUnknownProblem",
@@ -502,6 +517,7 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
                   "TPG-REPO-404" to GeneratedTypeRef.named("RepoNotFoundProblem"),
                   "TPG-WG-404" to GeneratedTypeRef.named("WorkingGraphNotFoundProblem"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

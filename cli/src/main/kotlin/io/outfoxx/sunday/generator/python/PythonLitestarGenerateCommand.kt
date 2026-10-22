@@ -47,7 +47,7 @@ open class PythonLitestarGenerateCommand :
     val modules =
       PythonLitestarIrGenerator(
         export.api,
-        pythonOptions(export).copy(
+        pythonOptions().copy(
           enforceEndpointSecurity = enforceEndpointSecurity,
           enforceSecuritySchemes = enforceSecuritySchemes,
         ),

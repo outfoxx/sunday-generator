@@ -180,6 +180,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                       ),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -225,11 +226,13 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
               "Identifier",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               "IdentifierAlias",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.named("Identifier")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         services =
@@ -346,6 +349,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
         kind = GeneratedModel.Kind.ENUM,
         values = listOf("active", "active", "unknown"),
         enumValueNames = listOf("Primary", "Alias", "Unknown"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val strictApi =
       GeneratedApi(
@@ -400,6 +404,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("pending", "running", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -503,6 +508,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "paused", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobProgress",
@@ -514,6 +520,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobStarted",
@@ -524,6 +531,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobPaused",
@@ -534,6 +542,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                   GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobEvent",
@@ -545,6 +554,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                   "started" to GeneratedTypeRef.named("JobStarted"),
                   "paused" to GeneratedTypeRef.named("JobPaused"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -579,6 +589,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("created", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
@@ -589,6 +600,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
               discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "CreatedData",
@@ -596,6 +608,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
               inherits = listOf(GeneratedTypeRef.named("EventData")),
               discriminatorValue = "created",
               properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -610,6 +623,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
           ),
       )
@@ -644,6 +658,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf(trailingBackslash, injectionShaped, "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "InternalEvent",
@@ -658,24 +673,28 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                   trailingBackslash to GeneratedTypeRef.named("TrailingEvent"),
                   injectionShaped to GeneratedTypeRef.named("InjectionEvent"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "TrailingEvent",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("InternalEvent")),
               discriminatorValue = trailingBackslash,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "InjectionEvent",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("InternalEvent")),
               discriminatorValue = injectionShaped,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ExternalKind",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf(trailingBackslash, injectionShaped, "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ExternalData",
@@ -686,18 +705,21 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                   trailingBackslash to GeneratedTypeRef.named("TrailingData"),
                   injectionShaped to GeneratedTypeRef.named("InjectionData"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "TrailingData",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("ExternalData")),
               discriminatorValue = trailingBackslash,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "InjectionData",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("ExternalData")),
               discriminatorValue = injectionShaped,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ExternalEnvelope",
@@ -712,6 +734,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
                     externalDiscriminator = "kind",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -749,6 +772,7 @@ class TypeScriptSundayIrValidationTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("wire"),
               enumValueNames = listOf("123"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

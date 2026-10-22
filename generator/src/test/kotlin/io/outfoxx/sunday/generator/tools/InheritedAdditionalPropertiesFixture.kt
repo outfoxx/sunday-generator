@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.tools
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
 /** Independent ancestor and descendant assertions, including a leaf that adds no local assertion. */
@@ -31,6 +32,7 @@ internal fun inheritedAdditionalPropertiesModels(): List<GeneratedModel> {
       GeneratedModel.Kind.OBJECT,
       properties = listOf(GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"))),
       additionalProperties = GeneratedAdditionalProperties(type = array, validation = mapOf("minItems" to "2")),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
   val child =
     base.copy(
@@ -50,6 +52,7 @@ internal fun inheritedAdditionalPropertiesModels(): List<GeneratedModel> {
       "DynamicHolder",
       GeneratedModel.Kind.OBJECT,
       properties = listOf(GeneratedModelProperty("payload", GeneratedTypeRef.named(leaf.name), required = true)),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
   return listOf(base, child, leaf, holder)
 }

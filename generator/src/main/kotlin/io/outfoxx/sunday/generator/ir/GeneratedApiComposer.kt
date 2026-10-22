@@ -30,7 +30,12 @@ class GeneratedApiComposer {
       throw GeneratedApiCompositionException("At least one GeneratedApiFragment is required")
     }
 
-    val sources = captureAuthentication(canonicalizeSecuritySchemes(GeneratedPatchModelNames.canonicalize(fragments)))
+    val sources =
+      captureAuthentication(
+        canonicalizeSecuritySchemes(
+          GeneratedPatchModelNames.qualifyDeclarations(GeneratedPatchModelNames.canonicalize(fragments)),
+        ),
+      )
     val first = sources.first()
     sources.drop(1).forEach { fragment ->
       if (fragment.apiId.id != first.apiId.id) {
@@ -264,7 +269,14 @@ class GeneratedApiComposer {
     if (existing == null) {
       services[identity.id] =
         ServiceState(
-          service = service.copy(operations = listOf()),
+          service =
+            service.copy(
+              operations = listOf(),
+              placementDeclarations =
+                service.placementDeclarations.ifEmpty {
+                  listOf(service.placementContribution())
+                },
+            ),
           identity = identity,
         ).also { state ->
           service.operations.forEach { operation ->
@@ -277,6 +289,13 @@ class GeneratedApiComposer {
     val mergedService =
       existing.service.mergeMetadata(service).copy(
         ownerUris = existing.service.ownerUris + service.ownerUris,
+        declarationUris = existing.service.declarationUris + service.declarationUris,
+        placementTags = existing.service.placementTags + service.placementTags,
+        placementDeclarations =
+          (
+            existing.service.placementDeclarations +
+              service.placementDeclarations.ifEmpty { listOf(service.placementContribution()) }
+          ).distinct(),
       )
     existing.service = mergedService
     service.operations.forEach { operation ->
@@ -331,7 +350,18 @@ class GeneratedApiComposer {
       return
     }
 
-    if (existing.operation == composedOperation) {
+    if (existing.operation == composedOperation) return
+
+    if (existing.operation.compositionSignature() == composedOperation.compositionSignature()) {
+      val merged =
+        existing.operation.copy(
+          placementDeclarations = (existing.operation.declarations() + composedOperation.declarations()).distinct(),
+        )
+      serviceState.operations[identity.id] = existing.copy(operation = merged)
+      serviceState.service =
+        serviceState.service.copy(
+          operations = serviceState.service.operations.map { if (it === existing.operation) merged else it },
+        )
       return
     }
 
@@ -353,16 +383,50 @@ class GeneratedApiComposer {
       return
     }
 
-    if (existing.model.name == model.name && existing.model.compositionSignature() == model.compositionSignature()) {
+    if (existing.model.name == model.name &&
+      (
+        existing.model.compositionSignature() == model.compositionSignature() ||
+          existing.source.location != fragment.modelSource(model).location
+      )
+    ) {
       val owners =
         existing.model.ownerUris.ifEmpty {
           setOfNotNull(
-            existing.model.source?.location ?: existing.model.declarationUri?.substringBefore('#'),
+            existing.model.source.location,
           )
         } +
-          model.ownerUris.ifEmpty { setOfNotNull(model.source?.location ?: model.declarationUri?.substringBefore('#')) }
+          model.ownerUris.ifEmpty {
+            setOf(
+              model.source.location,
+            )
+          }
       if (owners.size > 1) {
-        models[identity.id] = existing.copy(model = existing.model.copy(ownerUris = owners))
+        models[identity.id] =
+          existing.copy(
+            model =
+              existing.model.copy(
+                ownerUris = owners,
+                placementDeclarations =
+                  (
+                    existing.model.placementDeclarations.ifEmpty {
+                      listOf(
+                        existing.model.copy(
+                          source = existing.model.source,
+                          placementDeclarations = emptyList(),
+                        ),
+                      )
+                    } +
+                      model.placementDeclarations.ifEmpty {
+                        listOf(
+                          model.copy(
+                            source =
+                              model.source,
+                          ),
+                        )
+                      }
+                  ).distinct(),
+              ),
+          )
       }
       return
     }
@@ -406,65 +470,14 @@ class GeneratedApiComposer {
     operationIdentities[GeneratedOperationIdentityKey(service.name, operation.id)]
       ?: GeneratedIdentity.native(operation.id)
 
-  private fun GeneratedApiFragment.modelSource(model: GeneratedModel): GeneratedSourceSpec = model.source ?: api.source
+  private fun GeneratedApiFragment.modelSource(model: GeneratedModel): GeneratedSourceSpec = model.source
 
   private fun GeneratedSourceSpec.description(): String = "${kind.name.lowercase()} '$location'"
-
-  private fun GeneratedModel.compositionSignature(): GeneratedModel =
-    copy(
-      source = null,
-      declarationUri = null,
-      ownerUris = emptySet(),
-      properties = properties.map { property -> property.compositionSignature() },
-      aliases = aliases.map { alias -> alias.compositionSignature() },
-      patchOf = patchOf?.compositionSignature(),
-      additionalProperties = additionalProperties?.compositionSignature(),
-      patternProperties = patternProperties.map { patternProperty -> patternProperty.compositionSignature() },
-      targets = targets.mapValues { (_, target) -> target.compositionSignature() },
-      nested = nested?.compositionSignature(),
-      inherits = inherits.map { inherited -> inherited.compositionSignature() },
-      discriminatorMappings = discriminatorMappings.mapValues { (_, type) -> type.compositionSignature() },
-      examples = listOf(),
-      documentation = null,
-    )
-
-  private fun GeneratedModelProperty.compositionSignature(): GeneratedModelProperty =
-    copy(
-      type = type.compositionSignature(),
-      targets = targets.mapValues { (_, target) -> target.compositionSignature() },
-      examples = listOf(),
-      documentation = null,
-    )
-
-  private fun GeneratedAdditionalProperties.compositionSignature(): GeneratedAdditionalProperties =
-    copy(
-      type = type?.compositionSignature(),
-      documentation = null,
-    )
-
-  private fun GeneratedPatternProperty.compositionSignature(): GeneratedPatternProperty =
-    copy(
-      type = type.compositionSignature(),
-      documentation = null,
-    )
-
-  private fun GeneratedNestedType.compositionSignature(): GeneratedNestedType =
-    copy(enclosedIn = enclosedIn?.compositionSignature())
-
-  private fun GeneratedTarget.compositionSignature(): GeneratedTarget = this
-
-  private fun GeneratedTypeRef.compositionSignature(): GeneratedTypeRef =
-    copy(
-      // Collection kind and arguments define maps; readers use different descriptive names.
-      name = if (kind == GeneratedTypeRef.Kind.MAP) "map" else name,
-      arguments = arguments.map { argument -> argument.compositionSignature() },
-      source = null,
-    )
 
   private fun GeneratedApiFragment.problemIdentity(problem: GeneratedProblem): GeneratedIdentity =
     problemIdentities[problem.name] ?: GeneratedIdentity.native(
       listOfNotNull(
-        problem.source?.location,
+        problem.source.location,
         problem.sourceName ?: problem.name,
       ).joinToString(":"),
     )

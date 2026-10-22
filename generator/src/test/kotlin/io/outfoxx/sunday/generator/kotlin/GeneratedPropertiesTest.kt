@@ -217,7 +217,7 @@ class GeneratedPropertiesTest {
       expectCatching { KotlinQuarkusProperties.suffix(key, "embedded", client) }.isFailure()
       KotlinQuarkusProperties.suffix(key, "${'$'}{runtime.value}", client)
     }
-    val registry = KotlinTypeRegistry("test", null, server, emptySet())
+    val registry = KotlinTypeRegistry(null, server, emptySet())
     registry.addProperties("first.properties", mapOf("quarkus.zanzibar.filter.enabled" to "true"), "first.yaml")
     val error =
       org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {

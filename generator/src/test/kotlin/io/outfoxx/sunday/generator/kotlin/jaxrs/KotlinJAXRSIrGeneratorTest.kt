@@ -78,6 +78,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -106,7 +107,7 @@ class KotlinJAXRSIrGeneratorTest {
       val api = fixture.export(directory)
       for (mode in listOf(GenerationMode.Client, GenerationMode.Server)) {
         val registry =
-          KotlinTypeRegistry("io.test", null, mode, setOf(ValidationConstraints, ImplementModel, JacksonAnnotations))
+          KotlinTypeRegistry(null, mode, setOf(ValidationConstraints, ImplementModel, JacksonAnnotations))
         KotlinJAXRSIrGenerator(api, registry, testOptions()).generateServiceTypes()
         val result = compileTypesResult(registry.buildTypes())
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
@@ -281,7 +282,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     val api = GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = false)).export(testUri)
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
-      val typeRegistry = KotlinTypeRegistry("io.test", null, mode, setOf(ValidationConstraints))
+      val typeRegistry = KotlinTypeRegistry(null, mode, setOf(ValidationConstraints))
       KotlinJAXRSIrGenerator(
         api,
         typeRegistry,
@@ -356,7 +357,6 @@ class KotlinJAXRSIrGeneratorTest {
     ).forEach { (mode, expectations) ->
       val typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           mode,
           setOf(),
@@ -391,7 +391,6 @@ class KotlinJAXRSIrGeneratorTest {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       val typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           mode,
           setOf(),
@@ -443,7 +442,6 @@ class KotlinJAXRSIrGeneratorTest {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       val typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           mode,
           setOf(),
@@ -504,7 +502,6 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(ImplementModel, JacksonAnnotations),
@@ -536,7 +533,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates Quarkus throwable source problem models from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(ImplementModel, JacksonAnnotations, UseJakartaPackages),
@@ -580,7 +576,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates JAX-RS throwable source problem models from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(ImplementModel, JacksonAnnotations),
@@ -609,7 +604,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates Quarkus required query validation without empty class path`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(ValidationConstraints),
@@ -631,7 +625,6 @@ class KotlinJAXRSIrGeneratorTest {
 
   private fun typeRegistry(): KotlinTypeRegistry =
     KotlinTypeRegistry(
-      "io.test",
       null,
       GenerationMode.Server,
       setOf(),
@@ -678,6 +671,7 @@ class KotlinJAXRSIrGeneratorTest {
                   required = true,
                 ),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory://events"),
           ),
         ),
     )
@@ -750,6 +744,7 @@ class KotlinJAXRSIrGeneratorTest {
                   required = true,
                 ),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory://events"),
           ),
         ),
     )
@@ -771,6 +766,7 @@ class KotlinJAXRSIrGeneratorTest {
                 GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string")),
                 GeneratedModelProperty("instance", GeneratedTypeRef.scalar("string", format = "uri")),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory://problems"),
           ),
           GeneratedModel(
             name = "GraphsProblem",
@@ -783,6 +779,7 @@ class KotlinJAXRSIrGeneratorTest {
                 GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = true),
                 GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory://problems"),
           ),
           GeneratedModel(
             name = "RepoNotFoundProblem",
@@ -792,6 +789,7 @@ class KotlinJAXRSIrGeneratorTest {
               listOf(
                 GeneratedModelProperty("repoId", GeneratedTypeRef.scalar("string")),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory://problems"),
           ),
         ),
     )
@@ -881,7 +879,6 @@ class KotlinJAXRSIrGeneratorTest {
 
   private fun clientTypeRegistry(): KotlinTypeRegistry =
     KotlinTypeRegistry(
-      "io.test",
       null,
       GenerationMode.Client,
       setOf(),
@@ -946,7 +943,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints)),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf(ValidationConstraints)),
       options = kotlinJAXRSTestOptions,
       filePackageName = "io.test.service",
       snapshotPath = "RequestUriParamsTest/test-basic-uri-parameter-generation-with-validation-constraints.output.kt",
@@ -961,7 +958,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf()),
       options = kotlinJAXRSTestOptions,
       filePackageName = "io.test.service",
       snapshotPath = "RequestQueryParamsTest/test-optional-query-parameter-generation.output.kt",
@@ -976,7 +973,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Client, setOf()),
       options =
         KotlinJAXRSOptions(
           coroutineFlowMethods = false,
@@ -985,7 +982,7 @@ class KotlinJAXRSIrGeneratorTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "http://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
@@ -1004,7 +1001,6 @@ class KotlinJAXRSIrGeneratorTest {
     listOf(false, true).forEach { quarkus ->
       val typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           setOf(ImplementModel),
@@ -1035,7 +1031,6 @@ class KotlinJAXRSIrGeneratorTest {
     listOf(false, true).forEach { quarkus ->
       val typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           setOf(),
@@ -1066,7 +1061,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `retains server content type header parameters and wires enum JSON values`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(JacksonAnnotations),
@@ -1101,7 +1095,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates tolerant enums as raw-value sealed classes`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(JacksonAnnotations),
@@ -1119,6 +1112,7 @@ class KotlinJAXRSIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("pending", "running", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1149,7 +1143,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `decodes reusable discriminator mappings through sealed interfaces`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(ImplementModel, JacksonAnnotations),
@@ -1199,7 +1192,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates concrete fallback when discriminator is not the first property`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(ImplementModel, JacksonAnnotations),
@@ -1217,6 +1209,7 @@ class KotlinJAXRSIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobProgress",
@@ -1228,12 +1221,14 @@ class KotlinJAXRSIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobStarted",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("JobProgress")),
               discriminatorValue = "started",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1255,7 +1250,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates tolerant discriminator hierarchy fallbacks`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(JacksonAnnotations),
@@ -1273,6 +1267,7 @@ class KotlinJAXRSIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "paused", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobProgress",
@@ -1284,6 +1279,7 @@ class KotlinJAXRSIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobStarted",
@@ -1294,12 +1290,14 @@ class KotlinJAXRSIrGeneratorTest {
                 listOf(
                   GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotificationPhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotificationProgress",
@@ -1310,11 +1308,13 @@ class KotlinJAXRSIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictNotificationPhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictNotificationProgress",
@@ -1329,6 +1329,7 @@ class KotlinJAXRSIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictInheritedProgress",
@@ -1342,18 +1343,21 @@ class KotlinJAXRSIrGeneratorTest {
                   ),
                 ),
               discriminator = "phase",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictInheritedStarted",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("StrictInheritedProgress")),
               discriminatorValue = "started",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CrossPackagePhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CrossPackageProgress",
@@ -1363,6 +1367,7 @@ class KotlinJAXRSIrGeneratorTest {
                   GeneratedModelProperty("phase", GeneratedTypeRef.named("CrossPackagePhase"), required = true),
                 ),
               discriminator = "phase",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CrossPackageStarted",
@@ -1374,12 +1379,14 @@ class KotlinJAXRSIrGeneratorTest {
                 ),
               inherits = listOf(GeneratedTypeRef.named("CrossPackageProgress")),
               discriminatorValue = "started",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UnionNotificationPhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UnionNotificationProgress",
@@ -1394,6 +1401,7 @@ class KotlinJAXRSIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotificationEvent",
@@ -1403,6 +1411,7 @@ class KotlinJAXRSIrGeneratorTest {
                   GeneratedTypeRef.named("UnionNotificationProgress"),
                   GeneratedTypeRef.named("JobStarted"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobPaused",
@@ -1413,6 +1422,7 @@ class KotlinJAXRSIrGeneratorTest {
                   GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                   GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobEvent",
@@ -1424,12 +1434,14 @@ class KotlinJAXRSIrGeneratorTest {
                   "started" to GeneratedTypeRef.named("JobStarted"),
                   "paused" to GeneratedTypeRef.named("JobPaused"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventType",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("created", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
@@ -1440,6 +1452,7 @@ class KotlinJAXRSIrGeneratorTest {
                   GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
               discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CreatedData",
@@ -1447,6 +1460,7 @@ class KotlinJAXRSIrGeneratorTest {
               inherits = listOf(GeneratedTypeRef.named("EventData")),
               discriminatorValue = "created",
               properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -1461,6 +1475,7 @@ class KotlinJAXRSIrGeneratorTest {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1488,7 +1503,6 @@ class KotlinJAXRSIrGeneratorTest {
 
     val implementingTypeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(ImplementModel, JacksonAnnotations),
@@ -1583,7 +1597,6 @@ class KotlinJAXRSIrGeneratorTest {
       listOf(false, true).forEach { quarkus ->
         val typeRegistry =
           KotlinTypeRegistry(
-            "io.test",
             null,
             mode,
             setOf(ImplementModel, JacksonAnnotations),
@@ -1650,7 +1663,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates bean validation annotations on IR model properties`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(ImplementModel, ValidationConstraints),
@@ -1676,7 +1688,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `lowers supported IR scalar formats to Kotlin JAX-RS types`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(ImplementModel),
@@ -1727,7 +1738,6 @@ class KotlinJAXRSIrGeneratorTest {
     ).forEach { (mode, rateLimitValue) ->
       val typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           mode,
           setOf(),
@@ -1797,7 +1807,6 @@ class KotlinJAXRSIrGeneratorTest {
     ).forEach { (policy, expectedMessage) ->
       val typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Server,
           setOf(),
@@ -1824,7 +1833,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates Quarkus Zanzibar annotations from IR auth metadata in server mode`() {
     val serverRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(),
@@ -1889,7 +1897,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `rejects Zanzibar object type without object id source`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(),
@@ -1925,7 +1932,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `reports conflicting Zanzibar user source metadata`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(),
@@ -1974,7 +1980,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates strict opt-in principal fallback for Quarkus Zanzibar JWT user extractors`() {
     val serverRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(),
@@ -2006,7 +2011,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates principal fallback directly for empty Quarkus Zanzibar JWT claim lists`() {
     val serverRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(),
@@ -2055,7 +2059,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `does not generate Quarkus Zanzibar annotations in client mode`() {
     val clientRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -2083,7 +2086,6 @@ class KotlinJAXRSIrGeneratorTest {
       listOf(false, true).forEach { quarkus ->
         val typeRegistry =
           KotlinTypeRegistry(
-            "io.test",
             null,
             mode,
             setOf(),
@@ -2142,7 +2144,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates Quarkus aggregate REST client registration without URL path`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(ValidationConstraints, UseJakartaPackages),
@@ -2177,7 +2178,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates Quarkus REST client metadata on non-aggregate services`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(ValidationConstraints, UseJakartaPackages),
@@ -2218,7 +2218,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `reports invalid Quarkus REST client provider class names`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -2248,7 +2247,6 @@ class KotlinJAXRSIrGeneratorTest {
   fun `generates aggregate Quarkus REST client metadata from root only`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -2321,7 +2319,6 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(JacksonAnnotations),
@@ -2371,7 +2368,6 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -2432,7 +2428,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf()),
       options =
         KotlinJAXRSOptions(
           coroutineFlowMethods = false,
@@ -2441,7 +2437,7 @@ class KotlinJAXRSIrGeneratorTest {
           explicitSecurityParameters = true,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "http://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
@@ -2464,7 +2460,7 @@ class KotlinJAXRSIrGeneratorTest {
     val api = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(converted))
 
     listOf(false, true).forEach { quarkus ->
-      val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+      val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
       KotlinJAXRSIrGenerator(
         api,
         typeRegistry,
@@ -2495,7 +2491,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf()),
       options = kotlinJAXRSTestOptions,
       filePackageName = "io.test.service",
       snapshotPath = "RequestBodyParamTest/test-generation-of-body-parameter-with-explicit-content-type.output.kt",
@@ -2510,7 +2506,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Client, setOf()),
       options = kotlinJAXRSTestOptions,
       filePackageName = "io.test.service",
       snapshotPath =
@@ -2525,7 +2521,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf()),
       options = kotlinJAXRSTestOptions,
       filePackageName = "io.test.service",
       snapshotPath = "RequestBodyParamTest/test-body-parameter-generation-with-json-override-server-mode.output.kt",
@@ -2541,7 +2537,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints)),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf(ValidationConstraints)),
       options = kotlinJAXRSTestOptions,
       filePackageName = "io.test.service",
       snapshotPath = "RequestBodyParamTest/test-basic-body-parameter-generation-with-validation-constraints.output.kt",
@@ -2557,7 +2553,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Client, setOf()),
       options = kotlinJAXRSTestOptions,
       filePackageName = "io.test.service",
       snapshotPath = "ResponseHeadersTest/test-response-headers-force-response-return-in-client-mode.output.kt",
@@ -2573,7 +2569,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Client, setOf()),
       options =
         KotlinJAXRSOptions(
           coroutineFlowMethods = false,
@@ -2582,7 +2578,7 @@ class KotlinJAXRSIrGeneratorTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "http://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
@@ -2604,7 +2600,6 @@ class KotlinJAXRSIrGeneratorTest {
       testUri = testUri,
       typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Server,
           setOf(JacksonAnnotations),
@@ -2642,7 +2637,6 @@ class KotlinJAXRSIrGeneratorTest {
       testUri = testUri,
       typeRegistry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           setOf(),
@@ -2790,7 +2784,6 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(UseJakartaPackages),
@@ -2826,7 +2819,6 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(UseJakartaPackages),
@@ -2876,7 +2868,7 @@ class KotlinJAXRSIrGeneratorTest {
   ) {
     assertIrSnapshot(
       testUri = testUri,
-      typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf()),
+      typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf()),
       options =
         testOptions(
           explicitSecurityParameters = true,
@@ -2906,7 +2898,7 @@ class KotlinJAXRSIrGeneratorTest {
       explicitSecurityParameters = explicitSecurityParameters,
       baseUriMode = baseUriMode,
       alwaysUseResponseReturn = alwaysUseResponseReturn,
-      defaultServicePackageName = "io.test.service",
+      placement = kotlinPlacement("io.test", "io.test.service"),
       defaultProblemBaseUri = "http://example.com/",
       defaultMediaTypes = listOf("application/json"),
       serviceSuffix = "API",
@@ -2932,6 +2924,7 @@ class KotlinJAXRSIrGeneratorTest {
                   required = true,
                 ),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "memory://profiles"),
           ),
           GeneratedModel(
             name = "UserProfile",
@@ -2950,6 +2943,7 @@ class KotlinJAXRSIrGeneratorTest {
                   required = true,
                 ),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "memory://profiles"),
           ),
         ),
     )
@@ -3184,6 +3178,7 @@ class KotlinJAXRSIrGeneratorTest {
             name = "AvatarContentType",
             kind = GeneratedModel.Kind.ENUM,
             values = listOf("image/png", "image/jpeg", "image/webp"),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://users"),
           ),
         ),
     )
@@ -3237,6 +3232,7 @@ class KotlinJAXRSIrGeneratorTest {
                   validation = mapOf("pattern" to "^[A-Za-z0-9_]+$"),
                 ),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://validation"),
           ),
         ),
     )
@@ -3302,6 +3298,7 @@ class KotlinJAXRSIrGeneratorTest {
                   required = true,
                 ),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://union"),
           ),
           GeneratedModel(
             name = "UserSummaryResponse",
@@ -3312,16 +3309,19 @@ class KotlinJAXRSIrGeneratorTest {
                 GeneratedModelProperty("email", GeneratedTypeRef.scalar("string"), required = true),
                 GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = true),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://union"),
           ),
           GeneratedModel(
             name = "UserResponse",
             kind = GeneratedModel.Kind.UNION,
             aliases = listOf(GeneratedTypeRef.named("UserSelfResponse"), GeneratedTypeRef.named("UserSummaryResponse")),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://union"),
           ),
           GeneratedModel(
             name = "AssignPullRequestReviewerRequest",
             kind = GeneratedModel.Kind.OBJECT,
             additionalProperties = GeneratedAdditionalProperties(allowed = true),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://union"),
           ),
           GeneratedModel(
             name = "EventEnvelope",
@@ -3336,6 +3336,7 @@ class KotlinJAXRSIrGeneratorTest {
                   externalDiscriminator = "type",
                 ),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://union"),
           ),
           GeneratedModel(
             name = "EventData",
@@ -3344,6 +3345,7 @@ class KotlinJAXRSIrGeneratorTest {
               mapOf(
                 "accounts.team.created" to GeneratedTypeRef.named("AccountsTeamCreatedData"),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://union"),
           ),
           GeneratedModel(
             name = "AccountsTeamCreatedData",
@@ -3353,6 +3355,7 @@ class KotlinJAXRSIrGeneratorTest {
               listOf(
                 GeneratedModelProperty("teamId", GeneratedTypeRef.scalar("string"), required = true),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://union"),
           ),
         ),
     )
@@ -3421,6 +3424,7 @@ class KotlinJAXRSIrGeneratorTest {
                 GeneratedModelProperty("emptyValue", GeneratedTypeRef.scalar("nil"), required = true),
                 GeneratedModelProperty("unknownValue", GeneratedTypeRef.scalar("unknown"), required = true),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://format"),
           ),
         ),
     )

@@ -66,7 +66,11 @@ class GeneratedApiIrExporter
       }
       val loader = openApiDocumentLoader ?: OpenApiDocumentLoader.create(options.openApiReferences)
       val fragments = sources.map { exportFragment(it, loader) }
-      val composed = composer.compose(fragments)
+      val composed =
+        composer
+          .compose(
+            fragments,
+          ).copy(placementConfiguration = options.placement, id = fragments.first().apiId.id)
       val projected = options.projection?.let(composed::projectEnvironment) ?: composed
       return GeneratedApiIrExport(projected, fragments.first().apiId)
     }

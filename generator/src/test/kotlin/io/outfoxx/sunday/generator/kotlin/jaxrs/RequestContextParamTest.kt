@@ -39,7 +39,7 @@ class RequestContextParamTest {
     @ResourceUri("raml/resource-gen/req-jaxrs-context.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)

@@ -71,7 +71,6 @@ class KotlinNominalScalarTest {
     for (jaxrs in listOf(false, true)) {
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           if (jaxrs) GenerationMode.Server else GenerationMode.Client,
           buildSet {

@@ -41,6 +41,7 @@ internal class GeneratedNominalTypes(
         .fields(
           GeneratedModel(
             name = "${model.name}RawValue",
+            source = model.source,
             kind = GeneratedModel.Kind.OBJECT,
             properties = listOf(GeneratedModelProperty("value", reference, required = true)),
           ),

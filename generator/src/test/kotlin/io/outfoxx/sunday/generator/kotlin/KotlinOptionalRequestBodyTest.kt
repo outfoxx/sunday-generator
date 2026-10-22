@@ -21,6 +21,7 @@ import com.tschuchort.compiletesting.SourceFile
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.optionalRequestBodyApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -36,7 +37,6 @@ class KotlinOptionalRequestBodyTest {
   fun `optional request bodies omit the HTTP entity`(frontend: String) {
     val registry =
       KotlinTypeRegistry(
-        "example",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel),
@@ -45,7 +45,12 @@ class KotlinOptionalRequestBodyTest {
     KotlinSundayIrGenerator(
       optionalRequestBodyApi(frontend),
       registry,
-      KotlinSundayOptions("example", "https://example.com/", listOf("application/json"), "API"),
+      KotlinSundayOptions(
+        kotlinPlacement("example", "example"),
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+      ),
     ).generateServiceTypes()
     val result =
       compileTypesResult(

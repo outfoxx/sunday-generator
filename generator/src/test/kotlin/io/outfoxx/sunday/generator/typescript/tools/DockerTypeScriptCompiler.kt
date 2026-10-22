@@ -134,6 +134,7 @@ class DockerTypeScriptCompiler(
       return compileResult to compileOutput
     }
 
+    copyJavaScriptDependencies()
     val (executionResult, executionOutput) =
       executeCommand(arrayOf("node", "--conditions=import", "/work/dist/$modulePath.js"))
     return executionResult to listOf(compileOutput, executionOutput).filter { it.isNotBlank() }.joinToString("\n")

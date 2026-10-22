@@ -25,6 +25,7 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
@@ -34,6 +35,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.modelDefaultsApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -81,12 +83,12 @@ class KotlinModelDefaultsTest {
               defaultValue = "default",
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val api = source.copy(models = source.models + model)
     for (jaxrs in listOf(false, true)) {
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           setOf(
@@ -146,7 +148,6 @@ class KotlinModelDefaultsTest {
     for (jaxrs in listOf(false, true)) {
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -246,7 +247,6 @@ class KotlinModelDefaultsTest {
     val api = OpenApiToGeneratedApi().convert(source.toUri())
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -318,7 +318,6 @@ class KotlinModelDefaultsTest {
     val api = OpenApiToGeneratedApi().convert(file.toUri())
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -335,7 +334,7 @@ class KotlinModelDefaultsTest {
           false,
           null,
           false,
-          "io.test",
+          kotlinPlacement("io.test", "io.test"),
           "https://example.test/",
           emptyList(),
           "API",
@@ -346,7 +345,12 @@ class KotlinModelDefaultsTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://example.test/", emptyList(), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://example.test/",
+          emptyList(),
+          "API",
+        ),
       ).generateServiceTypes()
     }
     val callsName = ClassName("io.test", "DefaultCalls")

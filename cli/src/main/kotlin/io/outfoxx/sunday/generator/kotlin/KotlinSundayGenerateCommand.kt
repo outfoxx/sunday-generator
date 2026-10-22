@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 
 open class KotlinSundayGenerateCommand :
@@ -62,6 +63,7 @@ open class KotlinSundayGenerateCommand :
     val api =
       GeneratedApiIrExporter(
         GeneratedApiIrOptions(
+          placement = placementConfiguration(),
           openApiReferences = openApiReferenceOptions(),
           deriveServicesFromTags = servicesFromTags,
           autoPatchable = autoPatchable,
@@ -77,7 +79,7 @@ open class KotlinSundayGenerateCommand :
 
   private fun kotlinSundayOptions(): KotlinSundayOptions =
     KotlinSundayOptions(
-      servicePackageName ?: packageName,
+      GeneratedPlacementConfiguration(),
       problemBaseUri,
       mediaTypes.toList(),
       serviceSuffix,

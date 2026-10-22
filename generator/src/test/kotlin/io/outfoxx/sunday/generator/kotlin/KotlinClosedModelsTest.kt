@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.closedModelsApi
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -49,7 +50,6 @@ class KotlinClosedModelsTest {
       for (preserve in listOf(false, true)) {
         val registry =
           KotlinTypeRegistry(
-            "io.test",
             null,
             GenerationMode.Client,
             buildSet {
@@ -70,7 +70,7 @@ class KotlinClosedModelsTest {
               false,
               null,
               false,
-              "io.test.service",
+              kotlinPlacement("io.test", "io.test.service"),
               "http://example.com/",
               listOf("application/json"),
               "API",
@@ -83,7 +83,7 @@ class KotlinClosedModelsTest {
             api,
             registry,
             KotlinSundayOptions(
-              "io.test.service",
+              kotlinPlacement("io.test", "io.test.service"),
               "http://example.com/",
               listOf("application/json"),
               "API",

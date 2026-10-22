@@ -36,6 +36,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypes
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -295,7 +296,6 @@ class KotlinSecuritySchemeTest {
 
   private fun registry(target: String) =
     KotlinTypeRegistry(
-      "io.test",
       null,
       GenerationMode.Server,
       if (target == "javax") emptySet() else setOf(KotlinTypeRegistry.Option.UseJakartaPackages),
@@ -314,7 +314,7 @@ class KotlinSecuritySchemeTest {
     explicitSecurityParameters = explicitCredentials,
     baseUriMode = null,
     alwaysUseResponseReturn = false,
-    defaultServicePackageName = "io.test",
+    placement = kotlinPlacement("io.test", "io.test"),
     defaultProblemBaseUri = "http://example.com/",
     defaultMediaTypes = listOf("application/json"),
     serviceSuffix = "API",

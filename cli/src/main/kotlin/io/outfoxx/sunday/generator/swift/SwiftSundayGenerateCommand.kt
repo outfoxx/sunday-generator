@@ -48,6 +48,7 @@ open class SwiftSundayGenerateCommand :
     val api =
       GeneratedApiIrExporter(
         GeneratedApiIrOptions(
+          placement = placementConfiguration(),
           openApiReferences = openApiReferenceOptions(),
           deriveServicesFromTags = servicesFromTags,
           autoPatchable = autoPatchable,

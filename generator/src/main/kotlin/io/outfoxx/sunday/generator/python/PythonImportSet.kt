@@ -17,13 +17,34 @@
 package io.outfoxx.sunday.generator.python
 
 /** Collects Python imports while generated definitions render. */
-class PythonImportSet {
+class PythonImportSet(
+  private val relativeImportBase: String? = null,
+  private val currentModule: String? = null,
+) {
 
   private val symbols = linkedSetOf<PythonSymbol>()
 
+  internal fun collected(): Set<PythonSymbol> = symbols.toSet()
+
   /** Registers a symbol import and returns the expression used to reference it. */
   fun reference(symbol: PythonSymbol): String {
-    symbols.add(symbol)
+    val module = symbol.module
+    val absoluteModule =
+      (
+        if (module.startsWith(".")) {
+          (relativeImportBase ?: currentModule?.substringBeforeLast('.')).orEmpty() + module
+        } else {
+          module
+        }
+      ).removeSuffix(".__init__")
+    if (absoluteModule == currentModule?.removeSuffix(".__init__")) return symbol.name
+    symbols.add(
+      if (relativeImportBase != null && module.startsWith(".")) {
+        symbol.copy(module = absoluteModule)
+      } else {
+        symbol.copy(module = module.removeSuffix(".__init__").ifEmpty { "." })
+      },
+    )
     return symbol.reference
   }
 

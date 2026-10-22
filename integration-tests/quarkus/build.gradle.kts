@@ -58,8 +58,10 @@ val generateApi by tasks.registering(JavaExec::class) {
     "-aggregate-services",
     "-aggregate-service-name",
     "TestAPI",
-    "-pkg",
-    "io.test.quarkus.api",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.api.yaml")
+      .asFile.absolutePath,
     "-out",
     generatedSources.get().asFile.absolutePath,
     contract.asFile.absolutePath,
@@ -88,8 +90,10 @@ val generateSecuredApi by tasks.registering(JavaExec::class) {
     "-aggregate-services",
     "-aggregate-service-name",
     "SecureAPI",
-    "-pkg",
-    "io.test.quarkus.secure",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.secure.yaml")
+      .asFile.absolutePath,
     "-out",
     securedSources.get().asFile.absolutePath,
     securedContract.asFile.absolutePath,
@@ -110,8 +114,10 @@ val generateZanzibarApi by tasks.registering(JavaExec::class) {
     "-resource-adapters",
     "-enforce-security-schemes",
     "-quarkus",
-    "-pkg",
-    "io.test.quarkus.zanzibar",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.zanzibar.yaml")
+      .asFile.absolutePath,
     "-out",
     zanzibarSources.get().asFile.absolutePath,
     zanzibarContract.asFile.absolutePath,
@@ -135,8 +141,10 @@ val generateAsyncApi by tasks.registering(JavaExec::class) {
     "-resource-adapters",
     "-enforce-security-schemes",
     "-quarkus",
-    "-pkg",
-    "io.test.quarkus.asyncapi",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.asyncapi.yaml")
+      .asFile.absolutePath,
     "-out",
     asyncSources.get().asFile.absolutePath,
   )
@@ -157,8 +165,10 @@ val generateSelectedApi by tasks.registering(JavaExec::class) {
     "-resource-adapters",
     "-enforce-security-schemes",
     "-quarkus",
-    "-pkg",
-    "io.test.quarkus.selected",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.selected.yaml")
+      .asFile.absolutePath,
     "-out",
     selectedSources.get().asFile.absolutePath,
     selectedContract.asFile.absolutePath,
@@ -178,8 +188,10 @@ val generateUploadApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-quarkus",
-    "-pkg",
-    "io.test.quarkus.uploads",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.uploads.yaml")
+      .asFile.absolutePath,
     "-out",
     uploadSources.get().asFile.absolutePath,
     uploadContract.asFile.absolutePath,
@@ -200,8 +212,10 @@ val generateValidationApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-quarkus",
-    "-pkg",
-    "io.test.quarkus.validation",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.validation.yaml")
+      .asFile.absolutePath,
     "-out",
     validationSources.get().asFile.absolutePath,
     validationContract.asFile.absolutePath,
@@ -222,8 +236,10 @@ val generateClosedModelApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-quarkus",
-    "-pkg",
-    "io.test.quarkus.closed",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.closed.yaml")
+      .asFile.absolutePath,
     "-out",
     closedModelSources.get().asFile.absolutePath,
     closedModelContract.asFile.absolutePath,
@@ -244,8 +260,10 @@ val generateFreeformModelApi by tasks.registering(JavaExec::class) {
     "server",
     "-resource-adapters",
     "-quarkus",
-    "-pkg",
-    "io.test.quarkus.freeform",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.freeform.yaml")
+      .asFile.absolutePath,
     "-out",
     freeformModelSources.get().asFile.absolutePath,
     freeformModelContract.asFile.absolutePath,
@@ -268,8 +286,10 @@ val policyGenerators =
         "-quarkus",
         "-profile",
         "internal",
-        "-pkg",
-        "io.test.quarkus.policies.$role",
+        "--placement-config",
+        layout.projectDirectory
+          .file("src/main/placement/io.test.quarkus.policies.$role.yaml")
+          .asFile.absolutePath,
         "-out",
         output.get().asFile.absolutePath,
       )
@@ -292,8 +312,10 @@ val nativePayloadGenerators =
         "-mode",
         role,
         "-quarkus",
-        "-pkg",
-        "io.test.quarkus.payloads.$role",
+        "--placement-config",
+        layout.projectDirectory
+          .file("src/main/placement/io.test.quarkus.payloads.$role.yaml")
+          .asFile.absolutePath,
         "-out",
         output.get().asFile.absolutePath,
       )
@@ -318,8 +340,10 @@ val optionalBodyGenerators =
         "-mode",
         role,
         "-quarkus",
-        "-pkg",
-        "io.test.quarkus.optional.$role",
+        "--placement-config",
+        layout.projectDirectory
+          .file("src/main/placement/io.test.quarkus.optional.$role.yaml")
+          .asFile.absolutePath,
         "-out",
         output.get().asFile.absolutePath,
       )
@@ -342,8 +366,10 @@ val generateProfiledClient by tasks.registering(JavaExec::class) {
     "-quarkus",
     "-profile",
     "internal",
-    "-pkg",
-    "io.test.quarkus.profiled",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.profiled.yaml")
+      .asFile.absolutePath,
     "-out",
     profiledClientSources.get().asFile.absolutePath,
     profiledClientContract.asFile.absolutePath,
@@ -413,4 +439,9 @@ ktlint {
   filter {
     exclude { it.file.path.contains("/generated/") }
   }
+}
+
+// Placement files participate in generation cache invalidation.
+tasks.withType<JavaExec>().configureEach {
+  inputs.files(fileTree("src/main/placement"))
 }

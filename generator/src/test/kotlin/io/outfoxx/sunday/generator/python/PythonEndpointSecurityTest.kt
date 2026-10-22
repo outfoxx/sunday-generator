@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -234,7 +235,11 @@ class PythonEndpointSecurityTest : PythonTest() {
         .export(paths.map { javaClass.getResource("/$it")!!.toURI() })
     return PythonLitestarIrGenerator(
       api,
-      PythonGeneratorOptions(packageName = "security_api", aggregateServices = true, enforceEndpointSecurity = enforce),
+      PythonGeneratorOptions(
+        placement = pythonPlacement("security_api"),
+        aggregateServices = true,
+        enforceEndpointSecurity = enforce,
+      ),
     ).generateModules(
       GeneratedOutputSelection(
         GeneratedTypeCategory.entries.toSet(),

@@ -5,8 +5,11 @@ uses:
 mediaType:
 - application/json
 
-(sunday.kotlinPackage): io.explicit.test
-(sunday.kotlinPackage:client): io.explicit.test.client
+(sunday.placement):
+  kotlin:
+    package: io.explicit.test
+    client:
+      package: io.explicit.test.client
 
 /tests/{id}:
 

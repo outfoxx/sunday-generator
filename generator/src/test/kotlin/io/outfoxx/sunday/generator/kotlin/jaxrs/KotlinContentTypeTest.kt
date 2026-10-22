@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -77,7 +78,6 @@ class KotlinContentTypeTest {
       for (adapters in listOf(false, true)) {
         val registry =
           KotlinTypeRegistry(
-            "io.test",
             null,
             GenerationMode.Server,
             buildSet {
@@ -97,7 +97,7 @@ class KotlinContentTypeTest {
             false,
             null,
             false,
-            "io.test",
+            kotlinPlacement("io.test", "io.test"),
             "https://example.test/",
             listOf("application/json"),
             "API",

@@ -47,7 +47,6 @@ class KotlinFreeformObjectsTest {
     val api = GeneratedApiIrExporter().export(uri)
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         if (target == "jaxrs-server") GenerationMode.Server else GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),

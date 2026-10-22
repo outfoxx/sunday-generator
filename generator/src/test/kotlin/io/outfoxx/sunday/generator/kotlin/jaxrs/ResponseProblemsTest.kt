@@ -45,7 +45,6 @@ class ResponseProblemsTest {
     options: Set<KotlinTypeRegistry.Option> = setOf(),
   ): KotlinTypeRegistry =
     KotlinTypeRegistry(
-      "io.test",
       null,
       mode,
       options,
@@ -105,7 +104,6 @@ class ResponseProblemsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(),

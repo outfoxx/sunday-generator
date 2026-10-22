@@ -52,7 +52,7 @@ resolve against their referring document and applicable dialect base rules
 (including OpenAPI schema `$id`), never the CLI/Gradle configuration base.
 Remote cache filenames do not replace original document identities.
 
-IR version 2 preserves ownership metadata. Regenerate version 1 serialized IR.
+IR version 3 preserves ownership and placement metadata. Re-export older serialized IR.
 Flattened inputs must retain original provenance or be replaced with the original
 referenced documents; the generator cannot reconstruct erased ownership.
 

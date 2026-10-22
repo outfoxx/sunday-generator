@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Operation Transport Fidelity API"
 source:
   kind: "RAML"
@@ -37,17 +37,26 @@ services:
       type:
         kind: "NAMED"
         name: "ProjectCreateJson"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
       payloads:
       - type:
           kind: "NAMED"
           name: "ProjectCreateJson"
+          source:
+            kind: "RAML"
+            location: "SOURCE_LOCATION"
         mediaTypes:
         - "application/json"
       - type:
           kind: "NAMED"
           name: "ProjectCreatePatchPatch"
+          source:
+            kind: "RAML"
+            location: "SOURCE_LOCATION"
         mediaTypes:
         - "application/merge-patch+json"
     responses:
@@ -55,17 +64,26 @@ services:
       type:
         kind: "NAMED"
         name: "Project"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
       payloads:
       - type:
           kind: "NAMED"
           name: "Project"
+          source:
+            kind: "RAML"
+            location: "SOURCE_LOCATION"
         mediaTypes:
         - "application/json"
       - type:
           kind: "NAMED"
           name: "ProjectSummary"
+          source:
+            kind: "RAML"
+            location: "SOURCE_LOCATION"
         mediaTypes:
         - "application/vnd.project-summary+json"
     media:
@@ -73,6 +91,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects/post"
   media:
     request:
     - "application/json"
@@ -99,7 +118,10 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/Project"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Project"
   properties:
   - name: "id"
     type:
@@ -113,7 +135,10 @@ models:
     required: true
 - name: "ProjectCreateJson"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectCreateJson"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectCreateJson"
   properties:
   - name: "name"
     type:
@@ -122,7 +147,10 @@ models:
     required: true
 - name: "ProjectCreatePatch"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/application%2Fmerge-patch%2Bjson/shape/schema/inherits/shape/ProjectCreatePatch"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectCreatePatch"
   properties:
   - name: "name"
     type:
@@ -130,7 +158,10 @@ models:
       name: "string"
 - name: "ProjectSummary"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/returns/resp/200/payload/application%2Fvnd.project-summary%2Bjson/shape/schema/inherits/shape/ProjectSummary"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectSummary"
   properties:
   - name: "id"
     type:
@@ -139,7 +170,10 @@ models:
     required: true
 - name: "ProjectCreatePatchPatch"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/application%2Fmerge-patch%2Bjson/shape/schema/inherits/shape/ProjectCreatePatch"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectCreatePatch"
   properties:
   - name: "name"
     type:
@@ -174,3 +208,5 @@ servers:
     required: true
     defaultValue: "v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

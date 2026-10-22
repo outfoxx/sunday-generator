@@ -29,20 +29,14 @@ enum class APIAnnotationName(
   ServiceName("name", false),
   ServiceGroup("group", false),
 
-  KotlinPkg("kotlinPackage", true),
-  KotlinModelPkg("kotlinModelPackage", true),
+  Placement("placement", false),
+  TypeScriptImport("typeScriptImport", false),
 
   KotlinType("kotlinType", true),
   KotlinImpl("kotlinImplementation", true),
 
-  TypeScriptModule("typeScriptModule", false),
-  TypeScriptModelModule("typeScriptModelModule", false),
-
   TypeScriptType("typeScriptType", false),
   TypeScriptImpl("typeScriptImplementation", false),
-
-  SwiftModule("swiftModule", false),
-  SwiftModelModule("swiftModelModule", false),
 
   SwiftType("swiftType", false),
   SwiftImpl("swiftImplementation", false),

@@ -41,4 +41,14 @@ data class GeneratedOperation(
   val documentation: GeneratedDocumentation? = null,
   /** Complete operation security for each named server, before choosing a deployment. */
   val serverAuth: Map<String, GeneratedAuth> = mapOf(),
-)
+  /** Original source object location before composition. */
+  val declarationUri: String? = null,
+  /** Original lexical placement scopes; references do not add scopes. */
+  val placementScopes: List<GeneratedPlacementScope> = emptyList(),
+  /** Original operation contributions retained independently of their shared emitted behavior. */
+  val placementDeclarations: List<GeneratedOperation> = emptyList(),
+) {
+  internal fun declarations(): List<GeneratedOperation> = placementDeclarations.ifEmpty { listOf(this) }
+
+  internal fun declarationUris(): List<String> = declarations().mapNotNull { it.declarationUri }
+}

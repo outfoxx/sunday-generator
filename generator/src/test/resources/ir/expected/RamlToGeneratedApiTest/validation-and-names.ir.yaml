@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Validation and Names API"
 source:
   kind: "RAML"
@@ -46,6 +46,9 @@ services:
       type:
         kind: "NAMED"
         name: "ProjectSearch"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     media:
@@ -53,6 +56,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects/get"
   media:
     request:
     - "application/json"
@@ -61,7 +65,10 @@ services:
 models:
 - name: "ProjectSearch"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/ProjectSearch"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectSearch"
   properties:
   - name: "pageSize"
     type:
@@ -98,3 +105,5 @@ media:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

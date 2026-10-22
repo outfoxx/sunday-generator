@@ -16,6 +16,9 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
+import java.net.URI
+
 /**
  * Source specification metadata for a generated IR document.
  */
@@ -23,6 +26,13 @@ data class GeneratedSourceSpec(
   val kind: Kind,
   val location: String,
 ) {
+
+  /** Document identity is independent of the frontend that read a shared schema. */
+  internal fun documentIdentity(): String {
+    // Library-created IR can use descriptive source names; those retain their exact identity.
+    val uri = runCatching { URI(location) }.getOrNull()?.takeIf { it.isAbsolute } ?: return location
+    return GeneratedDocumentUri.canonical(uri).toString()
+  }
 
   /** Supported source specification formats. */
   enum class Kind {

@@ -93,6 +93,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ScriptUpdate",
@@ -102,11 +103,13 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityKind",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("scene"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityUpdate",
@@ -116,6 +119,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("kind", GeneratedTypeRef.named("EntityKind"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "SceneEntityUpdate",
@@ -126,6 +130,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("sceneId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -190,6 +195,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
               name = "EntityType",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("location", "character"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntitySummary",
@@ -199,6 +205,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("type", GeneratedTypeRef.named("EntityType"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "LocationSummary",
@@ -214,6 +221,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CharacterSummary",
@@ -224,6 +232,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityList",
@@ -240,11 +249,13 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityMap",
               kind = GeneratedModel.Kind.MAP,
               aliases = listOf(GeneratedTypeRef.named("EntitySummary")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EntityMapHolder",
@@ -253,6 +264,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("entries", GeneratedTypeRef.named("EntityMap"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -360,6 +372,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "Cat",
@@ -371,6 +384,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "Dog",
@@ -382,6 +396,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "Envelope",
@@ -396,6 +411,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                     externalDiscriminator = "kind",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -653,6 +669,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                     required = false,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "BadRequest",
@@ -665,6 +682,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer"), required = false),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "Conflict",
@@ -676,6 +694,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = false),
                   GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "GraphsProblem",
@@ -693,6 +712,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                   ),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "RepoNotFoundProblem",
@@ -702,6 +722,7 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("repoId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

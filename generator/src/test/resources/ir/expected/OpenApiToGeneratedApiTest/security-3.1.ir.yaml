@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Security API"
 source:
   kind: "OPENAPI"
@@ -68,6 +68,7 @@ services:
           description: "Query API key."
       securityOverride: true
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1projects/get"
   auth:
     schemes:
     - "bearerAuth"
@@ -117,3 +118,5 @@ media: {}
 servers:
 - url: "https://api.example.com/v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

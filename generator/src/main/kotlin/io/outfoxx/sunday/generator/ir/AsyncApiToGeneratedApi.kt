@@ -52,6 +52,7 @@ class AsyncApiToGeneratedApi(
       val generatedApi =
         GeneratedApi(
           name = sourceDocument.title() ?: "API",
+          placementScopes = sourceDocument.placementScopes(),
           quarkusConfig = sourceDocument.quarkusConfig(),
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, documentUri.toString()),
           services = services.map { it.copy(ownerUris = setOf(documentUri.toString())) },
@@ -144,6 +145,23 @@ class AsyncApiToGeneratedApi(
               service =
                 GeneratedService(
                   name = serviceName,
+                  placementScopes = placementScopes(),
+                  placementTags = setOfNotNull(seed.serviceTag),
+                  placementDeclarations =
+                    fragments
+                      .map { fragment ->
+                        val channel = fragment.channel
+                        GeneratedService.PlacementContribution(
+                          operationUris = listOfNotNull(fragment.operation.operation.declarationUri),
+                          placementScopes =
+                            placementScopes() +
+                              channel.source.placementScopes(
+                                location + "#/channels/" + channel.name.replace("~", "~0").replace("/", "~1"),
+                              ),
+                        )
+                      }.takeIf {
+                        fragments.any { "x-sunday-placement" in it.channel.source }
+                      }.orEmpty(),
                   baseUri = declaredServers.firstOrNull()?.url,
                   baseUriParameters =
                     declaredServers
@@ -215,6 +233,17 @@ class AsyncApiToGeneratedApi(
       operation =
         GeneratedOperation(
           id = operationId,
+          declarationUri =
+            sourceDeclarationUri(
+              location,
+              "/channels/" + name.replace("~", "~0").replace("/", "~1") + "/" + method,
+            ),
+          placementScopes =
+            currentSourceDocument.placementScopes() +
+              source.placementScopes(location + "#/channels/" + name.replace("~", "~0").replace("/", "~1")) +
+              operation.source.placementScopes(
+                location + "#/channels/" + name.replace("~", "~0").replace("/", "~1") + "/" + method,
+              ),
           method = method.uppercase(),
           path = address,
           parameters =
@@ -277,6 +306,7 @@ class AsyncApiToGeneratedApi(
     val payloadType = schemaTypeRef(payload, message.modelName(), location, localModels)
     val mediaTypes = listOfNotNull(message.contentType)
     val operationId = generatedOperationId()
+    val declarationUri = location + "#/operations/" + sourceName.replace("~", "~0").replace("/", "~1")
     val examples = message.examples.mapNotNull { example -> example.generatedExample() }
     val protocol =
       GeneratedProtocol(
@@ -290,6 +320,10 @@ class AsyncApiToGeneratedApi(
       operation =
         GeneratedOperation(
           id = operationId,
+          declarationUri = sourceDeclarationUri(location, declarationUri.substringAfter('#')),
+          placementScopes =
+            currentSourceDocument.placementScopes() +
+              source.placementScopes(declarationUri),
           method = method.uppercase(),
           path = channel.address,
           parameters =
@@ -522,9 +556,10 @@ class AsyncApiToGeneratedApi(
       source =
         GeneratedSourceSpec(
           GeneratedSourceSpec.Kind.ASYNCAPI,
-          (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+          (schema as? OpenApiSourceObject)?.declarationUri?.substringBefore('#') ?: location,
         ),
-      declarationUri = (schema as? OpenApiSchema)?.declarationUri,
+      declarationUri = (schema as? OpenApiSourceObject)?.declarationUri,
+      placementScopes = (schema as? OpenApiSourceObject)?.placementScopes.orEmpty(),
       targets = declarationTypeSchema(schema).languageTypeTargets("AsyncAPI model '$name'"),
       patchable = GeneratedPatchModels.annotation(schema["x-sunday-patchable"], "AsyncAPI model '$name'"),
       tolerance = GeneratedTolerance.parse(schema["x-sunday-tolerance"], "AsyncAPI model '$name' x-sunday-tolerance"),
@@ -947,7 +982,11 @@ class AsyncApiToGeneratedApi(
     if (options.deriveServicesFromTags) {
       val taggedService = operation?.serviceTagName() ?: taggedServiceLabel()
       if (taggedService != null) {
-        return ServiceIdentitySeed(taggedService, GeneratedIdentity.native(normalizedCompositionId(taggedService)))
+        return ServiceIdentitySeed(
+          taggedService,
+          GeneratedIdentity.native(normalizedCompositionId(taggedService)),
+          taggedService,
+        )
       }
     }
 
@@ -985,7 +1024,11 @@ class AsyncApiToGeneratedApi(
     if (options.deriveServicesFromTags) {
       val taggedService = serviceTagName() ?: channel.taggedServiceLabel()
       if (taggedService != null) {
-        return ServiceIdentitySeed(taggedService, GeneratedIdentity.native(normalizedCompositionId(taggedService)))
+        return ServiceIdentitySeed(
+          taggedService,
+          GeneratedIdentity.native(normalizedCompositionId(taggedService)),
+          taggedService,
+        )
       }
     }
 
@@ -1313,6 +1356,7 @@ class AsyncApiToGeneratedApi(
   private data class ServiceIdentitySeed(
     val serviceLabel: String,
     val identity: GeneratedIdentity,
+    val serviceTag: String? = null,
   )
 
   private data class ServiceFragment(
@@ -1338,6 +1382,8 @@ class AsyncApiToGeneratedApi(
   ) {
 
     val security = AsyncApiSecurity(source, location)
+
+    fun placementScopes() = source.placementScopes(location)
 
     fun title(): String? = source.mapValue("info")?.get("title") as? String
 
@@ -1452,6 +1498,7 @@ class AsyncApiToGeneratedApi(
               ?: return@mapNotNull null
           val channel = channels[channelName] ?: return@mapNotNull null
           AsyncApiDocumentOperation(
+            sourceName = operationId,
             operationId = operation["operationId"] as? String ?: operationId,
             action = operation["action"] as? String,
             source = operation,
@@ -1702,6 +1749,7 @@ class AsyncApiToGeneratedApi(
   }
 
   private data class AsyncApiDocumentOperation(
+    val sourceName: String,
     val operationId: String,
     val action: String?,
     val source: Map<*, *>,

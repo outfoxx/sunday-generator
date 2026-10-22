@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -53,6 +54,7 @@ class PythonLitestarRendererTest : PythonTest() {
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ProjectQuery",
@@ -69,6 +71,7 @@ class PythonLitestarRendererTest : PythonTest() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "Configuration",
@@ -77,6 +80,7 @@ class PythonLitestarRendererTest : PythonTest() {
                 listOf(
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UpdateProjectRequest",
@@ -90,6 +94,7 @@ class PythonLitestarRendererTest : PythonTest() {
                     serializationName = "displayName",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -104,11 +109,13 @@ class PythonLitestarRendererTest : PythonTest() {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
               kind = GeneratedModel.Kind.OBJECT,
               discriminatorMappings = mapOf("project.created" to GeneratedTypeRef.named("ProjectCreatedData")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ProjectCreatedData",
@@ -119,6 +126,7 @@ class PythonLitestarRendererTest : PythonTest() {
                 listOf(
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         )

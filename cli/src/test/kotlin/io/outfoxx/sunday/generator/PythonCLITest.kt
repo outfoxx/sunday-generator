@@ -69,8 +69,8 @@ class PythonCLITest {
     assertDoesNotThrow {
       command.parse(
         arrayOf(
-          "-pkg",
-          "turnpost_api",
+          "--placement-config",
+          placementConfig("turnpost_api", "python"),
           "-services-from-tags",
           "-aggregate",
           "-aggregate-service-name",
@@ -81,7 +81,14 @@ class PythonCLITest {
       )
     }
 
-    assertThat(command.packageName, equalTo("turnpost_api"))
+    assertThat(
+      io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
+        .read(
+          command.placementConfig!!.toPath(),
+        ).defaults.python
+        ?.packageName,
+      equalTo("turnpost_api"),
+    )
     assertThat(command.servicesFromTags, equalTo(true))
     assertThat(command.aggregateServices, equalTo(true))
     assertThat(command.aggregateServiceName, equalTo("TurnPostAPI"))
@@ -101,8 +108,8 @@ class PythonCLITest {
       PythonSundayGenerateCommand()
         .test(
           arrayOf(
-            "-pkg",
-            "turnpost_api",
+            "--placement-config",
+            placementConfig("turnpost_api", "python"),
             "-services-from-tags",
             "-aggregate",
             "-aggregate-service-name",
@@ -155,8 +162,8 @@ class PythonCLITest {
       PythonSundayGenerateCommand()
         .test(
           arrayOf(
-            "-package",
-            "turnpost_api",
+            "--placement-config",
+            placementConfig("turnpost_api", "python"),
             "-category",
             "models",
             "-out",
@@ -178,8 +185,8 @@ class PythonCLITest {
       PythonLitestarGenerateCommand()
         .test(
           arrayOf(
-            "-package",
-            "turnpost_api",
+            "--placement-config",
+            placementConfig("turnpost_api", "python"),
             "-services-from-tags",
             "-aggregate-services",
             "-aggregate-service-name",

@@ -32,12 +32,14 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.inheritedAdditionalPropertiesModels
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
 import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
@@ -71,6 +73,7 @@ class KotlinPatternModelsTest {
         GeneratedModel.Kind.ENUM,
         values = listOf("active", "unknown"),
         unknownValue = "unknown",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val child =
       GeneratedModel(
@@ -88,6 +91,7 @@ class KotlinPatternModelsTest {
               validation = mapOf("minItems" to "1"),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val record =
       GeneratedModel(
@@ -137,6 +141,7 @@ class KotlinPatternModelsTest {
               ),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val otherChild =
       child.copy(
@@ -151,7 +156,6 @@ class KotlinPatternModelsTest {
     for (jaxrs in listOf(false, true)) {
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           buildSet {
@@ -174,7 +178,7 @@ class KotlinPatternModelsTest {
             false,
             null,
             false,
-            "io.test.service",
+            kotlinPlacement("io.test", "io.test.service"),
             "https://example.com/",
             listOf("application/json"),
             "API",
@@ -186,7 +190,7 @@ class KotlinPatternModelsTest {
           api,
           registry,
           KotlinSundayOptions(
-            "io.test.service",
+            kotlinPlacement("io.test", "io.test.service"),
             "https://example.com/",
             listOf("application/json"),
             "API",
@@ -339,7 +343,6 @@ class KotlinPatternModelsTest {
       for (preserve in listOf(false, true)) {
         val registry =
           KotlinTypeRegistry(
-            "io.test",
             null,
             GenerationMode.Client,
             buildSet {
@@ -360,7 +363,7 @@ class KotlinPatternModelsTest {
               false,
               null,
               false,
-              "io.test.service",
+              kotlinPlacement("io.test", "io.test.service"),
               "http://example.com/",
               listOf("application/json"),
               "API",
@@ -373,7 +376,7 @@ class KotlinPatternModelsTest {
             api,
             registry,
             KotlinSundayOptions(
-              "io.test.service",
+              kotlinPlacement("io.test", "io.test.service"),
               "http://example.com/",
               listOf("application/json"),
               "API",

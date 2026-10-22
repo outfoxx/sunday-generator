@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.tools.reusableDiscriminatorMappingApi
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -163,7 +164,6 @@ class KotlinModelGraphTest {
     for (target in listOf("sunday", "jaxrs")) {
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           GenerationMode.Client,
           buildSet {
@@ -178,7 +178,12 @@ class KotlinModelGraphTest {
         KotlinSundayIrGenerator(
           api,
           registry,
-          KotlinSundayOptions("io.test.service", "https://example.test", emptyList(), "API"),
+          KotlinSundayOptions(
+            kotlinPlacement("io.test", "io.test.service"),
+            "https://example.test",
+            emptyList(),
+            "API",
+          ),
         ).generateServiceTypes()
       } else {
         KotlinJAXRSIrGenerator(
@@ -191,7 +196,7 @@ class KotlinModelGraphTest {
             false,
             null,
             false,
-            "io.test.service",
+            kotlinPlacement("io.test", "io.test.service"),
             "https://example.test",
             emptyList(),
             "API",

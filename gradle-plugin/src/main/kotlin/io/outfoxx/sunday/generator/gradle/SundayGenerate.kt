@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSource
+import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 import io.outfoxx.sunday.generator.ir.OpenApiDocumentSnapshot
 import io.outfoxx.sunday.generator.kotlin.KotlinApplicationMetadataOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
@@ -180,18 +181,6 @@ abstract class SundayGenerate
       objects
         .property(Boolean::class.java)
         .convention(framework.map { targetFramework -> targetFramework == TargetFramework.Sunday })
-
-    @get:Input
-    @get:Optional
-    val pkgName: Property<String> = objects.property(String::class.java).convention("com.example")
-
-    @get:Input
-    @get:Optional
-    val modelPkgName: Property<String> = objects.property(String::class.java).convention(pkgName)
-
-    @get:Input
-    @get:Optional
-    val servicePkgName: Property<String> = objects.property(String::class.java).convention(pkgName)
 
     @get:Input
     @get:Optional
@@ -362,7 +351,6 @@ abstract class SundayGenerate
 
       val typeRegistry =
         KotlinTypeRegistry(
-          modelPkgName.get(),
           generatedAnnotation.orNull,
           mode,
           options,
@@ -417,6 +405,27 @@ abstract class SundayGenerate
       GeneratedOutputOwnership.validate(outputDirectory, path)
     }
 
+    /** Shared placement configuration; its content participates in incremental generation. */
+    @get:org.gradle.api.tasks.InputFile
+    @get:Optional
+    @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+    abstract val placementConfig: org.gradle.api.file.RegularFileProperty
+
+    /** Tracks the base used by relative selectors even when configuration filenames and contents agree. */
+    @get:Input
+    @get:Optional
+    val placementResolutionBase: String?
+      get() =
+        placementConfig.orNull
+          ?.asFile
+          ?.absoluteFile
+          ?.normalize()
+          ?.parentFile
+          ?.canonicalFile
+          ?.relativeToOrSelf(
+            projectDirectory.canonicalFile,
+          )?.invariantSeparatorsPath
+
     private fun processFiles(
       files: Iterable<File>,
       typeRegistry: KotlinTypeRegistry,
@@ -435,6 +444,12 @@ abstract class SundayGenerate
       val exporter =
         GeneratedApiIrExporter(
           GeneratedApiIrOptions(
+            placement =
+              placementConfig.orNull?.asFile?.toPath()?.let(
+                io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration::read,
+              )
+                ?: io.outfoxx.sunday.generator.ir
+                  .GeneratedPlacementConfiguration(),
             deriveServicesFromTags = servicesFromTags.get(),
             generationMode = mode.get(),
             autoPatchable = autoPatchable.get(),
@@ -476,7 +491,7 @@ abstract class SundayGenerate
                   explicitSecurityParameters = explicitSecurityParameters.get(),
                   baseUriMode = baseUriMode.orNull,
                   alwaysUseResponseReturn = alwaysUseResponseReturn.get(),
-                  defaultServicePackageName = servicePkgName.get(),
+                  placement = GeneratedPlacementConfiguration(),
                   defaultProblemBaseUri = problemBaseUri.get(),
                   defaultMediaTypes = defaultMediaTypes.get(),
                   serviceSuffix = serviceSuffix.get(),
@@ -498,7 +513,7 @@ abstract class SundayGenerate
                 api,
                 typeRegistry,
                 KotlinSundayOptions(
-                  defaultServicePackageName = servicePkgName.get(),
+                  placement = GeneratedPlacementConfiguration(),
                   defaultProblemBaseUri = problemBaseUri.get(),
                   defaultMediaTypes = defaultMediaTypes.get(),
                   serviceSuffix = serviceSuffix.get(),

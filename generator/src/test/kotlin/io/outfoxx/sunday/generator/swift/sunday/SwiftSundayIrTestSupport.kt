@@ -149,6 +149,7 @@ abstract class SwiftSundayIrTestSupport {
             name = "AvatarContentType",
             kind = GeneratedModel.Kind.ENUM,
             values = listOf("image/png", "image/jpeg", "image/webp"),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
           ),
         ),
     )

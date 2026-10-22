@@ -107,7 +107,7 @@ Composition keeps the first fragment's API-level metadata by default and fills m
 
 ## Top-Level Fields
 
-- `irVersion`: Current format version. Version `1` is the only supported version.
+- `irVersion`: Current format version. Version `3` is the supported version.
 - `name`: API name.
 - `source`: Source specification metadata, including `kind` and `location`.
 - `services`: Generated service declarations and operations.
@@ -198,7 +198,7 @@ x-sunday-policy:
 
 Within each declaration, values resolve in this order: `all`, selected role, selected profile `all`, selected profile role. More-local declarations override inherited ones in tag → path → operation order, including a local shared value overriding an inherited role value. Missing members inherit; `false` disables an inherited policy. Exception lists replace inherited lists and `[]` clears them. Peer tag declarations merge independent members and reject conflicting values. Profiles are selected explicitly using `profile`; an unselected profile contributes no values.
 
-IR version 1 retains these scopes and an ordered `inherited` list of prior declarations. Each policy setting contains `enabled` and a typed `value`; disabled settings have no value. Durations store exact `seconds` and `nanos`. Exception references store either a native `className` or a generated `problem` name. Source durations accept ISO-8601 and `PT{n}MS` literals; numeric members accept numbers or numeric strings. Unknown members and malformed values are rejected, including those in unselected scopes.
+IR retains these scopes and an ordered `inherited` list of prior declarations. Each policy setting contains `enabled` and a typed `value`; disabled settings have no value. Durations store exact `seconds` and `nanos`. Exception references store either a native `className` or a generated `problem` name. Source durations accept ISO-8601 and `PT{n}MS` literals; numeric members accept numbers or numeric strings. Unknown members and malformed values are rejected, including those in unselected scopes.
 
 Kotlin/JAX-RS Quarkus resolves the selected environment into native SmallRye/MicroProfile annotations. Server resource adapters place enforcement on concrete resource methods, leaving delegates free of duplicate enforcement. `retryOn`/`abortOn` and `failOn`/`skipOn` accept one exception or a list. Native `skipOn` classifies matching failures as successful circuit-breaker outcomes; it does not remove them from the rolling window. Generated problem references must resolve to exception types.
 
@@ -209,7 +209,7 @@ APIs, services, tags, and operations may carry `jaxrs` metadata for Quarkus/JAX-
 Wire requirements and environment bindings are independent. `GeneratedSecurityScheme.bindings` stores
 `x-sunday-security` on a security scheme. RAML uses `(sunday.security)` on its security scheme.
 `GeneratedAuth.selection` stores the same extension on an API, path/resource/channel, or operation.
-Both use the typed `GeneratedEnvironment` scopes and declaration lineage described for policies. IR remains version 1.
+Both use the typed `GeneratedEnvironment` scopes and declaration lineage described for policies. These scopes are retained in IR version 3.
 
 ```yaml
 components:
@@ -298,7 +298,7 @@ An enum may opt into tolerant decoding by setting `unknownValue` to one of its d
 
 When a discriminator property uses a tolerant enum, the same `unknownValue` automatically enables a catch-all hierarchy variant. Discriminator mappings continue to describe exact known cases; they are not wildcard declarations. Known tags decode only their mapped subtype, while an unmapped string tag decodes the generated fallback with the original tag, declared root properties, and complete raw payload. Mapping the reserved `unknownValue` sentinel to a concrete subtype is a generation error.
 
-Models declared outside the root source document may carry `source` with the defining source location. Named type references may also carry `source` when the referenced declaration is imported. This allows IR to preserve duplicate declaration names across RAML documents and libraries without depending on AMF unit state during IR-to-code emission.
+Every model and problem declaration has a non-null `source` identifying its declaring document and defining source location, including declarations in the root document. The YAML reader expands an omitted declaration source from the enclosing document before composition; serialized declarations always include it. Explicit null sources are invalid. Named type references may omit `source` when unambiguous, or carry it to bind an imported or independently composed declaration. This allows IR to preserve duplicate declaration names across RAML documents and libraries without depending on AMF unit state during IR-to-code emission.
 
 ### Nominal scalar models
 
@@ -405,3 +405,9 @@ Servers retain names, variables (including defaults, allowed values, documentati
 source retrieval locations, and `securityProfile`. AsyncAPI operations may include `serverAuth`, indexed
 by server name, so factories can select complete server-plus-operation requirements without changing
 legacy constructor defaults. Composition and environment projection preserve this metadata.
+
+## Declaration ownership and placement
+
+IR version 3 extends version 2 ownership provenance with unresolved `placementScopes`, original operation and problem `declarationUri` values, and service contribution membership. Composition retains individual model `placementDeclarations` so structurally identical inputs can resolve to different packages or modules. Service contribution records contain placement and operation locations. Deduplicated operations retain their individual `placementDeclarations`, including original references and lexical scopes; behavioral compatibility is checked separately from provenance, and reference identities are compared after placement. Source-qualified reference binding, enclosing declaration identity, and inferred discriminator dependencies are shared contracts rather than backend-local approximations.
+
+`placementConfiguration` carries invocation defaults and relocations. Resolution happens for the requested language and role before symbol creation and output filtering. Excluded declarations still receive identities for consumers' imports. `ownerUris` and output categories continue to control emission independently. See [declaration placement](declaration-placement.md) for the public syntax and selector rules.

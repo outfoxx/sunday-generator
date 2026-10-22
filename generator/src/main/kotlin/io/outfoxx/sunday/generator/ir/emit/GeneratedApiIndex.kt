@@ -18,7 +18,6 @@ package io.outfoxx.sunday.generator.ir.emit
 
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedModel
-import io.outfoxx.sunday.generator.ir.GeneratedModelScope
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -30,51 +29,31 @@ class GeneratedApiIndex(
   val api: GeneratedApi,
 ) {
 
-  private val modelsByNameAndScope =
-    api.models.groupBy { model ->
-      ModelKey(model.name, model.scope)
-    }
+  private val models = GeneratedModelIndex(api.models)
 
-  private val problemsByName =
-    api.problems
-      .flatMap { problem ->
-        listOfNotNull(problem.name, problem.sourceName).map { name -> name to problem }
-      }.groupBy({ (name) -> name }, { (_, problem) -> problem })
+  private val problems = GeneratedProblemIndex(api.problems)
 
   /**
    * Returns the model matching a generated type reference's name, scope, and optional source identity.
    */
-  fun modelOrNull(type: GeneratedTypeRef): GeneratedModel? =
-    modelsByNameAndScope[ModelKey(type.name, type.scope)]
-      .orEmpty()
-      .let { candidates ->
-        candidates.firstOrNull { model -> model.source == type.source }
-          ?: if (type.source == null) candidates.firstOrNull() else null
-      }
+  fun modelOrNull(type: GeneratedTypeRef): GeneratedModel? = models.modelOrNull(type)
 
   /**
    * Returns the problem matching a generated type reference's generated or source name and optional source identity.
    */
-  fun problemOrNull(type: GeneratedTypeRef): GeneratedProblem? =
-    problemsByName[type.name]
-      .orEmpty()
-      .let { candidates ->
-        candidates.firstOrNull { problem -> problem.source == type.source }
-          ?: if (type.source == null) candidates.firstOrNull() else null
-      }
+  fun problemOrNull(type: GeneratedTypeRef): GeneratedProblem? = problems.problemOrNull(type)
 
   /**
    * Returns operation-local models referenced by a service and owned by that service.
    */
   fun referencedScopedModels(service: GeneratedService): List<GeneratedModel> =
     buildList {
-      val added = linkedSetOf<ModelKey>()
+      val added = linkedSetOf<GeneratedModel>()
 
       fun add(type: GeneratedTypeRef) {
         val model = modelOrNull(type)
         if (model != null && model.scope?.service == service.name && !model.isFreeformObject) {
-          val key = ModelKey(model.name, model.scope)
-          if (added.add(key)) {
+          if (added.add(model)) {
             add(model)
           }
         }
@@ -95,11 +74,6 @@ class GeneratedApiIndex(
         }
       }
     }
-
-  private data class ModelKey(
-    val name: String,
-    val scope: GeneratedModelScope?,
-  )
 }
 
 /**

@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.tools.parameterDefaultsApi
 import io.outfoxx.sunday.generator.tools.withOptionalParameterTemplates
@@ -44,12 +45,18 @@ class TypeScriptParameterDefaultsTest {
   ) {
     val source = parameterDefaultsApi("openapi", directory, collections = true)
     val stateList =
-      GeneratedModel("States", GeneratedModel.Kind.ARRAY, aliases = listOf(GeneratedTypeRef.named("State")))
+      GeneratedModel(
+        "States",
+        GeneratedModel.Kind.ARRAY,
+        aliases = listOf(GeneratedTypeRef.named("State")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val dateList =
       GeneratedModel(
         "Dates",
         GeneratedModel.Kind.ARRAY,
         aliases = listOf(GeneratedTypeRef.scalar("string", format = "date")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val nested = GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = listOf(GeneratedTypeRef.scalar("any")))
     val parameters =

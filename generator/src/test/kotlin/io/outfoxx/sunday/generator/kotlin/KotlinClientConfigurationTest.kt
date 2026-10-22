@@ -28,12 +28,14 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.aggregateClientConfigurationApi
 import io.outfoxx.sunday.generator.tools.aggregateFrontendConfigurationApi
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Files
 import java.nio.file.Path
 
 @KotlinTest
@@ -42,12 +44,12 @@ class KotlinClientConfigurationTest {
   fun `generated factories preserve application token persistence`(
     @TempDir directory: Path,
   ) {
-    val registry = KotlinTypeRegistry("example", null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
+    val registry = KotlinTypeRegistry(null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
     KotlinSundayIrGenerator(
       aggregateClientConfigurationApi(directory),
       registry,
       KotlinSundayOptions(
-        "example",
+        kotlinPlacement("example", "example"),
         "https://example.com/",
         listOf("application/json"),
         "API",
@@ -59,8 +61,9 @@ class KotlinClientConfigurationTest {
       compileTypesResult(
         registry.buildTypes(),
         listOf(
-          com.tschuchort.compiletesting.SourceFile.fromPath(
-            Path.of("src/test/resources/client-config-persistence/PersistenceCheck.kt").toFile(),
+          com.tschuchort.compiletesting.SourceFile.kotlin(
+            "PersistenceCheck.kt",
+            Files.readString(Path.of("src/test/resources/client-config-persistence/PersistenceCheck.kt")),
           ),
         ),
       )
@@ -78,11 +81,16 @@ class KotlinClientConfigurationTest {
     val api = clientConfigurationApi("credential-collision", directory)
     val error =
       assertThrows(IllegalArgumentException::class.java) {
-        val registry = KotlinTypeRegistry("example", null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
+        val registry = KotlinTypeRegistry(null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
         KotlinSundayIrGenerator(
           api,
           registry,
-          KotlinSundayOptions("example", "https://example.com/", listOf("application/json"), "API"),
+          KotlinSundayOptions(
+            kotlinPlacement("example", "example"),
+            "https://example.com/",
+            listOf("application/json"),
+            "API",
+          ),
         ).generateServiceTypes()
       }
     assertTrue(error.message.orEmpty().contains("credential field name collision"))
@@ -109,11 +117,16 @@ class KotlinClientConfigurationTest {
       } else {
         "ExampleAPIConfig"
       }
-    val registry = KotlinTypeRegistry("example", null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
+    val registry = KotlinTypeRegistry(null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
     KotlinSundayIrGenerator(
       api,
       registry,
-      KotlinSundayOptions("example", "https://example.com/", listOf("application/json"), "API"),
+      KotlinSundayOptions(
+        kotlinPlacement("example", "example"),
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+      ),
     ).generateServiceTypes()
     val consumer =
       TypeSpec
@@ -164,12 +177,12 @@ class KotlinClientConfigurationTest {
     @TempDir directory: Path,
   ) {
     val api = aggregateClientConfigurationApi(directory)
-    val registry = KotlinTypeRegistry("example", null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
+    val registry = KotlinTypeRegistry(null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
     KotlinSundayIrGenerator(
       api,
       registry,
       KotlinSundayOptions(
-        "example",
+        kotlinPlacement("example", "example"),
         "https://example.com/",
         listOf("application/json"),
         "API",
@@ -261,12 +274,12 @@ class KotlinClientConfigurationTest {
     @TempDir directory: Path,
   ) {
 
-    val registry = KotlinTypeRegistry("example", null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
+    val registry = KotlinTypeRegistry(null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
     KotlinSundayIrGenerator(
       aggregateFrontendConfigurationApi(frontend, directory),
       registry,
       KotlinSundayOptions(
-        "example",
+        kotlinPlacement("example", "example"),
         "https://example.com/",
         listOf("application/json"),
         "API",
