@@ -514,6 +514,7 @@ class KotlinSundayIrGenerator(
       typeRegistry.beanValidationTypes.takeIf {
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
+      api.models,
     )
     models
       .flatMap { model ->

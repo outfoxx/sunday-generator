@@ -25,6 +25,76 @@ class KotlinOutputSelectionTest {
   @TempDir
   lateinit var directory: Path
 
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = ["jaxrs", "sunday"])
+  fun `empty patches preserve absent defaults through named arrays`(target: String) {
+    val input =
+      Files.writeString(
+        directory.resolve("arrays.yaml"),
+        """
+        openapi: 3.1.0
+        info: {title: Arrays, version: '1'}
+        paths: {}
+        components:
+          schemas:
+            Element:
+              type: object
+              properties: {note: {type: string, default: initial}}
+            Elements:
+              type: array
+              items: {${'$'}ref: '#/components/schemas/Element'}
+            Container:
+              type: object
+              x-sunday-patchable: true
+              required: [elements]
+              properties:
+                elements: {${'$'}ref: '#/components/schemas/Elements'}
+            Other:
+              type: object
+              x-sunday-patchable: true
+              properties: {value: {type: string}}
+        """.trimIndent(),
+      )
+    val api = GeneratedApiIrExporter().export(input.toUri())
+    val registry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.SUNDAY,
+      )
+    if (target == "sunday") {
+      KotlinSundayIrGenerator(
+        api,
+        registry,
+        KotlinSundayOptions("io.test", "https://test/", listOf("application/json"), "API"),
+      ).generateServiceTypes()
+    } else {
+      KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+    }
+    val compiled = compileTypesResult(registry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+    val mapper =
+      com.fasterxml.jackson.module.kotlin
+        .jacksonObjectMapper()
+    val container = compiled.classLoader.loadClass("io.test.Container")
+    val patch = compiled.classLoader.loadClass("io.test.ContainerPatch")
+    val element =
+      compiled.classLoader
+        .loadClass("io.test.Element")
+        .getConstructor(String::class.java)
+        .newInstance(*arrayOf<Any?>(null))
+    val value = container.getConstructor(List::class.java).newInstance(listOf(element))
+    val expected = mapper.readTree("""{"elements":[{}]}""")
+    assertEquals(expected, mapper.valueToTree(value))
+    val merged =
+      container
+        .getMethod("merge", patch, com.fasterxml.jackson.databind.ObjectMapper::class.java)
+        .invoke(value, mapper.readValue("{}", patch), mapper)
+    assertEquals(expected, mapper.valueToTree(merged))
+  }
+
   @Test
   fun `consumer compiles against packaged owner without owner sources`() {
     val shared =

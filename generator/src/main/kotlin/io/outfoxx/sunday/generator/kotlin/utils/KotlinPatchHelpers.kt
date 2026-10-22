@@ -36,6 +36,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 internal fun addKotlinPatchHelpers(
   models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   validation: BeanValidationTypes?,
+  declarations: List<GeneratedModel>,
   allModels: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> = models,
   methodNames: Pair<String, String>? = null,
 ) {
@@ -59,7 +60,13 @@ internal fun addKotlinPatchHelpers(
   val mergeMethod = methodNames?.second ?: names.newName("merge")
   if (pairs.size > 1) {
     pairs.forEach { (original, patch) ->
-      addKotlinPatchHelpers(mapOf(original.toPair(), patch.toPair()), validation, allModels, patchMethod to mergeMethod)
+      addKotlinPatchHelpers(
+        mapOf(original.toPair(), patch.toPair()),
+        validation,
+        declarations,
+        allModels,
+        patchMethod to mergeMethod,
+      )
     }
     return
   }
@@ -281,7 +288,7 @@ internal fun addKotlinPatchHelpers(
   )
   // Generated Jackson factories apply decoding defaults. A merge must retain deleted members as absent.
   val factories =
-    reachablePatchModels(models.values.map { it.first }, allModels).filterValues { (_, b) ->
+    reachablePatchModels(models.values.map { it.first }, allModels, declarations).filterValues { (_, b) ->
       b.typeSpecs.any {
         it.isCompanion &&
           it.funSpecs.any { f -> f.annotations.any { a -> a.typeName == JACKSON_JSON_CREATOR } }
@@ -330,8 +337,9 @@ internal fun addKotlinPatchHelpers(
 private fun reachablePatchModels(
   roots: List<GeneratedModel>,
   models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
+  allDeclarations: List<GeneratedModel>,
 ): Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> {
-  val declarations = models.values.map { it.first }.associateBy { it.name to it.scope }
+  val declarations = allDeclarations.associateBy { it.name to it.scope }
   val reachable = mutableSetOf<GeneratedModel>()
   val pending = ArrayDeque(roots)
 
