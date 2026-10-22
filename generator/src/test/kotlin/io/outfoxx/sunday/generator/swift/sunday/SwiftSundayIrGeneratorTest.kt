@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
@@ -422,7 +423,10 @@ class SwiftSundayIrGeneratorTest : SwiftSundayIrTestSupport() {
 
     SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
       .generateServiceTypes()
-    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Service), compiler.srcDir)
+    typeRegistry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)),
+      compiler.srcDir,
+    )
 
     val source = Files.readString(compiler.srcDir.resolve("TeamsAPI.swift"))
     assertTrue(compileGeneratedFiles(compiler))

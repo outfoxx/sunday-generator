@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Query String Shapes API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "QueryStringShapesService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "searchProjects"
     method: "GET"
@@ -56,6 +58,7 @@ services:
 models:
 - name: "SearchProjectsQueryString"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/expects/request/shape/queryString"
   scope:
     service: "QueryStringShapesService"
     operation: "searchProjects"
@@ -77,6 +80,7 @@ models:
     description: "Project search query object."
 - name: "SearchProjectsResponseBody"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema"
   scope:
     service: "QueryStringShapesService"
     operation: "searchProjects"
@@ -90,6 +94,7 @@ models:
     required: true
 - name: "SignedQueryString"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/security/default-requirement_1/schemes/signed/scheme/signed/shape/queryString"
   scope:
     securityScheme: "signed"
     usage: "SECURITY_QUERY_STRING"

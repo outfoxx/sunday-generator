@@ -100,7 +100,7 @@ class GeneratedApiYamlTest {
     val decoded = GeneratedApiYaml.readString(yaml)
 
     assertThat(decoded, equalTo(api))
-    assertThat(yaml, containsString("irVersion: \"1\""))
+    assertThat(yaml, containsString("irVersion: \"2\""))
     assertThat(yaml, containsString("name: \"Projects\""))
     assertThat(yaml, containsString("zanzibar:"))
     assertThat(yaml, containsString("zanzibarUserSource:"))

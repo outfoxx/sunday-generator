@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -106,17 +107,21 @@ class PythonNominalScalarTest : PythonTest() {
       nominalScalarApi(frontend, directory).let {
         it.copy(services = it.services.map { service -> service.copy(name = "Ids", group = null) })
       }
-    val categories = setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)
+    val categories = GeneratedTypeCategory.entries.toSet()
     val clients =
       PythonSundayIrGenerator(
         api,
         PythonGeneratorOptions(packageName = "client_api"),
-      ).generateModules(categories)
+      ).generateModules(
+        GeneratedOutputSelection(categories),
+      )
     val servers =
       PythonLitestarIrGenerator(
         api,
         PythonGeneratorOptions(packageName = "server_api"),
-      ).generateModules(categories)
+      ).generateModules(
+        GeneratedOutputSelection(categories),
+      )
     assertTrue(
       compileModules(
         compiler,

@@ -18,6 +18,7 @@
 
 package io.outfoxx.sunday.generator.gradle
 
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
@@ -30,6 +31,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 
 class SundayGeneration(
@@ -96,8 +98,15 @@ class SundayGeneration(
   /** Derives patch companions for merge-patch request bodies without requiring a schema annotation. */
   val autoPatchable: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
-  val generateModel: Property<Boolean> = objects.property(Boolean::class.java)
-  val generateService: Property<Boolean> = objects.property(Boolean::class.java)
+  /** Categories to emit; empty selects models, services, and problems. */
+  val outputCategories: SetProperty<GeneratedTypeCategory> =
+    objects
+      .setProperty(
+        GeneratedTypeCategory::class.java,
+      ).convention(emptySet())
+
+  /** Exact owner filenames or document URIs; empty selects every owner. */
+  val outputOwners: SetProperty<String> = objects.setProperty(String::class.java).convention(emptySet())
   val generateBrokerServices: Property<Boolean> = objects.property(Boolean::class.java)
   val pkgName: Property<String> = objects.property(String::class.java)
   val servicePkgName: Property<String> = objects.property(String::class.java)

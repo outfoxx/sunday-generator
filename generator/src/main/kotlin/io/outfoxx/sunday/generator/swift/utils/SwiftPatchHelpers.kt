@@ -47,14 +47,10 @@ internal class SwiftPatchHelpers(
   private val patchName = names.newName("patch")
   private val mergeName = names.newName("merge")
   private val factoryName = names.newName("fromModel")
-  val supportName by lazy {
-    val allocator = NameAllocator()
-    models.map { typeName(it).simpleName }.distinct().forEach { allocator.newName(it) }
-    DeclaredTypeName.typeName(
-      "${typeName(
-        models.first(),
-      ).moduleName}.${allocator.newName("MergePatchSupport")}",
-    )
+
+  private fun supportName(model: GeneratedModel): DeclaredTypeName {
+    val original = model.patchOf?.name?.let { name -> models.single { it.name == name } } ?: model
+    return typeName(original).nestedType("MergePatchSupport")
   }
 
   fun add(
@@ -62,10 +58,12 @@ internal class SwiftPatchHelpers(
     builder: TypeSpec.Builder,
     valueType: Boolean,
   ) {
+    val supportName = supportName(model)
     val patch = models.singleOrNull { it.patchOf?.name == model.name }
     val tag = patch?.properties?.firstOrNull { it.patchDiscriminator }?.let { it.serializationName ?: it.name }
     val tagCode = tag?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil")
     if (patch != null) {
+      builder.addType(support(supportName).build())
       builder.addFunction(
         FunctionSpec
           .builder(patchName)
@@ -121,7 +119,7 @@ internal class SwiftPatchHelpers(
     }
   }
 
-  fun support(): TypeSpec.Builder {
+  private fun support(supportName: DeclaredTypeName): TypeSpec.Builder {
     val value = typeVariable("Value", bound(CODABLE))
     val patch = typeVariable("Patch", bound(CODABLE))
     val encoder = DeclaredTypeName.typeName("PotentCodables.AnyValueEncoder")

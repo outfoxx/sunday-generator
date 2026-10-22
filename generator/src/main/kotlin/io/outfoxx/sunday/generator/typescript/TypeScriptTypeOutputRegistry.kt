@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.GeneratedOutputOwnership
 import io.outfoxx.typescriptpoet.AnyTypeSpecBuilder
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.TypeName
@@ -24,6 +25,9 @@ import io.outfoxx.typescriptpoet.TypeName
  * TypeScript type registry surface required by IR-backed emitters.
  */
 interface TypeScriptTypeOutputRegistry {
+
+  /** Declaration provenance used exclusively for output selection. */
+  val outputOwnership: GeneratedOutputOwnership
 
   fun generatedTypeName(
     simpleName: String,

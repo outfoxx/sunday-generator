@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Inheritance API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "InheritanceService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "getAnimal"
     method: "GET"
@@ -36,6 +38,7 @@ services:
 models:
 - name: "Animal"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/declares/shape/Dog/shape/Animal"
   properties:
   - name: "kind"
     type:
@@ -50,6 +53,7 @@ models:
   discriminator: "kind"
 - name: "Cat"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/declares/shape/Cat"
   properties:
   - name: "huntingSkill"
     type:
@@ -63,6 +67,7 @@ models:
   discriminatorValue: "cat"
 - name: "Dog"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/declares/shape/Dog"
   properties:
   - name: "packSize"
     type:

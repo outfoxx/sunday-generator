@@ -331,7 +331,7 @@ class GeneratedPatchModelsTest {
     @TempDir directory: Path,
   ) {
     val api = patchableApi(frontend, directory)
-    assertEquals("1", api.irVersion)
+    assertEquals(GeneratedApi.CURRENT_IR_VERSION, api.irVersion)
     assertEquals(api, GeneratedPatchModels.materialize(api))
     val models = api.models.associateBy { it.name }
     assertFalse(models.getValue("SomeRequest").patchable)

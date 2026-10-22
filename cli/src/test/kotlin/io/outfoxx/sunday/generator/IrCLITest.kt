@@ -84,7 +84,7 @@ class IrCLITest {
     assertTrue(publicText.contains("internal"))
     assertTrue(publicText.contains("application"))
     assertTrue(publicText.contains("external"))
-    assertEquals("1", api.irVersion)
+    assertEquals("2", api.irVersion)
     val noRole = IrCommand().test(arrayOf("-out", output.toString(), "-profile", "external", source.toString()))
     assertEquals(1, noRole.statusCode)
     assertTrue(noRole.output.contains("requires -mode"))
@@ -680,7 +680,7 @@ class IrCLITest {
       createTempFile("sunday-ir-cli-validate", ".yaml").apply {
         writeText(
           """
-          irVersion: "1"
+          irVersion: "2"
           name: "Projects API"
           source:
             kind: "RAML"

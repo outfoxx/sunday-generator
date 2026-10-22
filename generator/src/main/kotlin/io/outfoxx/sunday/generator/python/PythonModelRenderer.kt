@@ -55,13 +55,19 @@ class PythonModelRenderer(
   private val customValidators = linkedMapOf<Pair<String, Map<String, String>>, Pair<String, PythonCodeBlock>>()
 
   /** Renders the given models into the package `models.py` module. */
-  fun renderModels(models: List<GeneratedModel>): PythonModule =
-    renderNormalizedModels(GeneratedPatchModels.normalizeFields(models))
+  fun renderModels(
+    models: List<GeneratedModel>,
+    include: (GeneratedModel) -> Boolean = { true },
+  ): PythonModule = renderNormalizedModels(GeneratedPatchModels.normalizeFields(models), include)
 
-  private fun renderNormalizedModels(models: List<GeneratedModel>): PythonModule {
+  private fun renderNormalizedModels(
+    allModels: List<GeneratedModel>,
+    include: (GeneratedModel) -> Boolean,
+  ): PythonModule {
+    val models = allModels.filter(include)
     val module = PythonModuleBuilder("$packageName/models.py")
     customValidators.clear()
-    modelIndex = models.associateBy { model -> model.name }
+    modelIndex = allModels.associateBy { model -> model.name }
     patchHelpers = PythonPatchHelpers(models)
     if (patchHelpers.enabled) module.addCode(patchHelpers.support())
     modelProperties = GeneratedModelProperties { modelIndex[it.name] }

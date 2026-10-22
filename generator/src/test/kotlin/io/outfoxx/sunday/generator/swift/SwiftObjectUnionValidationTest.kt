@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -107,7 +108,12 @@ class SwiftObjectUnionValidationTest {
       registry,
       SwiftSundayOptions("https://example.com/", listOf("application/json"), "API", preserveUnknownFields = true),
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("ProblemHierarchyTests.swift"),
@@ -161,7 +167,12 @@ class SwiftObjectUnionValidationTest {
       registry,
       SwiftSundayOptions("https://example.com/", listOf("application/json"), "API", preserveUnknownFields = true),
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("DiscriminatedUnionTests.swift"),
@@ -224,7 +235,12 @@ class SwiftObjectUnionValidationTest {
       registry,
       SwiftSundayOptions("https://example.com/", listOf("application/json"), "API", preserveUnknownFields = true),
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("ObjectUnionTests.swift"),

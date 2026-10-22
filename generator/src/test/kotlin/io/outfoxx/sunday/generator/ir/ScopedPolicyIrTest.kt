@@ -39,7 +39,7 @@ class ScopedPolicyIrTest {
     val api = scopedPolicyApi(frontend, directory)
     val decoded = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api))
     assertEquals(api, decoded)
-    assertEquals("1", decoded.irVersion)
+    assertEquals(GeneratedApi.CURRENT_IR_VERSION, decoded.irVersion)
     for (operation in decoded.services.flatMap { it.operations }) {
       val policy = requireNotNull(operation.policy)
       assertEquals(1, policy.inherited.size)

@@ -69,6 +69,7 @@ import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.typescript.utils.ABORT_SIGNAL
 import io.outfoxx.sunday.generator.typescript.utils.ASYNC_ITERABLE
@@ -156,14 +157,20 @@ class TypeScriptSundayIrGenerator(
 
   private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
 
-  private val patchSupportName by lazy {
-    val allocator = NameAllocator()
+  private val patchSupportNames by lazy {
+    val names = NameAllocator()
     api.models
       .map { it.name.toUpperCamelCase() }
       .distinct()
-      .forEach { allocator.newName(it) }
-    val name = allocator.newName("MergePatchSupport")
-    typeRegistry.generatedTypeName(name, "!${name.camelCaseToKebabCase()}")
+      .forEach { names.newName(it) }
+    api.models.filter { model -> api.models.any { it.patchOf?.name == model.name } }.associate { model ->
+      model.name to names.newName(model.name.toUpperCamelCase() + "MergePatchSupport")
+    }
+  }
+
+  private fun patchSupportName(model: GeneratedModel): TypeName.Standard {
+    val original = model.patchOf?.name?.let { name -> api.models.single { it.name == name } } ?: model
+    return original.typeName(patchSupportNames.getValue(original.name))
   }
 
   private val transportTypeVariable = typeVariable("Factory", bound(TypeName.implicit("SundayTransport")))
@@ -186,8 +193,24 @@ class TypeScriptSundayIrGenerator(
   private val generatedDiscriminatorFallbacks = mutableSetOf<GeneratedModel>()
   private val typeScriptEnumEntriesByModel = mutableMapOf<GeneratedModel, List<TypeScriptEnumEntry>>()
 
+  private fun GeneratedModel.modelOutputOrigin() =
+    outputOrigin(api).let { origin ->
+      if (isProblemModel()) {
+        origin.copy(
+          category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem,
+        )
+      } else {
+        origin
+      }
+    }
+
   /** Generates TypeScript/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
+    typeRegistry.outputOwnership.current = api.outputOrigin()
+    api.models.forEach { model ->
+      typeRegistry.outputOwnership.bind(model.typeName(model.name.toUpperCamelCase()), model.modelOutputOrigin())
+    }
+
     options.requireBrokerServicesSupported("TypeScript/Sunday")
     val services = api.typeScriptSundayServices()
     services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "TypeScript/Sunday")
@@ -212,6 +235,7 @@ class TypeScriptSundayIrGenerator(
               options.generateClientConfig,
             )
           }
+        typeRegistry.outputOwnership.bind(serviceTypeName, service.outputOrigin(api))
         val serviceType = generateServiceType(serviceTypeName, service)
         typeRegistry.addServiceType(serviceTypeName, serviceType.interfaceBuilder, serviceType.extras)
         GeneratedTypeScriptService(service, serviceTypeName)
@@ -279,8 +303,7 @@ class TypeScriptSundayIrGenerator(
       url.hasHttpScheme()
 
   private fun generateProblemTypes(services: List<GeneratedService>) {
-    services
-      .flatMap { service -> service.referencedProblems(index) }
+    (if (api.services.isEmpty()) api.problems else services.flatMap { service -> service.referencedProblems(index) })
       .distinctBy { problem -> Triple(problem.name, problem.sourceName, problem.source) }
       .forEach { problem -> generateProblemType(problem) }
   }
@@ -304,9 +327,11 @@ class TypeScriptSundayIrGenerator(
       val type = model.typeName(model.name.toUpperCamelCase())
       typeRegistry.addExternalType(type, type.sibling("Schema"))
     }
-    if (api.models.any { it.patchOf != null }) {
-      val (type, code) = TypeScriptPatchHelpers.support(patchSupportName)
-      typeRegistry.addModelType(patchSupportName, type, listOf(code))
+    api.models.filter { model -> api.models.any { it.patchOf?.name == model.name } }.forEach { model ->
+      val name = patchSupportName(model)
+      val (type, code) = TypeScriptPatchHelpers.support(name)
+      typeRegistry.outputOwnership.bind(name, model.modelOutputOrigin())
+      typeRegistry.addModelType(name, type, listOf(code))
     }
     api.models
       .filter { model ->
@@ -589,100 +614,102 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     service: GeneratedService,
   ): TypeScriptServiceType {
-    val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
-    val interfaceBuilder =
-      InterfaceSpec
-        .builder(serviceTypeName.simpleName())
-        .addTypeVariable(transportTypeVariable)
-    val serviceClassName = TypeName.standard("${serviceTypeName.simpleName()}Client")
-    val serviceClassBuilder =
-      ClassSpec
-        .builder(serviceClassName)
-        .addTypeVariable(transportTypeVariable)
-        .tag(CodeBlock.builder())
+    return typeRegistry.outputOwnership.within(service.outputOrigin(api)) {
+      val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
+      val interfaceBuilder =
+        InterfaceSpec
+          .builder(serviceTypeName.simpleName())
+          .addTypeVariable(transportTypeVariable)
+      val serviceClassName = TypeName.standard("${serviceTypeName.simpleName()}Client")
+      val serviceClassBuilder =
+        ClassSpec
+          .builder(serviceClassName)
+          .addTypeVariable(transportTypeVariable)
+          .tag(CodeBlock.builder())
 
-    serviceClassBuilder
-      .addProperty(
-        PropertySpec
-          .builder("transport", transportTypeVariable, false, Modifier.PUBLIC)
-          .initializer("transport")
-          .build(),
-      ).addProperty(
-        PropertySpec
-          .builder("defaultContentTypes", parameterizedType(ARRAY, MEDIA_TYPE))
-          .build(),
-      ).addProperty(
-        PropertySpec
-          .builder("defaultAcceptTypes", parameterizedType(ARRAY, MEDIA_TYPE))
-          .build(),
-      )
-
-    val constructorBuilder =
-      FunctionSpec
-        .constructorBuilder()
-        .addParameter("transport", transportTypeVariable, false, Modifier.PUBLIC)
-        .addParameter(
-          ParameterSpec
-            .builder("options", serviceOptionsType().undefinable)
-            .defaultValue("undefined")
+      serviceClassBuilder
+        .addProperty(
+          PropertySpec
+            .builder("transport", transportTypeVariable, false, Modifier.PUBLIC)
+            .initializer("transport")
             .build(),
-        ).addStatement(
-          "this.defaultContentTypes =\noptions?.defaultContentTypes ?? %L",
-          mediaTypesArray(mediaSelection.contentTypes),
-        ).addStatement(
-          "this.defaultAcceptTypes =\noptions?.defaultAcceptTypes ?? %L",
-          mediaTypesArray(mediaSelection.acceptTypes),
+        ).addProperty(
+          PropertySpec
+            .builder("defaultContentTypes", parameterizedType(ARRAY, MEDIA_TYPE))
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("defaultAcceptTypes", parameterizedType(ARRAY, MEDIA_TYPE))
+            .build(),
         )
 
-    service.referencedProblems(index).forEach { problem ->
-      constructorBuilder.addCode(
-        CodeBlock
-          .builder()
-          .add("transport.registerProblem(%S, ", problem.resolvedTypeUri(options.defaultProblemBaseUri))
-          .add(typeRegistry.schemaInitializer(problem.typeName()))
-          .add(");\n")
-          .build(),
+      val constructorBuilder =
+        FunctionSpec
+          .constructorBuilder()
+          .addParameter("transport", transportTypeVariable, false, Modifier.PUBLIC)
+          .addParameter(
+            ParameterSpec
+              .builder("options", serviceOptionsType().undefinable)
+              .defaultValue("undefined")
+              .build(),
+          ).addStatement(
+            "this.defaultContentTypes =\noptions?.defaultContentTypes ?? %L",
+            mediaTypesArray(mediaSelection.contentTypes),
+          ).addStatement(
+            "this.defaultAcceptTypes =\noptions?.defaultAcceptTypes ?? %L",
+            mediaTypesArray(mediaSelection.acceptTypes),
+          )
+
+      service.referencedProblems(index).forEach { problem ->
+        constructorBuilder.addCode(
+          CodeBlock
+            .builder()
+            .add("transport.registerProblem(%S, ", problem.resolvedTypeUri(options.defaultProblemBaseUri))
+            .add(typeRegistry.schemaInitializer(problem.typeName()))
+            .add(");\n")
+            .build(),
+        )
+      }
+
+      if (options.generateClientConfig) {
+        constructorBuilder.addParameter(
+          ParameterSpec
+            .builder(
+              "clientSettings",
+              clientSettingsType.undefinable,
+              false,
+              Modifier.PRIVATE,
+            ).defaultValue("undefined")
+            .build(),
+        )
+      }
+      serviceClassBuilder.constructor(constructorBuilder.build())
+
+      generateLocalModelTypes(serviceTypeName, service)
+
+      service.operations.forEach { operation ->
+        interfaceBuilder.addFunction(
+          operation
+            .operationFunctionSignature(serviceTypeName, defaultOptionalParameters = false)
+            .toBuilder()
+            .addModifiers(Modifier.ABSTRACT)
+            .build(),
+        )
+        serviceClassBuilder.addFunction(operation.operationFunction(serviceTypeName, serviceClassBuilder))
+      }
+
+      return TypeScriptServiceType(
+        interfaceBuilder,
+        listOfNotNull(
+          transportAliasCode(),
+          serviceClassBuilder.extraCode(),
+          serviceClassBuilder.build(),
+          service.configurationFactory(serviceTypeName, serviceClassName)
+            ?: service.factoryFunction(serviceTypeName, serviceClassName, mediaSelection),
+          service.baseUrlNamespace(serviceTypeName),
+        ),
       )
     }
-
-    if (options.generateClientConfig) {
-      constructorBuilder.addParameter(
-        ParameterSpec
-          .builder(
-            "clientSettings",
-            clientSettingsType.undefinable,
-            false,
-            Modifier.PRIVATE,
-          ).defaultValue("undefined")
-          .build(),
-      )
-    }
-    serviceClassBuilder.constructor(constructorBuilder.build())
-
-    generateLocalModelTypes(serviceTypeName, service)
-
-    service.operations.forEach { operation ->
-      interfaceBuilder.addFunction(
-        operation
-          .operationFunctionSignature(serviceTypeName, defaultOptionalParameters = false)
-          .toBuilder()
-          .addModifiers(Modifier.ABSTRACT)
-          .build(),
-      )
-      serviceClassBuilder.addFunction(operation.operationFunction(serviceTypeName, serviceClassBuilder))
-    }
-
-    return TypeScriptServiceType(
-      interfaceBuilder,
-      listOfNotNull(
-        transportAliasCode(),
-        serviceClassBuilder.extraCode(),
-        serviceClassBuilder.build(),
-        service.configurationFactory(serviceTypeName, serviceClassName)
-          ?: service.factoryFunction(serviceTypeName, serviceClassName, mediaSelection),
-        service.baseUrlNamespace(serviceTypeName),
-      ),
-    )
   }
 
   private fun GeneratedService.baseUrlFunction(
@@ -1024,6 +1051,7 @@ class TypeScriptSundayIrGenerator(
     index
       .referencedScopedModels(service)
       .forEach { model ->
+        typeRegistry.outputOwnership.bind(serviceTypeName.nested(model.name), service.outputOrigin(api))
         when (model.kind) {
           GeneratedModel.Kind.ENUM -> generateLocalEnumModelType(serviceTypeName, model)
           GeneratedModel.Kind.OBJECT -> generateLocalObjectModelType(serviceTypeName, model)
@@ -1040,70 +1068,71 @@ class TypeScriptSundayIrGenerator(
     generateEnumModelType(typeName, model)
   }
 
-  private fun generateProblemType(problem: GeneratedProblem) {
-    val typeName = problem.typeName()
-    val specName = typeName.sibling("Spec")
-    val properties =
-      problem.fields.map { field ->
-        field to field.type.typeName(typeName).modelPropertyType(field)
-      }
-    val classBuilder =
-      ClassSpec
-        .builder(typeName)
-        .addModifiers(Modifier.EXPORT)
-        .superClass(PROBLEM)
-        .addProperty(
+  private fun generateProblemType(problem: GeneratedProblem) =
+    typeRegistry.outputOwnership.within(problem.outputOrigin(api)) {
+      val typeName = problem.typeName()
+      val specName = typeName.sibling("Spec")
+      val properties =
+        problem.fields.map { field ->
+          field to field.type.typeName(typeName).modelPropertyType(field)
+        }
+      val classBuilder =
+        ClassSpec
+          .builder(typeName)
+          .addModifiers(Modifier.EXPORT)
+          .superClass(PROBLEM)
+          .addProperty(
+            PropertySpec
+              .builder("TYPE", STRING)
+              .addModifiers(Modifier.STATIC)
+              .initializer("%S", problem.typeUri)
+              .build(),
+          )
+
+      properties.forEach { (field, fieldType) ->
+        classBuilder.addProperty(
           PropertySpec
-            .builder("TYPE", STRING)
-            .addModifiers(Modifier.STATIC)
-            .initializer("%S", problem.typeUri)
+            .builder(field.name.typeScriptIdentifierName, fieldType)
             .build(),
         )
+      }
 
-    properties.forEach { (field, fieldType) ->
-      classBuilder.addProperty(
-        PropertySpec
-          .builder(field.name.typeScriptIdentifierName, fieldType)
-          .build(),
+      val constructorBuilder =
+        FunctionSpec
+          .constructorBuilder()
+          .addParameter(
+            ParameterSpec
+              .builder("spec", specName)
+              .apply {
+                if (properties.isEmpty()) {
+                  defaultValue("{}")
+                }
+              }.build(),
+          ).addCode(problemSuperCode(problem, typeName, properties.map { it.first }))
+
+      properties.forEach { (field, _) ->
+        val fieldName = field.name.typeScriptIdentifierName
+        constructorBuilder.addStatement("this.%N = spec.%N", fieldName, fieldName)
+      }
+      constructorBuilder.addStatement(
+        "if (new.target === %T) %Q(this, %N, %T)",
+        typeName,
+        VALIDATE_MODEL_CONSTRUCTION,
+        typeName.simpleName() + "Schema",
+        typeName,
+      )
+      classBuilder.constructor(constructorBuilder.build())
+
+      typeRegistry.addModelType(
+        typeName,
+        classBuilder,
+        listOf(
+          problemSpecSchemaCode(typeName, properties),
+          problemSpecType(specName, typeName),
+          problemSchemaCode(typeName, properties),
+        ),
       )
     }
-
-    val constructorBuilder =
-      FunctionSpec
-        .constructorBuilder()
-        .addParameter(
-          ParameterSpec
-            .builder("spec", specName)
-            .apply {
-              if (properties.isEmpty()) {
-                defaultValue("{}")
-              }
-            }.build(),
-        ).addCode(problemSuperCode(problem, typeName, properties.map { it.first }))
-
-    properties.forEach { (field, _) ->
-      val fieldName = field.name.typeScriptIdentifierName
-      constructorBuilder.addStatement("this.%N = spec.%N", fieldName, fieldName)
-    }
-    constructorBuilder.addStatement(
-      "if (new.target === %T) %Q(this, %N, %T)",
-      typeName,
-      VALIDATE_MODEL_CONSTRUCTION,
-      typeName.simpleName() + "Schema",
-      typeName,
-    )
-    classBuilder.constructor(constructorBuilder.build())
-
-    typeRegistry.addModelType(
-      typeName,
-      classBuilder,
-      listOf(
-        problemSpecSchemaCode(typeName, properties),
-        problemSpecType(specName, typeName),
-        problemSchemaCode(typeName, properties),
-      ),
-    )
-  }
 
   private fun problemSpecType(
     specName: TypeName.Standard,
@@ -1222,10 +1251,11 @@ class TypeScriptSundayIrGenerator(
       ).add("});\n")
       .build()
 
-  private fun generateSharedEnumModelType(model: GeneratedModel) {
-    val simpleName = model.name.toUpperCamelCase()
-    generateEnumModelType(model.typeName(simpleName), model)
-  }
+  private fun generateSharedEnumModelType(model: GeneratedModel) =
+    typeRegistry.outputOwnership.within(model.modelOutputOrigin()) {
+      val simpleName = model.name.toUpperCamelCase()
+      generateEnumModelType(model.typeName(simpleName), model)
+    }
 
   private fun generateEnumModelType(
     typeName: TypeName.Standard,
@@ -1395,120 +1425,125 @@ class TypeScriptSundayIrGenerator(
     typeRegistry.addModelType(typeName, classBuilder, listOf(schemaCode))
   }
 
-  private fun generateSharedObjectModelType(model: GeneratedModel) {
-    val simpleName = model.name.toUpperCamelCase()
-    val typeName = model.typeName(simpleName)
-    generateObjectModelType(typeName, model, typeName, typeName.sibling("Spec"))
-  }
-
-  private fun generateNominalModelType(model: GeneratedModel) {
-    val name = model.typeName(model.name.toUpperCamelCase())
-    val scalar = nominalTypes.scalar(model)
-    val schema =
-      CodeBlock
-        .builder()
-        .add(
-          "/** Validating schema for %L. */\nexport const %LSchema = ",
-          model.name,
-          name.simpleName(),
-        ).add(scalar.type.directZodSchema(true, scalar.property.validation)!!)
-    if (scalar.type.name == "integer") {
-      schema.add(".refine(Number.isInteger)")
+  private fun generateSharedObjectModelType(model: GeneratedModel) =
+    typeRegistry.outputOwnership.within(model.modelOutputOrigin()) {
+      val simpleName = model.name.toUpperCamelCase()
+      val typeName = model.typeName(simpleName)
+      generateObjectModelType(typeName, model, typeName, typeName.sibling("Spec"))
     }
-    scalar.patterns.filterNot { it == scalar.property.validation["pattern"] }.forEach {
-      schema.add(".regex(new RegExp(%S))", it)
-    }
-    schema
-      .add(".brand<%S>();\n", model.name)
-      .add(
-        "/** Validates and brands a raw scalar. */\nexport function %L(value: %T): %T {\n",
-        name.simpleName(),
-        scalar.type.typeName(name),
-        name,
-      ).add("  return %LSchema.parse(value);\n}\n", name.simpleName())
-      .add(
-        "/** Tests whether a value satisfies this scalar's schema. */\nexport function is%L(value: unknown): value is %T {\n",
-        name.simpleName(),
-        name,
-      ).add("  return %LSchema.safeParse(value).success;\n}\n", name.simpleName())
-    typeRegistry.addModelType(
-      name,
-      TypeAliasSpec.builder(name.simpleName(), schemaOutputType(name)).addModifiers(Modifier.EXPORT),
-      listOf(schema.build()),
-    )
-  }
 
-  private fun generateSharedUnionModelType(model: GeneratedModel) {
-    val simpleName = model.name.toUpperCamelCase()
-    val typeName = model.typeName(simpleName)
-    val typeAliasBuilder =
-      TypeAliasSpec
-        .builder(
-          typeName.simpleName(),
-          if (model.isRecursiveModel()) {
-            TypeName.unionType(*model.aliases.map { alias -> alias.typeName(typeName) }.toTypedArray())
-          } else {
-            schemaOutputType(typeName)
-          },
-        ).addModifiers(Modifier.EXPORT)
-
-    typeRegistry.addModelType(
-      typeName,
-      typeAliasBuilder,
-      listOf(
-        unionSchemaCode(
-          typeName,
-          model,
-          schemaTypeName = typeName.takeIf { model.isRecursiveModel() },
-        ),
-      ),
-    )
-  }
-
-  private fun generateDiscriminatorFallbackType(model: GeneratedModel) {
-    val fallback = discriminatorFallbacks[model] ?: return
-    if (!generatedDiscriminatorFallbacks.add(model)) {
-      return
-    }
-    val typeName = model.typeName(fallback.modelName.toUpperCamelCase())
-    val exposedProperties =
-      buildList {
-        if (!fallback.externallyDiscriminated) {
-          add(fallback.discriminatorProperty)
-        }
-        addAll(fallback.baseProperties)
+  private fun generateNominalModelType(model: GeneratedModel) =
+    typeRegistry.outputOwnership.within(model.modelOutputOrigin()) {
+      val name = model.typeName(model.name.toUpperCamelCase())
+      val scalar = nominalTypes.scalar(model)
+      val schema =
+        CodeBlock
+          .builder()
+          .add(
+            "/** Validating schema for %L. */\nexport const %LSchema = ",
+            model.name,
+            name.simpleName(),
+          ).add(scalar.type.directZodSchema(true, scalar.property.validation)!!)
+      if (scalar.type.name == "integer") {
+        schema.add(".refine(Number.isInteger)")
       }
-    val interfaceBuilder =
-      InterfaceSpec
-        .builder(typeName.simpleName())
-        .addModifiers(Modifier.EXPORT)
-        .addSuperInterface(TypeName.namedImport("UnknownVariant", "@outfoxx/sunday"))
-        .apply {
-          if (fallback.hierarchy.kind == GeneratedModel.Kind.OBJECT && fallback.hierarchy.isProblemModel()) {
-            addSuperInterface(fallback.hierarchy.typeName(fallback.hierarchy.name.toUpperCamelCase()))
-          }
-        }
-    exposedProperties.forEach { property ->
-      val propertyType = property.type.typeName(typeName).modelPropertyType(property)
-      interfaceBuilder.addProperty(
-        PropertySpec
-          .builder(property.name.typeScriptIdentifierName, propertyType.nonUndefinable)
-          .optional(propertyType.isUndefinable)
-          .build(),
+      scalar.patterns.filterNot { it == scalar.property.validation["pattern"] }.forEach {
+        schema.add(".regex(new RegExp(%S))", it)
+      }
+      schema
+        .add(".brand<%S>();\n", model.name)
+        .add(
+          "/** Validates and brands a raw scalar. */\nexport function %L(value: %T): %T {\n",
+          name.simpleName(),
+          scalar.type.typeName(name),
+          name,
+        ).add("  return %LSchema.parse(value);\n}\n", name.simpleName())
+        .add(
+          "/** Tests whether a value satisfies this scalar's schema. */\nexport function is%L(value: unknown): value is %T {\n",
+          name.simpleName(),
+          name,
+        ).add("  return %LSchema.safeParse(value).success;\n}\n", name.simpleName())
+      typeRegistry.addModelType(
+        name,
+        TypeAliasSpec.builder(name.simpleName(), schemaOutputType(name)).addModifiers(Modifier.EXPORT),
+        listOf(schema.build()),
       )
     }
-    interfaceBuilder.addProperty(
-      PropertySpec
-        .builder("rawBody", TypeName.implicit("Readonly<Record<string, unknown>>"))
-        .addModifiers(Modifier.READONLY)
-        .build(),
-    )
 
-    typeRegistry.addModelType(
-      typeName,
-      interfaceBuilder,
-      listOf(discriminatorFallbackSchemaCode(typeName, fallback, exposedProperties)),
-    )
+  private fun generateSharedUnionModelType(model: GeneratedModel) =
+    typeRegistry.outputOwnership.within(model.modelOutputOrigin()) {
+      val simpleName = model.name.toUpperCamelCase()
+      val typeName = model.typeName(simpleName)
+      val typeAliasBuilder =
+        TypeAliasSpec
+          .builder(
+            typeName.simpleName(),
+            if (model.isRecursiveModel()) {
+              TypeName.unionType(*model.aliases.map { alias -> alias.typeName(typeName) }.toTypedArray())
+            } else {
+              schemaOutputType(typeName)
+            },
+          ).addModifiers(Modifier.EXPORT)
+
+      typeRegistry.addModelType(
+        typeName,
+        typeAliasBuilder,
+        listOf(
+          unionSchemaCode(
+            typeName,
+            model,
+            schemaTypeName = typeName.takeIf { model.isRecursiveModel() },
+          ),
+        ),
+      )
+    }
+
+  private fun generateDiscriminatorFallbackType(model: GeneratedModel) {
+    return typeRegistry.outputOwnership.within(model.modelOutputOrigin()) {
+      val fallback = discriminatorFallbacks[model] ?: return
+      if (!generatedDiscriminatorFallbacks.add(model)) {
+        return
+      }
+      val typeName = model.typeName(fallback.modelName.toUpperCamelCase())
+      val exposedProperties =
+        buildList {
+          if (!fallback.externallyDiscriminated) {
+            add(fallback.discriminatorProperty)
+          }
+          addAll(fallback.baseProperties)
+        }
+      val interfaceBuilder =
+        InterfaceSpec
+          .builder(typeName.simpleName())
+          .addModifiers(Modifier.EXPORT)
+          .addSuperInterface(TypeName.namedImport("UnknownVariant", "@outfoxx/sunday"))
+          .apply {
+            if (fallback.hierarchy.kind == GeneratedModel.Kind.OBJECT && fallback.hierarchy.isProblemModel()) {
+              addSuperInterface(fallback.hierarchy.typeName(fallback.hierarchy.name.toUpperCamelCase()))
+            }
+          }
+      exposedProperties.forEach { property ->
+        val propertyType = property.type.typeName(typeName).modelPropertyType(property)
+        interfaceBuilder.addProperty(
+          PropertySpec
+            .builder(property.name.typeScriptIdentifierName, propertyType.nonUndefinable)
+            .optional(propertyType.isUndefinable)
+            .build(),
+        )
+      }
+      interfaceBuilder.addProperty(
+        PropertySpec
+          .builder("rawBody", TypeName.implicit("Readonly<Record<string, unknown>>"))
+          .addModifiers(Modifier.READONLY)
+          .build(),
+      )
+
+      typeRegistry.addModelType(
+        typeName,
+        interfaceBuilder,
+        listOf(discriminatorFallbackSchemaCode(typeName, fallback, exposedProperties)),
+      )
+    }
   }
 
   private fun discriminatorFallbackSchemaCode(
@@ -1932,14 +1967,14 @@ class TypeScriptSundayIrGenerator(
           TypeScriptPatchHelpers.adapters(
             typeName,
             patch.typeName(patch.name.toUpperCamelCase()),
-            patchSupportName,
+            patchSupportName(model),
             patch.properties.firstOrNull { it.patchDiscriminator }?.wireName,
           )
         original != null ->
           TypeScriptPatchHelpers.factory(
             typeName,
             original.typeName(original.name.toUpperCamelCase()),
-            patchSupportName,
+            patchSupportName(model),
           )
         else -> null
       }

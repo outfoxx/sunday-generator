@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
@@ -47,7 +48,12 @@ class SwiftParameterToleranceTest {
       registry,
       SwiftSundayOptions("http://example.com/", listOf("application/json"), "API"),
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("CollisionTests.swift"),
@@ -98,7 +104,12 @@ class SwiftParameterToleranceTest {
       registry,
       SwiftSundayOptions("http://example.com/", listOf("application/json"), "API", defaultTolerance = tolerance),
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("ParameterTests.swift"),

@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Validation and Names API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "ValidationAndNamesService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "listProjects"
     method: "GET"
@@ -59,6 +61,7 @@ services:
 models:
 - name: "ProjectSearch"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/ProjectSearch"
   properties:
   - name: "pageSize"
     type:

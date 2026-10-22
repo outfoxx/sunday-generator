@@ -45,7 +45,7 @@ internal fun addOpenModelProperties(
   properties: GeneratedModelProperties,
   preserveUnknownFields: Boolean,
   nativeTypes: BeanValidationTypes?,
-  register: (ClassName, TypeSpec.Builder) -> Unit,
+  register: (GeneratedModel, ClassName, TypeSpec.Builder) -> Unit,
   typeName: (GeneratedTypeRef) -> TypeName,
 ) {
   if (KotlinTypeRegistry.Option.JacksonAnnotations !in options) {
@@ -207,7 +207,7 @@ internal fun addOpenModelProperties(
             field == null || !field.required && !properties.acceptsNull(field.type)
           },
           modelTypes.keys.filter { it.enclosingClassName() == type }.mapTo(mutableSetOf()) { it.simpleName },
-          register,
+          { name, binding -> register(entry.first, name, binding) },
         )
       }
     }

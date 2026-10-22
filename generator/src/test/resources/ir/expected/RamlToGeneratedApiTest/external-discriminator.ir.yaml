@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "External Discriminator API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "ExternalDiscriminatorService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "getAnimal"
     method: "GET"
@@ -36,6 +38,7 @@ services:
 models:
 - name: "Animal"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fanimals%2F%7BanimalId%7D/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/AnimalEnvelope/property/animal/shape/animal/shape/Animal"
   properties:
   - name: "kind"
     type:
@@ -53,6 +56,7 @@ models:
       name: "Dog"
 - name: "AnimalEnvelope"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fanimals%2F%7BanimalId%7D/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/AnimalEnvelope"
   properties:
   - name: "animal"
     type:
@@ -67,6 +71,7 @@ models:
     required: true
 - name: "Cat"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/declares/shape/Cat"
   properties:
   - name: "huntingSkill"
     type:
@@ -80,6 +85,7 @@ models:
   discriminatorValue: "cat"
 - name: "Dog"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/declares/shape/Dog"
   properties:
   - name: "packSize"
     type:

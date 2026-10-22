@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -48,7 +49,11 @@ class PythonParameterToleranceTest : PythonTest() {
       PythonSundayIrGenerator(
         parameterNameCollisionApi(frontend, directory, listOf("validateParameters")),
         PythonGeneratorOptions(packageName = "client_api"),
-      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -87,17 +92,21 @@ class PythonParameterToleranceTest : PythonTest() {
   ) {
     val tolerance = if (frontend.endsWith("-all")) Tolerance.All else Tolerance.Response
     val api = parameterToleranceApi(frontend.removeSuffix("-all"), directory, cookies = true)
-    val categories = setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)
+    val categories = GeneratedTypeCategory.entries.toSet()
     val clients =
       PythonSundayIrGenerator(
         api,
         PythonGeneratorOptions(packageName = "client_api", defaultTolerance = tolerance),
-      ).generateModules(categories)
+      ).generateModules(
+        GeneratedOutputSelection(categories),
+      )
     val servers =
       PythonLitestarIrGenerator(
         api,
         PythonGeneratorOptions(packageName = "server_api", defaultTolerance = tolerance),
-      ).generateModules(categories)
+      ).generateModules(
+        GeneratedOutputSelection(categories),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -203,17 +212,21 @@ class PythonParameterToleranceTest : PythonTest() {
             )
           },
       )
-    val categories = setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)
+    val categories = GeneratedTypeCategory.entries.toSet()
     val clients =
       PythonSundayIrGenerator(
         api,
         PythonGeneratorOptions(packageName = "client_api"),
-      ).generateModules(categories)
+      ).generateModules(
+        GeneratedOutputSelection(categories),
+      )
     val servers =
       PythonLitestarIrGenerator(
         api,
         PythonGeneratorOptions(packageName = "server_api"),
-      ).generateModules(categories)
+      ).generateModules(
+        GeneratedOutputSelection(categories),
+      )
     assertTrue(
       compileModules(
         compiler,

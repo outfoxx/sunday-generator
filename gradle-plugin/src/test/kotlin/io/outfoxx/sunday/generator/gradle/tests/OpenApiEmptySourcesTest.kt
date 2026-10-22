@@ -47,7 +47,7 @@ class OpenApiEmptySourcesTest {
             framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.Sunday)
             mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
             pkgName.set('test.' + generation)
-            generateService.set(false)
+            outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
             disableJacksonAnnotations.set(true)
             disableValidationConstraints.set(true)
           }

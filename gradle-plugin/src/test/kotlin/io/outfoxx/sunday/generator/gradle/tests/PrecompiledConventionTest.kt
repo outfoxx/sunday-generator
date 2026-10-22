@@ -108,8 +108,8 @@ class PrecompiledConventionTest {
           create("models") {
             framework.set(TargetFramework.JAXRS)
             mode.set(GenerationMode.Server)
-            generateModel.set(true)
-            generateService.set(false)
+
+            outputCategories.set(setOf(io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem))
             preserveUnknownFields.set(true)
           }
         }

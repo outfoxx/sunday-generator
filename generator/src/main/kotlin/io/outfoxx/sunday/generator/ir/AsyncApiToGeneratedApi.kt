@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
@@ -31,23 +32,29 @@ class AsyncApiToGeneratedApi(
 
   /** Converts an AsyncAPI source document into a generated API IR composition fragment. */
   fun convertFragment(sourceUri: URI): GeneratedApiFragment {
+    val documentUri =
+      GeneratedDocumentUri
+        .canonical(sourceUri)
     val sourceDocument =
       AsyncApiSourceDocument.read(
-        sourceUri.toString(),
+        documentUri.toString(),
         OpenApiDocumentLoader.create(options.openApiReferences),
       )
     activeSourceDocument = sourceDocument
     try {
       val localModels = linkedMapOf<String, GeneratedModel>()
       val servers = sourceDocument.servers().map { server -> server.generatedServer(sourceDocument) }
-      val serviceFragments = sourceDocument.serviceFragments(sourceUri.toString(), localModels)
+      val serviceFragments = sourceDocument.serviceFragments(documentUri.toString(), localModels)
       val services = serviceFragments.map { fragment -> fragment.service }
+      if (services.isEmpty()) {
+        sourceDocument.schemas().keys.forEach { materializedNamedTypeRef(it, sourceDocument.location, localModels) }
+      }
       val generatedApi =
         GeneratedApi(
           name = sourceDocument.title() ?: "API",
           quarkusConfig = sourceDocument.quarkusConfig(),
-          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, sourceUri.toString()),
-          services = services,
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, documentUri.toString()),
+          services = services.map { it.copy(ownerUris = setOf(documentUri.toString())) },
           servers = servers,
           models = AsyncApiModelRefinements(localModels.values.toList()).refine(),
           auth = sourceDocument.auth(),
@@ -57,7 +64,7 @@ class AsyncApiToGeneratedApi(
       val patchApi = GeneratedPatchModels.materialize(generatedApi, autoPatchable = options.autoPatchable)
       return GeneratedApiFragment(
         api = patchApi,
-        apiId = sourceDocument.compositionApiIdentity(sourceUri.toString()),
+        apiId = sourceDocument.compositionApiIdentity(documentUri.toString()),
         serviceIdentities = serviceFragments.associate { fragment -> fragment.service.name to fragment.identity },
         operationIdentities =
           serviceFragments
@@ -512,6 +519,12 @@ class AsyncApiToGeneratedApi(
     localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, location, localModels).copy(
+      source =
+        GeneratedSourceSpec(
+          GeneratedSourceSpec.Kind.ASYNCAPI,
+          (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+        ),
+      declarationUri = (schema as? OpenApiSchema)?.declarationUri,
       targets = declarationTypeSchema(schema).languageTypeTargets("AsyncAPI model '$name'"),
       patchable = GeneratedPatchModels.annotation(schema["x-sunday-patchable"], "AsyncAPI model '$name'"),
       tolerance = GeneratedTolerance.parse(schema["x-sunday-tolerance"], "AsyncAPI model '$name' x-sunday-tolerance"),

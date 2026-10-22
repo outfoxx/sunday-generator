@@ -104,10 +104,28 @@ abstract class CommonGenerateCommand(
 
   val outputCategories by option(
     "-category",
-    help = "Add category of type to output ${GeneratedTypeCategory.entries.joinToString { it.name }}",
-  ).enum<GeneratedTypeCategory>()
-    .multiple(GeneratedTypeCategory.entries)
+    help = "Add category of type to output ${GeneratedTypeCategory.entries.joinToString { it.name.lowercase() + "s" }}",
+  ).enum<GeneratedTypeCategory> { it.name.lowercase() + "s" }
+    .multiple()
     .unique()
+
+  /** Owner identifiers without a scheme denote local files. */
+  val outputOwners by option("-owner", help = "Emit types owned by this document URI or local filename").multiple()
+
+  /** Resolves configuration paths before passing absolute URIs to the generator. */
+  val outputSelection: GeneratedOutputSelection
+    get() =
+      GeneratedOutputSelection(
+        outputCategories.toSet(),
+        outputOwners
+          .map {
+            GeneratedDocumentUri.configuration(
+              it,
+              java.nio.file.Path
+                .of(""),
+            )
+          }.toSet(),
+      )
 
   val outputDirectory by option(
     "-out",

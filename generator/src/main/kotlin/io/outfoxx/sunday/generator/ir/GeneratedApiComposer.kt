@@ -274,7 +274,10 @@ class GeneratedApiComposer {
       return
     }
 
-    val mergedService = existing.service.mergeMetadata(service)
+    val mergedService =
+      existing.service.mergeMetadata(service).copy(
+        ownerUris = existing.service.ownerUris + service.ownerUris,
+      )
     existing.service = mergedService
     service.operations.forEach { operation ->
       addOperation(existing, fragment, service, operation, asyncEventStreams, eventStreamFramingOperations)
@@ -351,6 +354,16 @@ class GeneratedApiComposer {
     }
 
     if (existing.model.name == model.name && existing.model.compositionSignature() == model.compositionSignature()) {
+      val owners =
+        existing.model.ownerUris.ifEmpty {
+          setOfNotNull(
+            existing.model.source?.location ?: existing.model.declarationUri?.substringBefore('#'),
+          )
+        } +
+          model.ownerUris.ifEmpty { setOfNotNull(model.source?.location ?: model.declarationUri?.substringBefore('#')) }
+      if (owners.size > 1) {
+        models[identity.id] = existing.copy(model = existing.model.copy(ownerUris = owners))
+      }
       return
     }
 
@@ -400,6 +413,8 @@ class GeneratedApiComposer {
   private fun GeneratedModel.compositionSignature(): GeneratedModel =
     copy(
       source = null,
+      declarationUri = null,
+      ownerUris = emptySet(),
       properties = properties.map { property -> property.compositionSignature() },
       aliases = aliases.map { alias -> alias.compositionSignature() },
       patchOf = patchOf?.compositionSignature(),

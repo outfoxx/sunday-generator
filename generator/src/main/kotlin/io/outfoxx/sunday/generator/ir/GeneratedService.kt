@@ -21,6 +21,8 @@ package io.outfoxx.sunday.generator.ir
  */
 data class GeneratedService(
   val name: String,
+  /** Canonical document URIs contributing to this complete service declaration. */
+  val ownerUris: Set<String> = emptySet(),
   val baseUri: String? = null,
   val baseUriParameters: List<GeneratedParameter> = listOf(),
   val group: String? = null,

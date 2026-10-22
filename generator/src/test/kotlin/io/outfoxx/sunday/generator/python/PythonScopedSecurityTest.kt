@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
@@ -49,7 +50,11 @@ class PythonScopedSecurityTest : PythonTest() {
     val api = source.copy(services = listOf(GeneratedService("SecurityService", operations = operations)))
     val modules =
       PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "security_api", profile = "external"))
-        .generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+        .generateModules(
+          GeneratedOutputSelection(
+            GeneratedTypeCategory.entries.toSet(),
+          ),
+        )
     val calls =
       operations.joinToString("\n") {
         if (it.streaming != null) {

@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Extensions API"
 source:
   kind: "OPENAPI"
   location: "SOURCE_LOCATION"
 services:
 - name: "ProjectsService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://api.example.com/{version}"
   baseUriParameters:
   - name: "version"

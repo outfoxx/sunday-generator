@@ -39,7 +39,7 @@ class DirectionalToleranceIrTest {
     assertEquals(GeneratedTolerance.RESPONSE, models.getValue("State").tolerance)
     assertEquals(GeneratedTolerance.ALL, models.getValue("OpenState").tolerance)
     assertEquals(api, GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)))
-    assertEquals("1", api.irVersion)
+    assertEquals(GeneratedApi.CURRENT_IR_VERSION, api.irVersion)
     val event = models.getValue("Event")
     val fallback = event.discriminatorFallbackOrNull(GeneratedApiIndex(api))
     assertNotNull(fallback)

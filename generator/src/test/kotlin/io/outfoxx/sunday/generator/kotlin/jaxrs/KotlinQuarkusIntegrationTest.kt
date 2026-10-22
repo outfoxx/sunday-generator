@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.squareup.kotlinpoet.ClassName
 import com.tschuchort.compiletesting.KotlinCompilation
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
@@ -377,7 +378,10 @@ class KotlinQuarkusIntegrationTest {
       val compiled = compileTypesResult(registry.buildTypes())
       expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
       val output = directory.resolve("defaults-$discovery")
-      registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+      registry.generateFiles(
+        GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+        output,
+      )
       val generated =
         io.smallrye.config.PropertiesConfigSource(
           output.resolve("META-INF/microprofile-config.properties").toUri().toURL(),
@@ -531,7 +535,10 @@ class KotlinQuarkusIntegrationTest {
     val compiled = compileTypesResult(registry.buildTypes())
     expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
     val output = directory.resolve("overlapping-providers")
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      output,
+    )
     val generated =
       io.smallrye.config.PropertiesConfigSource(
         output.resolve("META-INF/microprofile-config.properties").toUri().toURL(),
@@ -614,7 +621,10 @@ class KotlinQuarkusIntegrationTest {
         val compiled = compileTypesResult(types)
         expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
         val output = directory.resolve("$mode-$selection")
-        registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+        registry.generateFiles(
+          GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+          output,
+        )
         val path = if (mode == GenerationMode.Server) "config/server.properties" else "config/client.properties"
         expectThat(Files.exists(output.resolve(path))).isEqualTo(selection == "renamed")
         expectThat(
@@ -688,7 +698,10 @@ class KotlinQuarkusIntegrationTest {
       KotlinJAXRSIrGenerator(roundtrip, registry, options(mode)).generateServiceTypes()
       expectThat(compileTypesResult(registry.buildTypes()).exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
       val output = directory.resolve("resources-$mode")
-      registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+      registry.generateFiles(
+        GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+        output,
+      )
       val properties =
         Properties().apply {
           Files.newBufferedReader(output.resolve("META-INF/microprofile-config.properties")).use { load(it) }
@@ -767,7 +780,10 @@ class KotlinQuarkusIntegrationTest {
       val compiled = compileTypesResult(registry.buildTypes())
       expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
       val output = directory.resolve("selected-${selector ?: "default"}")
-      registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+      registry.generateFiles(
+        GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+        output,
+      )
       val props =
         Properties().apply {
           Files.newBufferedReader(output.resolve("META-INF/microprofile-config.properties")).use { load(it) }
@@ -849,7 +865,10 @@ class KotlinQuarkusIntegrationTest {
           expectThat(method.annotations.none { it.annotationClass.simpleName == "OidcClientFilter" }).isTrue()
         }
       }
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), directory.resolve("selected-security"))
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      directory.resolve("selected-security"),
+    )
     val props =
       Properties().apply {
         Files
@@ -923,7 +942,10 @@ class KotlinQuarkusIntegrationTest {
         .filter { it.annotationClass.simpleName == "OidcClientFilter" }
     expectThat(filters.size).isEqualTo(1)
     val output = directory.resolve("selected-alternative")
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      output,
+    )
     val props =
       Properties().apply {
         Files.newBufferedReader(output.resolve("META-INF/microprofile-config.properties")).use { load(it) }

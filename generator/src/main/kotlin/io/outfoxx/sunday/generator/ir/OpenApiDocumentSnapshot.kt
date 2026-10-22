@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.ir
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Files
@@ -44,7 +45,7 @@ object OpenApiDocumentSnapshot {
         directory.resolve(body).writeOpenApiContent(bytes)
         mapOf(
           "source" to encodeUri(source, baseDirectory),
-          "uri" to encodeUri(document.uri, baseDirectory),
+          "uri" to effectiveUri(document.uri, baseDirectory),
           "body" to body,
         )
       }
@@ -88,6 +89,17 @@ object OpenApiDocumentSnapshot {
         ?: throw IOException("OpenAPI document '$uri' is missing from the captured inputs")
     }
   }
+
+  // Keep retrieval aliases as lookup keys, but retain physical file ownership when snapshots relocate without symlinks.
+  private fun effectiveUri(
+    uri: URI,
+    baseDirectory: Path,
+  ): Map<String, String> =
+    if (uri.scheme.equals("file", ignoreCase = true) && Path.of(uri).fileSystem == baseDirectory.fileSystem) {
+      encodeUri(GeneratedDocumentUri.canonical(uri), baseDirectory.toFile().canonicalFile.toPath())
+    } else {
+      encodeUri(uri, baseDirectory)
+    }
 
   private fun encodeUri(
     uri: URI,

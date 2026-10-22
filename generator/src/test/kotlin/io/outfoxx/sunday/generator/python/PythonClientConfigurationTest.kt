@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -49,7 +50,11 @@ class PythonClientConfigurationTest : PythonTest() {
           aggregateServices = true,
           aggregateServiceName = "ExampleAPI",
         ),
-      ).generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     val source =
       java.nio.file.Files
         .readString(Path.of("src/test/resources/client-config-persistence/python.py"))
@@ -64,7 +69,11 @@ class PythonClientConfigurationTest : PythonTest() {
     val error =
       assertThrows(IllegalArgumentException::class.java) {
         PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
-          .generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+          .generateModules(
+            GeneratedOutputSelection(
+              GeneratedTypeCategory.entries.toSet(),
+            ),
+          )
       }
     assertTrue(error.message.orEmpty().contains("credential field name collision"))
   }
@@ -116,7 +125,11 @@ class PythonClientConfigurationTest : PythonTest() {
     val api = original.copy(services = original.services.map { it.copy(name = "Service", group = null) })
     val modules =
       PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
-        .generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+        .generateModules(
+          GeneratedOutputSelection(
+            GeneratedTypeCategory.entries.toSet(),
+          ),
+        )
     val service = api.services.single()
     assertTrue(
       compileModules(
@@ -172,7 +185,11 @@ class PythonClientConfigurationTest : PythonTest() {
     val factory = "create_${service.pythonServiceBaseName.pythonIdentifierName}"
     val modules =
       PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
-        .generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+        .generateModules(
+          GeneratedOutputSelection(
+            GeneratedTypeCategory.entries.toSet(),
+          ),
+        )
     assertTrue(
       compileModules(
         compiler,
@@ -240,7 +257,11 @@ class PythonClientConfigurationTest : PythonTest() {
           aggregateServices = true,
           aggregateServiceName = "ExampleAPI",
         ),
-      ).generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -327,7 +348,11 @@ class PythonClientConfigurationTest : PythonTest() {
           aggregateServices = true,
           aggregateServiceName = "ExampleAPI",
         ),
-      ).generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(compileModules(compiler, modules, listOf("example_api.api")))
   }
 }

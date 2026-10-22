@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
@@ -53,7 +54,12 @@ class SwiftScopedSecurityTest {
       registry,
       SwiftSundayOptions("https://api.example/problems/", listOf("application/json"), "API", profile = "external"),
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     val calls =
       operations.joinToString("\n") { operation ->

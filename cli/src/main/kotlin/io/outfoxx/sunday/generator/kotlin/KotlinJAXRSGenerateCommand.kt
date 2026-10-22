@@ -20,6 +20,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
@@ -105,7 +106,7 @@ open class KotlinJAXRSGenerateCommand :
   ).flag(default = false)
 
   override fun run() {
-    println("Generating ${this.outputCategories} types")
+    println("Generating ${outputCategories.ifEmpty { GeneratedTypeCategory.entries }} types")
     println("Processing ${files.joinToString()}")
 
     val api =
@@ -121,7 +122,7 @@ open class KotlinJAXRSGenerateCommand :
     KotlinJAXRSIrGenerator(api, typeRegistry, kotlinJaxrsOptions())
       .generateServiceTypes()
 
-    typeRegistry.generateFiles(outputCategories.toSet(), outputDirectory.toPath())
+    typeRegistry.generateFiles(outputSelection, outputDirectory.toPath())
   }
 
   override fun effectiveProblemLibrary(): KotlinProblemLibrary =

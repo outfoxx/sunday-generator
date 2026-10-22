@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
@@ -59,7 +60,11 @@ class PythonSecuritySchemeTest : PythonTest() {
           profile = "external",
           enforceSecuritySchemes = true,
         ),
-      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -195,7 +200,9 @@ class PythonSecuritySchemeTest : PythonTest() {
         PythonLitestarIrGenerator(
           api.copy(services = listOf(duplicate)),
           PythonGeneratorOptions(packageName = "security_api", enforceSecuritySchemes = true),
-        ).generateModules(setOf(GeneratedTypeCategory.Service))
+        ).generateModules(
+          GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)),
+        )
       }
     assertEquals("Duplicate security policy key '${service.name}.${operation.id}'", error.message)
   }
@@ -370,6 +377,10 @@ class PythonSecuritySchemeTest : PythonTest() {
         aggregateServiceName = "Secure",
         enforceSecuritySchemes = enforce,
       ),
-    ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+    ).generateModules(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+    )
   }
 }

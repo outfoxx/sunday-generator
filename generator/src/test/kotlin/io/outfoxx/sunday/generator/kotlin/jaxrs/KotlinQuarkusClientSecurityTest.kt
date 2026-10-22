@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.client.quarkus.ClientAuthentication
 import io.outfoxx.sunday.client.quarkus.ClientInvocation
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
@@ -149,7 +150,10 @@ class KotlinQuarkusClientSecurityTest {
       )
     }
     val output = directory.resolve("generated")
-    registry.generateFiles(setOf(GeneratedTypeCategory.Service), output)
+    registry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)),
+      output,
+    )
     assertEquals(
       "io.test.OpenAPIOidcConfiguration\n",
       Files.readString(output.resolve("META-INF/services/io.smallrye.config.ConfigSourceFactory")),

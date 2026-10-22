@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
@@ -27,6 +28,7 @@ import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
+import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates transport-neutral Python Sunday client modules from generated IR. */
@@ -38,23 +40,55 @@ class PythonSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(listOf("application/json"))
 
   /** Generates the modules for the requested type categories. */
-  fun generateModules(outputCategories: Set<GeneratedTypeCategory>): List<PythonModule> {
+  fun generateModules(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<PythonModule> {
     options.requireBrokerServicesSupported("Python/Sunday")
     val packageName = api.pythonPackageName(options)
     val services = api.pythonHttpServices()
+
+    fun selected(service: GeneratedService): Boolean {
+      val origin = service.outputOrigin(api)
+      return selection.includes(origin.category, origin.ownerUris)
+    }
+    val sharedOrigin = api.outputOrigin()
+    val includeShared = selection.includes(sharedOrigin.category, sharedOrigin.ownerUris)
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
-    if (GeneratedTypeCategory.Model in outputCategories) {
+    val selectedModels =
+      api.models
+        .filter { model ->
+          val origin = model.outputOrigin(api)
+          selection.includes(origin.category, origin.ownerUris)
+        }.toSet()
+    if (selectedModels.isNotEmpty() ||
+      (
+        selection.ownerUris.isEmpty() &&
+          (selection.categories.isEmpty() || GeneratedTypeCategory.Model in selection.categories)
+      )
+    ) {
       modules +=
         PythonModelRenderer(
           packageName,
           options.preserveUnknownFields,
           options.defaultTolerance,
-        ).renderModels(api.models)
-      modules += PythonProblemRenderer(packageName).renderProblems(api.problems)
+        ).renderModels(api.models) { it in selectedModels }
+    }
+    val problems =
+      api.problems.filter { problem ->
+        val origin = problem.outputOrigin(api)
+        selection.includes(origin.category, origin.ownerUris)
+      }
+    if (problems.isNotEmpty() ||
+      (
+        selection.ownerUris.isEmpty() &&
+          (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories)
+      )
+    ) {
+      modules += PythonProblemRenderer(packageName).renderProblems(problems)
     }
 
-    if (GeneratedTypeCategory.Service in outputCategories) {
+    if (services.isNotEmpty() &&
+      (selection.categories.isEmpty() || GeneratedTypeCategory.Service in selection.categories)
+    ) {
       services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Python/Sunday")
       val clientRenderer =
         PythonClientRenderer(
@@ -78,10 +112,17 @@ class PythonSundayIrGenerator(
         )
       val configurations = if (options.generateClientConfig) api.clientConfigurations(services) else emptyList()
       val factories = PythonClientConfigurations(api, packageName, options.profile, defaultMediaTypes)
-      if (configurations.isNotEmpty()) modules += factories.configurations(configurations)
+      if (configurations.isNotEmpty() && includeShared) modules += factories.configurations(configurations)
       modules +=
-        services.map { service -> factories.factories(clientRenderer.renderService(service), service, configurations) }
-      if (options.aggregateServices && services.size > 1) {
+        services.mapNotNull { service ->
+          factories
+            .factories(
+              clientRenderer.renderService(service),
+              service,
+              configurations,
+            ).takeIf { selected(service) }
+        }
+      if (options.aggregateServices && services.size > 1 && includeShared) {
         if (options.generateClientConfig) configurations.requireCompatibleAggregate(services)
         val className = options.aggregateServiceName?.pythonTypeName ?: api.aggregateTypeName
         modules +=

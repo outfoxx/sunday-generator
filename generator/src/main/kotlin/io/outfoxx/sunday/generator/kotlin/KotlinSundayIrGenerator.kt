@@ -171,6 +171,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTransport
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.tolerantEnumTypeSpec
+import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
@@ -266,10 +267,29 @@ class KotlinSundayIrGenerator(
       .toSet()
   }
 
+  private fun GeneratedModel.modelOutputOrigin() =
+    outputOrigin(api).let { origin ->
+      if (isProblemModel()) {
+        origin.copy(
+          category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem,
+        )
+      } else {
+        origin
+      }
+    }
+
   /**
    * Generates Kotlin/Sunday service types from IR and registers them in the type registry.
    */
   fun generateServiceTypes() {
+    typeRegistry.outputOwnership.current = api.outputOrigin()
+    api.models
+      .filter { model ->
+        model.scope?.service?.let { owner -> api.services.any { it.name == owner } } ?: true
+      }.forEach { model ->
+        typeRegistry.outputOwnership.bind(model.kotlinClassName(), model.modelOutputOrigin())
+      }
+
     val services = api.kotlinSundayServices()
     services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Kotlin/Sunday")
     val brokerServices = api.kotlinSundayBrokerServices()
@@ -290,6 +310,7 @@ class KotlinSundayIrGenerator(
         val serviceTypeName = ClassName.bestGuess("$servicePackageName.${service.typeSimpleName()}")
         val serviceTypeBuilder = generateServiceType(serviceTypeName, service)
 
+        typeRegistry.outputOwnership.bind(serviceTypeName, service.outputOrigin(api))
         typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
         GeneratedKotlinService(service, serviceTypeName)
       }
@@ -313,6 +334,7 @@ class KotlinSundayIrGenerator(
           ClassName.bestGuess("$servicePackageName.${service.brokerTypeSimpleName(serviceTypeNames)}")
         val serviceTypeBuilder = generateBrokerServiceType(serviceTypeName, service)
 
+        typeRegistry.outputOwnership.bind(serviceTypeName, service.outputOrigin(api))
         typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
       }
     }
@@ -421,21 +443,30 @@ class KotlinSundayIrGenerator(
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
         nativePayloads.register(
           GeneratedTypeRef.named(model.name, scope = model.scope),
-          model.nativeValidationName(),
+          model.nativeValidationName().also { typeRegistry.outputOwnership.bind(it, model.modelOutputOrigin()) },
           shapeType = { it.commonSchemaOwner() },
           commonRules =
             model.target("kotlinClient", "kotlin")?.typeName != null && modelProperties.hasUnionCommonRules(model),
         )
       }
       services
-        .flatMap { it.operations }
-        .flatMap { operation ->
-          listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type) +
-            operation.parameters.map { it.type }
-        }.filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
-        .distinct()
-        .forEachIndexed { index, reference ->
-          nativePayloads.register(reference, ClassName(servicePackageName(), "Payload${index + 1}Validation"))
+        .flatMap { service ->
+          service.operations.flatMap { operation ->
+            (
+              listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type) +
+                operation.parameters.map { it.type }
+            ).filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
+              .map { it to service.outputOrigin(api) }
+          }
+        }.groupBy({ it.first }, { it.second })
+        .entries
+        .forEachIndexed { index, (reference, origins) ->
+          val name = ClassName(servicePackageName(), "Payload${index + 1}Validation")
+          typeRegistry.outputOwnership.bind(
+            name,
+            api.outputOrigin().copy(ownerUris = origins.flatMap { it.ownerUris }.toSet()),
+          )
+          nativePayloads.register(reference, name)
         }
     }
     val modelTypes =
@@ -451,7 +482,10 @@ class KotlinSundayIrGenerator(
       typeRegistry.beanValidationTypes.takeIf {
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
-      typeRegistry::addModelType,
+      { model, name, builder ->
+        typeRegistry.outputOwnership.bind(name, model.modelOutputOrigin())
+        typeRegistry.addModelType(name, builder)
+      },
     ) {
       it.kotlinTypeName()
     }
@@ -480,13 +514,16 @@ class KotlinSundayIrGenerator(
       typeRegistry.beanValidationTypes.takeIf {
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
-      typeRegistry::addModelType,
+      api.models,
     )
     models
       .flatMap { model ->
         buildList {
           modelTypes[model.kotlinClassName()]?.let { (_, type) -> add(model.kotlinClassName() to type) }
-          model.discriminatorFallbackType()?.let { fallback -> add(fallback) }
+          model.discriminatorFallbackType()?.let { fallback ->
+            typeRegistry.outputOwnership.bind(fallback.first, model.modelOutputOrigin())
+            add(fallback)
+          }
         }
       }.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
   }
@@ -535,7 +572,8 @@ class KotlinSundayIrGenerator(
         .flatMap { service -> service.referencedProblems(apiIndex) }
         .distinctBy { problem -> problem.typeUri }
 
-    referencedProblems.forEach { problem ->
+    (if (api.services.isEmpty()) api.problems else referencedProblems).distinctBy { it.typeUri }.forEach { problem ->
+      typeRegistry.outputOwnership.bind(problem.typeName(), problem.outputOrigin(api))
       typeRegistry.addModelType(problem.typeName(), problem.problemType())
     }
   }
@@ -983,108 +1021,115 @@ class KotlinSundayIrGenerator(
     serviceTypeName: ClassName,
     service: GeneratedService,
   ): TypeSpec.Builder {
-    val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
-    val serviceTypeBuilder = TypeSpec.classBuilder(serviceTypeName)
-    val constructorBuilder =
-      FunSpec
-        .constructorBuilder()
-        .addParameter("transport", transportType)
+    return typeRegistry.outputOwnership.within(service.outputOrigin(api)) {
+      val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
+      val serviceTypeBuilder = TypeSpec.classBuilder(serviceTypeName)
+      val constructorBuilder =
+        FunSpec
+          .constructorBuilder()
+          .addParameter("transport", transportType)
 
-    constructorBuilder
-      .addParameter(
-        ParameterSpec
-          .builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE))
-          .defaultValue("%L", mediaTypesArray(mediaSelection.contentTypes))
-          .build(),
-      ).addParameter(
-        ParameterSpec
-          .builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE))
-          .defaultValue("%L", mediaTypesArray(mediaSelection.acceptTypes))
-          .build(),
-      )
+      constructorBuilder
+        .addParameter(
+          ParameterSpec
+            .builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE))
+            .defaultValue("%L", mediaTypesArray(mediaSelection.contentTypes))
+            .build(),
+        ).addParameter(
+          ParameterSpec
+            .builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE))
+            .defaultValue("%L", mediaTypesArray(mediaSelection.acceptTypes))
+            .build(),
+        )
 
-    if (options.generateClientConfig) {
-      constructorBuilder.addAnnotation(JvmOverloads::class)
-      constructorBuilder.addParameter(
-        ParameterSpec.builder("clientSettings", clientSettingsType.copy(nullable = true)).defaultValue("null").build(),
-      )
-      serviceTypeBuilder.addProperty(
-        PropertySpec
-          .builder(
-            "clientSettings",
-            clientSettingsType.copy(nullable = true),
-            KModifier.PRIVATE,
-          ).initializer("clientSettings")
-          .build(),
-      )
-      serviceTypeBuilder.tag(
-        AssociatedFunctions::class,
-        AssociatedFunctions(clientFactoryFunctions(service, serviceTypeName)),
-      )
-    }
-    val referencedProblems = service.referencedProblems(apiIndex)
-    referencedProblems.forEach { problem ->
-      constructorBuilder.addStatement(
-        "transport.registerProblem(%S, %T::class)",
-        problem.resolvedTypeUri(options.defaultProblemBaseUri),
-        problem.typeName(),
-      )
-    }
-
-    serviceTypeBuilder
-      .addTypeVariable(requestTypeVariable)
-      .primaryConstructor(
-        constructorBuilder.build(),
-      ).addProperty(
-        PropertySpec
-          .builder("transport", transportType, KModifier.PUBLIC)
-          .initializer("transport")
-          .build(),
-      ).addProperty(
-        PropertySpec
-          .builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE), KModifier.PUBLIC)
-          .initializer("defaultContentTypes")
-          .build(),
-      ).addProperty(
-        PropertySpec
-          .builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE), KModifier.PUBLIC)
-          .initializer("defaultAcceptTypes")
-          .build(),
-      )
-
-    service.baseURLCompanionType()?.let(serviceTypeBuilder::addType)
-
-    service.operations
-      .forEach { operation ->
-        val operationParameters = operation.operationParameters()
-        serviceTypeBuilder.addFunction(
-          generateOperation(
-            operation,
-            operationParameters,
-            api
-              .clientConstructorSecurity(
-                service,
-                operation,
-                options.generationContext(GenerationMode.Client),
-                options.generateClientConfig,
-              ).kotlinTransport(options.profile)
-              .let { legacy ->
-                if (!options.generateClientConfig) {
-                  legacy
-                } else {
-                  CodeBlock.of(
-                    "(if (clientSettings != null) this.transport.%M(clientSettings.bindings.getValue(%S)) else %L)",
-                    MemberName("io.outfoxx.sunday", "withSecurity"),
-                    operation.id,
-                    legacy,
-                  )
-                }
-              },
-          ),
+      if (options.generateClientConfig) {
+        constructorBuilder.addAnnotation(JvmOverloads::class)
+        constructorBuilder.addParameter(
+          ParameterSpec
+            .builder(
+              "clientSettings",
+              clientSettingsType.copy(nullable = true),
+            ).defaultValue("null")
+            .build(),
+        )
+        serviceTypeBuilder.addProperty(
+          PropertySpec
+            .builder(
+              "clientSettings",
+              clientSettingsType.copy(nullable = true),
+              KModifier.PRIVATE,
+            ).initializer("clientSettings")
+            .build(),
+        )
+        serviceTypeBuilder.tag(
+          AssociatedFunctions::class,
+          AssociatedFunctions(clientFactoryFunctions(service, serviceTypeName)),
+        )
+      }
+      val referencedProblems = service.referencedProblems(apiIndex)
+      (if (api.services.isEmpty()) api.problems else referencedProblems).distinctBy { it.typeUri }.forEach { problem ->
+        constructorBuilder.addStatement(
+          "transport.registerProblem(%S, %T::class)",
+          problem.resolvedTypeUri(options.defaultProblemBaseUri),
+          problem.typeName(),
         )
       }
 
-    return serviceTypeBuilder
+      serviceTypeBuilder
+        .addTypeVariable(requestTypeVariable)
+        .primaryConstructor(
+          constructorBuilder.build(),
+        ).addProperty(
+          PropertySpec
+            .builder("transport", transportType, KModifier.PUBLIC)
+            .initializer("transport")
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE), KModifier.PUBLIC)
+            .initializer("defaultContentTypes")
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE), KModifier.PUBLIC)
+            .initializer("defaultAcceptTypes")
+            .build(),
+        )
+
+      service.baseURLCompanionType()?.let(serviceTypeBuilder::addType)
+
+      service.operations
+        .forEach { operation ->
+          val operationParameters = operation.operationParameters()
+          serviceTypeBuilder.addFunction(
+            generateOperation(
+              operation,
+              operationParameters,
+              api
+                .clientConstructorSecurity(
+                  service,
+                  operation,
+                  options.generationContext(GenerationMode.Client),
+                  options.generateClientConfig,
+                ).kotlinTransport(options.profile)
+                .let { legacy ->
+                  if (!options.generateClientConfig) {
+                    legacy
+                  } else {
+                    CodeBlock.of(
+                      "(if (clientSettings != null) this.transport.%M(clientSettings.bindings.getValue(%S)) else %L)",
+                      MemberName("io.outfoxx.sunday", "withSecurity"),
+                      operation.id,
+                      legacy,
+                    )
+                  }
+                },
+            ),
+          )
+        }
+
+      return serviceTypeBuilder
+    }
   }
 
   private fun generateBrokerServiceType(
@@ -1326,17 +1371,19 @@ class KotlinSundayIrGenerator(
       .joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
 
   private fun GeneratedModel.modelType(): TypeSpec.Builder? {
-    if (target("kotlinClient", "kotlin")?.typeName != null) return null
-    return nominalGenerator.generate(this) ?: when (kind) {
-      GeneratedModel.Kind.ENUM ->
-        enumTypeSpec()
+    return typeRegistry.outputOwnership.within(modelOutputOrigin()) {
+      if (target("kotlinClient", "kotlin")?.typeName != null) return null
+      return nominalGenerator.generate(this) ?: when (kind) {
+        GeneratedModel.Kind.ENUM ->
+          enumTypeSpec()
 
-      GeneratedModel.Kind.OBJECT ->
-        objectTypeSpec()
+        GeneratedModel.Kind.OBJECT ->
+          objectTypeSpec()
 
-      GeneratedModel.Kind.UNION -> objectUnionTypeSpecOrNull()
+        GeneratedModel.Kind.UNION -> objectUnionTypeSpecOrNull()
 
-      else -> null
+        else -> null
+      }
     }
   }
 

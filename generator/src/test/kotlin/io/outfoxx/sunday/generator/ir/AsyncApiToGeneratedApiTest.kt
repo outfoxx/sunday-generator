@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.hamcrest.MatcherAssert.assertThat
@@ -182,6 +183,7 @@ class AsyncApiToGeneratedApiTest {
       equalTo(
         GeneratedService(
           name = "ProjectsService",
+          ownerUris = setOf(fragment.api.source.location),
           operations =
             listOf(
               GeneratedOperation(
@@ -441,6 +443,7 @@ class AsyncApiToGeneratedApiTest {
         listOf(
           GeneratedModel(
             name = "ProjectSnapshot",
+            declarationUri = fragment.api.source.location + "#/components/schemas/ProjectSnapshot",
             kind = GeneratedModel.Kind.OBJECT,
             source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
             properties =
@@ -500,6 +503,7 @@ class AsyncApiToGeneratedApiTest {
           ),
           GeneratedModel(
             name = "ProjectStatus",
+            declarationUri = fragment.api.source.location + "#/components/schemas/ProjectStatus",
             kind = GeneratedModel.Kind.ENUM,
             source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
             values = listOf("active", "archived"),
@@ -534,6 +538,7 @@ class AsyncApiToGeneratedApiTest {
       equalTo(
         GeneratedModel(
           name = "EventData",
+          declarationUri = fragment.api.source.location + "#/components/schemas/EventData",
           kind = GeneratedModel.Kind.UNION,
           unionMode = GeneratedModel.UnionMode.ONE_OF,
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
@@ -648,7 +653,7 @@ class AsyncApiToGeneratedApiTest {
           servers =
             listOf(
               GeneratedServer(
-                sourceUri = testUri.toString(),
+                sourceUri = GeneratedDocumentUri.canonical(testUri).toString(),
                 name = "production",
                 url = "broker.example.com:9092",
                 protocol = "kafka",
@@ -780,6 +785,7 @@ class AsyncApiToGeneratedApiTest {
       equalTo(
         GeneratedModel(
           name = "EventIdentity",
+          declarationUri = fragment.api.source.location + "#/components/schemas/EventIdentity",
           kind = GeneratedModel.Kind.UNION,
           unionMode = GeneratedModel.UnionMode.ONE_OF,
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
@@ -830,6 +836,7 @@ class AsyncApiToGeneratedApiTest {
       equalTo(
         GeneratedModel(
           name = "EventEnvelope",
+          declarationUri = fragment.api.source.location + "#/components/schemas/EventEnvelope",
           kind = GeneratedModel.Kind.UNION,
           unionMode = GeneratedModel.UnionMode.ONE_OF,
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),

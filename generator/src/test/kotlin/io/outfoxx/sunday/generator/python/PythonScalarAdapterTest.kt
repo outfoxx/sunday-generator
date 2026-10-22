@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -94,7 +95,11 @@ class PythonScalarAdapterTest : PythonTest() {
     val api = GeneratedApiIrExporter().export(spec.toUri())
     val modules =
       PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "header_fixture"))
-        .generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+        .generateModules(
+          GeneratedOutputSelection(
+            GeneratedTypeCategory.entries.toSet(),
+          ),
+        )
     assertTrue(
       compileModules(
         compiler,

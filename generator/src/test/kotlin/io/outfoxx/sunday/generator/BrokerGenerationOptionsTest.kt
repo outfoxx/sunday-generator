@@ -56,10 +56,20 @@ class BrokerGenerationOptionsTest {
       TypeScriptSundayIrGenerator(api, TypeScriptTypeRegistry(setOf()), typeScriptOptions()).generateServiceTypes()
     }
     assertUnsupported("Python/Sunday") {
-      PythonSundayIrGenerator(api, PythonGeneratorOptions(generateBrokerServices = true)).generateModules(setOf())
+      PythonSundayIrGenerator(
+        api,
+        PythonGeneratorOptions(generateBrokerServices = true),
+      ).generateModules(
+        GeneratedOutputSelection(setOf()),
+      )
     }
     assertUnsupported("Python/Litestar") {
-      PythonLitestarIrGenerator(api, PythonGeneratorOptions(generateBrokerServices = true)).generateModules(setOf())
+      PythonLitestarIrGenerator(
+        api,
+        PythonGeneratorOptions(generateBrokerServices = true),
+      ).generateModules(
+        GeneratedOutputSelection(setOf()),
+      )
     }
   }
 

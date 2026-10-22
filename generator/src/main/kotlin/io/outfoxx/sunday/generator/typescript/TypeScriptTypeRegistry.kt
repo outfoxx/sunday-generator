@@ -18,6 +18,8 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.GeneratedOutputOwnership
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.genError
@@ -90,6 +92,9 @@ class TypeScriptTypeRegistry(
   internal val schemaRuntimeArgumentName: String = "runtime",
 ) : TypeScriptTypeOutputRegistry {
 
+  override val outputOwnership =
+    GeneratedOutputOwnership()
+
   data class SpecificationInterface(
     val value: InterfaceSpec.Builder,
   )
@@ -114,11 +119,11 @@ class TypeScriptTypeRegistry(
   private val companionSchemaModules = mutableMapOf<String, TypeName.Standard>()
 
   fun generateFiles(
-    categories: Set<GeneratedTypeCategory>,
+    selection: GeneratedOutputSelection = GeneratedOutputSelection(),
     outputDirectory: Path,
   ) {
 
-    val fileSpecs = generateExportedTypeFiles(categories)
+    val fileSpecs = generateExportedTypeFiles(selection)
 
     fileSpecs
       .forEach { fileSpec -> writeFileSpec(fileSpec, outputDirectory) }
@@ -139,11 +144,12 @@ class TypeScriptTypeRegistry(
     }
   }
 
-  fun generateExportedTypeFiles(categories: Set<GeneratedTypeCategory>): List<FileSpec> {
+  fun generateExportedTypeFiles(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<FileSpec> {
 
     val generatedFiles =
       buildTypes()
-        .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
+        .filterKeys { it in exportedTypeBuilders }
+        .filter { type -> outputOwnership.includes(selection, type.key) }
         .map { (typeName, moduleSpec) ->
           val importModulePath = importModulePath(typeName)
           val outputModulePath = normalizeModulePath(importModulePath)
@@ -187,10 +193,15 @@ class TypeScriptTypeRegistry(
         }
 
     val companionSchemaFiles =
-      if (!categories.contains(GeneratedTypeCategory.Model)) {
+      if (selection.categories.isNotEmpty() &&
+        GeneratedTypeCategory.Model !in selection.categories &&
+        GeneratedTypeCategory.Problem !in selection.categories
+      ) {
         emptyList()
       } else {
         companionSchemaFileMembers
+          .mapValues { (_, members) -> members.filter { outputOwnership.includes(selection, it.first) } }
+          .filterValues { it.isNotEmpty() }
           .map { (modulePath, members) ->
             val sortedMembers =
               members.sortedWith(
@@ -345,6 +356,7 @@ class TypeScriptTypeRegistry(
       is InterfaceSpec.Builder -> serviceType.addModifiers(Modifier.EXPORT)
     }
 
+    outputOwnership.register(typeName, GeneratedTypeCategory.Service)
     serviceType.tag(GeneratedTypeCategory.Service)
 
     if (exportedTypeBuilders.putIfAbsent(typeName, serviceType) != null) {
@@ -360,6 +372,7 @@ class TypeScriptTypeRegistry(
     modelType: AnyTypeSpecBuilder,
     extras: List<Any>,
   ) {
+    outputOwnership.register(typeName, GeneratedTypeCategory.Model)
     modelType.tag(GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(typeName, modelType) != null) {
@@ -408,6 +421,7 @@ class TypeScriptTypeRegistry(
     typeName: TypeName.Standard,
     member: CodeBlock,
   ) {
+    outputOwnership.register(typeName, GeneratedTypeCategory.Model)
     val modulePath = companionSchemaModulePath(typeName)
     companionSchemaFileMembers.computeIfAbsent(modulePath) { mutableListOf() }.add(typeName to member)
   }

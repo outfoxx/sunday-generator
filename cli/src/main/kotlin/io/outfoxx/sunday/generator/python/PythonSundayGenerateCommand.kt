@@ -26,16 +26,16 @@ open class PythonSundayGenerateCommand :
   override val generationMode: GenerationMode = GenerationMode.Client
 
   override fun run() {
-    println("Generating ${this.outputCategories} types")
+    println("Generating ${outputCategories.ifEmpty { GeneratedTypeCategory.entries }} types")
     println("Processing ${files.joinToString()}")
 
     val export = exportApi()
     val modules =
       PythonSundayIrGenerator(export.api, pythonOptions(export))
-        .generateModules(outputCategories.toSet())
+        .generateModules(outputSelection)
 
     val obsoleteModulePaths =
-      if (GeneratedTypeCategory.Service in outputCategories) {
+      if (outputCategories.isEmpty() || GeneratedTypeCategory.Service in outputCategories) {
         listOf(modules.first().path.substringBeforeLast('/') + "/runtime.py")
       } else {
         emptyList()

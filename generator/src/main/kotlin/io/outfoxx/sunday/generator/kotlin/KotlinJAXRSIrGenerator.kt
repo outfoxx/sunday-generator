@@ -169,6 +169,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.rawType
 import io.outfoxx.sunday.generator.kotlin.utils.tolerantEnumTypeSpec
+import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.utils.GeneratedProperties
 import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
@@ -460,10 +461,29 @@ class KotlinJAXRSIrGenerator(
       } == true
     }
 
+  private fun GeneratedModel.modelOutputOrigin() =
+    outputOrigin(api).let { origin ->
+      if (isProblemModel()) {
+        origin.copy(
+          category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem,
+        )
+      } else {
+        origin
+      }
+    }
+
   /**
    * Generates Kotlin/JAX-RS service types from IR and registers them in the type registry.
    */
   fun generateServiceTypes() {
+    typeRegistry.outputOwnership.current = api.outputOrigin()
+    api.models
+      .filter { model ->
+        model.scope?.service?.let { owner -> api.services.any { it.name == owner } } ?: true
+      }.forEach { model ->
+        typeRegistry.outputOwnership.bind(model.kotlinClassName(), model.modelOutputOrigin())
+      }
+
     options.requireBrokerServicesSupported("Kotlin/JAX-RS")
     if (options.resourceAdapters && generationMode != Server) {
       genError("Kotlin/JAX-RS resource adapters require server mode")
@@ -571,7 +591,7 @@ class KotlinJAXRSIrGenerator(
     service: GeneratedJaxRsService,
     securityGenerator: KotlinJAXRSSecurityGenerator?,
     quarkusSecurityGenerator: KotlinQuarkusSecurityGenerator?,
-  ) {
+  ) = typeRegistry.outputOwnership.within(service.service.outputOrigin(api)) {
     val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
     if (service.service.operations.any { it.requestBody?.rejectsSuppliedNull() == true }) {
       typeRegistry.addServiceType(
@@ -663,27 +683,33 @@ class KotlinJAXRSIrGenerator(
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
         nativePayloads.register(
           GeneratedTypeRef.named(model.name),
-          model.nativeValidationName(),
+          model.nativeValidationName().also { typeRegistry.outputOwnership.bind(it, model.modelOutputOrigin()) },
           shapeType = { it.commonSchemaOwner() },
           commonRules =
             model.target(preferredTargetId, "kotlin")?.typeName != null && modelProperties.hasUnionCommonRules(model),
         )
       }
       api.services
-        .flatMap { it.operations }
-        .flatMap { operation ->
-          listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type)
-        }.filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
-        .distinct()
-        .forEachIndexed { index, reference ->
-          nativePayloads.register(
-            reference,
+        .flatMap { service ->
+          service.operations.flatMap { operation ->
+            (listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type))
+              .filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
+              .map { it to service.outputOrigin(api) }
+          }
+        }.groupBy({ it.first }, { it.second })
+        .entries
+        .forEachIndexed { index, (reference, origins) ->
+          val name =
             ClassName(
               typeRegistry.defaultModelPackageName ?: options.defaultServicePackageName
                 ?: genError("No payload validation package specified"),
               "Payload${index + 1}Validation",
-            ),
+            )
+          typeRegistry.outputOwnership.bind(
+            name,
+            api.outputOrigin().copy(ownerUris = origins.flatMap { it.ownerUris }.toSet()),
           )
+          nativePayloads.register(reference, name)
         }
     }
     val modelTypes =
@@ -697,7 +723,10 @@ class KotlinJAXRSIrGenerator(
       modelProperties,
       options.preserveUnknownFields,
       beanValidationTypes.takeIf { KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options },
-      typeRegistry::addModelType,
+      { model, name, builder ->
+        typeRegistry.outputOwnership.bind(name, model.modelOutputOrigin())
+        typeRegistry.addModelType(name, builder)
+      },
     ) {
       it.kotlinTypeName()
     }
@@ -726,13 +755,16 @@ class KotlinJAXRSIrGenerator(
       typeRegistry.beanValidationTypes.takeIf {
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
-      typeRegistry::addModelType,
+      api.models,
     )
     models
       .flatMap { model ->
         buildList {
           modelTypes[model.kotlinClassName()]?.let { (_, type) -> add(model.kotlinClassName() to type) }
-          model.discriminatorFallbackType()?.let { fallback -> add(fallback) }
+          model.discriminatorFallbackType()?.let { fallback ->
+            typeRegistry.outputOwnership.bind(fallback.first, model.modelOutputOrigin())
+            add(fallback)
+          }
         }
       }.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
   }
@@ -808,7 +840,8 @@ class KotlinJAXRSIrGenerator(
             }
         }.distinctBy { problem -> problem.typeUri }
 
-    referencedProblems.forEach { problem ->
+    (if (api.services.isEmpty()) api.problems else referencedProblems).distinctBy { it.typeUri }.forEach { problem ->
+      typeRegistry.outputOwnership.bind(problem.typeName(), problem.outputOrigin(api))
       typeRegistry.addModelType(problem.typeName(), problem.problemType())
     }
   }
@@ -2440,71 +2473,73 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedModel.modelType(): TypeSpec.Builder? {
-    if (target(preferredTargetId, "kotlin")?.typeName != null) return null
-    return nominalGenerator.generate(this) ?: when (kind) {
-      GeneratedModel.Kind.ENUM -> {
-        val entries = kotlinEnumEntries.entries(this)
-        if (unknownValue != null) {
-          tolerantEnumTypeSpec(
-            kotlinClassName(),
-            entries,
-            typeRegistry.options.contains(JacksonAnnotations),
-            generationMode == Server,
-            fallbackValidation =
-              beanValidationTypes.knownVariant().takeIf {
-                typeRegistry.options.contains(ValidationConstraints) &&
-                  !tolerance.allowsUnknown(options.generationContext(generationMode, PayloadUse.Request))
-              },
-          )
-        } else {
-          TypeSpec
-            .enumBuilder(kotlinClassName())
-            .addModifiers(KModifier.PUBLIC)
-            .primaryConstructor(
-              FunSpec
-                .constructorBuilder()
-                .addParameter("wireValue", STRING)
-                .build(),
-            ).addProperty(
-              PropertySpec
-                .builder("wireValue", STRING, KModifier.PRIVATE)
-                .initializer("wireValue")
-                .build(),
-            ).addFunction(
-              FunSpec
-                .builder("toString")
-                .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
-                .returns(STRING)
-                .apply {
-                  if (typeRegistry.options.contains(JacksonAnnotations)) {
-                    addAnnotation(JACKSON_JSON_VALUE)
-                  }
-                }.addStatement("return wireValue")
-                .build(),
-            ).apply {
-              if (typeRegistry.options.contains(JacksonAnnotations) || generationMode == Server) {
-                addType(enumCompanionType())
+    return typeRegistry.outputOwnership.within(modelOutputOrigin()) {
+      if (target(preferredTargetId, "kotlin")?.typeName != null) return null
+      return nominalGenerator.generate(this) ?: when (kind) {
+        GeneratedModel.Kind.ENUM -> {
+          val entries = kotlinEnumEntries.entries(this)
+          if (unknownValue != null) {
+            tolerantEnumTypeSpec(
+              kotlinClassName(),
+              entries,
+              typeRegistry.options.contains(JacksonAnnotations),
+              generationMode == Server,
+              fallbackValidation =
+                beanValidationTypes.knownVariant().takeIf {
+                  typeRegistry.options.contains(ValidationConstraints) &&
+                    !tolerance.allowsUnknown(options.generationContext(generationMode, PayloadUse.Request))
+                },
+            )
+          } else {
+            TypeSpec
+              .enumBuilder(kotlinClassName())
+              .addModifiers(KModifier.PUBLIC)
+              .primaryConstructor(
+                FunSpec
+                  .constructorBuilder()
+                  .addParameter("wireValue", STRING)
+                  .build(),
+              ).addProperty(
+                PropertySpec
+                  .builder("wireValue", STRING, KModifier.PRIVATE)
+                  .initializer("wireValue")
+                  .build(),
+              ).addFunction(
+                FunSpec
+                  .builder("toString")
+                  .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
+                  .returns(STRING)
+                  .apply {
+                    if (typeRegistry.options.contains(JacksonAnnotations)) {
+                      addAnnotation(JACKSON_JSON_VALUE)
+                    }
+                  }.addStatement("return wireValue")
+                  .build(),
+              ).apply {
+                if (typeRegistry.options.contains(JacksonAnnotations) || generationMode == Server) {
+                  addType(enumCompanionType())
+                }
+                entries.forEach { entry ->
+                  addEnumConstant(
+                    entry.name,
+                    TypeSpec
+                      .anonymousClassBuilder()
+                      .addSuperclassConstructorParameter("%S", entry.value)
+                      .build(),
+                  )
+                }
               }
-              entries.forEach { entry ->
-                addEnumConstant(
-                  entry.name,
-                  TypeSpec
-                    .anonymousClassBuilder()
-                    .addSuperclassConstructorParameter("%S", entry.value)
-                    .build(),
-                )
-              }
-            }
+          }
         }
+
+        GeneratedModel.Kind.OBJECT ->
+          objectTypeSpec()
+
+        GeneratedModel.Kind.UNION ->
+          objectUnionTypeSpecOrNull()
+
+        else -> null
       }
-
-      GeneratedModel.Kind.OBJECT ->
-        objectTypeSpec()
-
-      GeneratedModel.Kind.UNION ->
-        objectUnionTypeSpecOrNull()
-
-      else -> null
     }
   }
 

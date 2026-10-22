@@ -48,7 +48,7 @@ class ScopedSecurityIrTest {
   ) {
     val api = scopedSecurityApi(frontend, directory)
     assertEquals(api, GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)))
-    assertEquals("1", api.irVersion)
+    assertEquals(GeneratedApi.CURRENT_IR_VERSION, api.irVersion)
     if (frontend == "asyncapi3") {
       assertEquals(
         "https://events.example",
@@ -288,7 +288,7 @@ class ScopedSecurityIrTest {
       )
     val api =
       GeneratedApi(
-        "1",
+        GeneratedApi.CURRENT_IR_VERSION,
         "Security",
         GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory://test"),
         auth = GeneratedAuth(selection = selection),

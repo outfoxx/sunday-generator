@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -33,7 +34,11 @@ class PythonOptionalRequestBodyTest : PythonTest() {
       PythonSundayIrGenerator(
         optionalRequestBodyApi("openapi"),
         PythonGeneratorOptions(packageName = "optional_api"),
-      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(
       compileModules(
         compiler,

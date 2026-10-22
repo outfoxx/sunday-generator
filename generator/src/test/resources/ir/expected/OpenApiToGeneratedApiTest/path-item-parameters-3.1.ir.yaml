@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Repo Path Parameters API"
 source:
   kind: "OPENAPI"
   location: "SOURCE_LOCATION"
 services:
 - name: "RepoPathParametersService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://api.example.com/v1"
   operations:
   - id: "getRepo"
@@ -66,6 +68,10 @@ services:
 models:
 - name: "Branch"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/Branch"
   properties:
   - name: "branchId"
     type:
@@ -74,6 +80,10 @@ models:
     required: true
 - name: "Repo"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/Repo"
   properties:
   - name: "repoId"
     type:

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -82,7 +83,10 @@ class SwiftCustomTypeMappingTest {
       registry,
       SwiftSundayOptions("https://example.com/", listOf("application/json"), "API"),
     ).generateServiceTypes()
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      compiler.srcDir,
+    )
     Files.writeString(
       compiler.srcDir.resolve("DomainIdentifier.swift"),
       """

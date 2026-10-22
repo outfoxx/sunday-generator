@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.OpenApiReferenceLocations.Kind
 import io.outfoxx.sunday.generator.ir.OpenApiReferenceLocations.componentKinds
@@ -156,7 +157,7 @@ class OpenApiReferenceResolver(
         val result = referenced.toMutableMap()
         result.putAll(normalizeFields(node, kind))
         return if (kind == Kind.SCHEMA) {
-          node.schema(
+          (if (node.isIdentityAlias()) terminal(node, Kind.SCHEMA) else node).schema(
             result,
             (referenced as? OpenApiSchema)?.usesBooleanExclusiveBounds,
             node.takeIf { it.isSchemaAlias() }?.let { schemaName(reference(it, kind)) },
@@ -572,11 +573,18 @@ class OpenApiReferenceResolver(
       kind: Kind = Kind.SCHEMA,
       dialect: String = OAS_DIALECT,
     ): Document {
-      documents[uri]?.let { return it }
+      val identity = retrievalIdentity(uri)
+      (documents[uri] ?: documents[identity])?.let {
+        capturedDocuments[uri] = OpenApiLoadedDocument(it.uri, it.bytes)
+        documents[uri] = it
+        resources.putIfAbsent(uri, it.root())
+        return it
+      }
       val loaded = documentLoader.load(uri)
       capturedDocuments[uri] = loaded
       capturedDocuments[loaded.uri] = loaded
-      documents[loaded.uri]?.let {
+      (documents[loaded.uri] ?: documents[retrievalIdentity(loaded.uri)])?.let {
+        documents[identity] = it
         documents[uri] = it
         resources[uri] = it.root()
         return it
@@ -594,6 +602,8 @@ class OpenApiReferenceResolver(
           )
         }
       val document = Document(loaded.uri, bytes, value, dialect)
+      documents[identity] = document
+      documents[retrievalIdentity(loaded.uri)] = document
       documents[uri] = document
       documents[loaded.uri] = document
       resources.putIfAbsent(uri, document.root())
@@ -614,6 +624,15 @@ class OpenApiReferenceResolver(
       }
       return document
     }
+
+    // Only retrieved files have filesystem identity; embedded schema IDs may be opaque file: URIs.
+    private fun retrievalIdentity(uri: URI): URI =
+      if (uri.scheme.equals("file", ignoreCase = true) && !uri.isOpaque && uri.rawQuery == null) {
+        GeneratedDocumentUri
+          .canonical(uri)
+      } else {
+        uri
+      }
 
     private fun indexComponents(root: Node) {
       root.child("components").children().forEach { (section, components) ->

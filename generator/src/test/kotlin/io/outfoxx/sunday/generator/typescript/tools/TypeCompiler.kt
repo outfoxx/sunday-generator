@@ -141,3 +141,20 @@ private fun compileTypes(
     compiler.srcDir.toFile().deleteRecursively()
   }
 }
+
+/** Compiles exact emitted files, recording source only after the TypeScript compiler succeeds. */
+internal fun compileGeneratedFiles(compiler: TypeScriptCompiler): Boolean {
+  try {
+    CompiledGeneratedSources.beginCompile()
+    val (result, output) = compiler.compile()
+    if (result != 0) throw AssertionError(output)
+    val files =
+      Files.walk(compiler.srcDir).use { paths ->
+        paths.filter { it.toString().endsWith(".ts") }.toList().associateWith(Files::readString)
+      }
+    CompiledGeneratedSources.recordAll(GeneratedCodeLanguage.TypeScript, compiler.srcDir, files)
+    return true
+  } finally {
+    compiler.srcDir.toFile().deleteRecursively()
+  }
+}

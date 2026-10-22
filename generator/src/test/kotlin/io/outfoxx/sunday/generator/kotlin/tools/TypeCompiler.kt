@@ -39,6 +39,8 @@ internal fun compileTypesResult(
   types: Map<ClassName, TypeSpec>,
   additionalSources: List<SourceFile> = emptyList(),
   classpathFilter: (File) -> Boolean = { true },
+  additionalClasspath: List<File> = emptyList(),
+  sourceDirectory: java.nio.file.Path? = null,
 ): JvmCompilationResult {
 
   val fileSpecs =
@@ -46,6 +48,13 @@ internal fun compileTypesResult(
       .filter { it.key.topLevelClassName() == it.key }
       .map { kotlinFileSpec(it.key.packageName, it.value) }
 
+  val diskSources =
+    sourceDirectory
+      ?.let { root ->
+        java.nio.file.Files.walk(root).use { paths ->
+          paths.filter { it.toString().endsWith(".kt") }.toList().associateWith(java.nio.file.Files::readString)
+        }
+      }.orEmpty()
   val out = ByteArrayOutputStream()
   CompiledGeneratedSources.beginCompile()
 
@@ -57,7 +66,10 @@ internal fun compileTypesResult(
           fileSpecs.map {
             val fileName = "${it.packageName.replace('.', '_')}_${it.name}.kt"
             SourceFile.kotlin(fileName, it.toString())
-          } + additionalSources
+          } + additionalSources +
+          diskSources.map { (path, source) ->
+            SourceFile.kotlin(sourceDirectory!!.relativize(path).toString(), source)
+          }
         kotlincArguments =
           listOf("-jvm-target", "21", "-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
         languageVersion = "2.3"
@@ -65,7 +77,7 @@ internal fun compileTypesResult(
         classpaths =
           requireNotNull(System.getProperty("sunday.validation.kotlin.classpath")) {
             "Run compiler-backed tests through Gradle to supply the generated-code classpath"
-          }.split(File.pathSeparator).map(::File).filter(File::exists).filter(classpathFilter)
+          }.split(File.pathSeparator).map(::File).filter(File::exists).filter(classpathFilter) + additionalClasspath
         verbose = false
         allWarningsAsErrors = true
         reportOutputFiles = true
@@ -74,6 +86,11 @@ internal fun compileTypesResult(
   CompilerProcess.record("kotlinc", started, result.exitCode.ordinal)
 
   if (result.exitCode == KotlinCompilation.ExitCode.OK) {
+    if (sourceDirectory !=
+      null
+    ) {
+      CompiledGeneratedSources.recordAll(GeneratedCodeLanguage.Kotlin, sourceDirectory, diskSources)
+    }
     fileSpecs.forEach { fileSpec ->
       val builder = StringBuilder()
       fileSpec.writeTo(builder)

@@ -16,7 +16,9 @@
 
 package io.outfoxx.sunday.generator
 
+/** Independently selectable generated declaration categories. */
 enum class GeneratedTypeCategory {
   Service,
   Model,
+  Problem,
 }

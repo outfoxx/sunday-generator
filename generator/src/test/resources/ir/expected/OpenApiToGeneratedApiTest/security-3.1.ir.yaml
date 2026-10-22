@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Security API"
 source:
   kind: "OPENAPI"
   location: "SOURCE_LOCATION"
 services:
 - name: "SecurityService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://api.example.com/v1"
   operations:
   - id: "listProjects"
@@ -87,6 +89,10 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/Project"
   properties:
   - name: "id"
     type:

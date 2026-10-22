@@ -87,8 +87,42 @@ class CLITest {
   fun `--category options`() {
 
     val command = GenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-category", "service", "-category", "model", *requiredOptions)) }
+    assertDoesNotThrow { command.parse(arrayOf("-category", "services", "-category", "models", *requiredOptions)) }
     assertThat(command.outputCategories, contains(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+  }
+
+  @Test
+  fun `owner configuration accepts scheme-less files and remote URIs`() {
+    val command = GenerateCommandTest()
+    command.parse(
+      arrayOf(
+        "-owner",
+        emptyFile.path,
+        "-owner",
+        "https://example.test/common.yaml",
+        "-category",
+        "problems",
+        *requiredOptions,
+      ),
+    )
+    assertThat(command.outputSelection.categories, equalTo(setOf(GeneratedTypeCategory.Problem)))
+    assertThat(
+      command.outputSelection.ownerUris,
+      equalTo(
+        setOf(
+          GeneratedDocumentUri.canonical(emptyFile),
+          java.net.URI("https://example.test/common.yaml"),
+        ),
+      ),
+    )
+  }
+
+  @Test
+  fun `omitted output filters independently select all`() {
+    val command = GenerateCommandTest()
+    command.parse(requiredOptions)
+    assertThat(command.outputSelection.categories, equalTo(emptySet()))
+    assertThat(command.outputSelection.ownerUris, equalTo(emptySet()))
   }
 
   @Test

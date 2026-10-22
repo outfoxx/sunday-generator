@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Additional Properties API"
 source:
   kind: "OPENAPI"
   location: "SOURCE_LOCATION"
 services:
 - name: "AdditionalPropertiesService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://api.example.com/v1"
   operations:
   - id: "getContainer"
@@ -27,6 +29,10 @@ services:
 models:
 - name: "Container"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/Container"
   properties:
   - name: "id"
     type:
@@ -62,6 +68,10 @@ models:
     required: true
 - name: "FreeformLabels"
   kind: "MAP"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/FreeformLabels"
   aliases:
   - kind: "SCALAR"
     name: "any"
@@ -70,6 +80,10 @@ models:
     allowed: true
 - name: "SealedLabels"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/SealedLabels"
   properties:
   - name: "owner"
     type:
@@ -80,6 +94,10 @@ models:
     allowed: false
 - name: "TypedLabels"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/TypedLabels"
   properties:
   - name: "owner"
     type:

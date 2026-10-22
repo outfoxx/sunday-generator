@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Documentation API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "DocsService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "listProjects"
     method: "GET"
@@ -50,6 +52,7 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fdocs%2Fprojects/supportedOperation/get/returns/resp/200/payload/application%2Fjson/array/schema/shape/Project"
   properties:
   - name: "id"
     type:

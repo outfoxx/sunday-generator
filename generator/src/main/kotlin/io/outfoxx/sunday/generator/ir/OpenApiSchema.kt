@@ -18,7 +18,9 @@ package io.outfoxx.sunday.generator.ir
 
 import com.fasterxml.jackson.core.JsonLocation
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
 import io.outfoxx.sunday.generator.GenerationException
+import java.net.URI
 
 /** Carries diagnostic provenance and bound dialect through normalization without adding fields to the document or IR. */
 internal class OpenApiSchema(
@@ -29,6 +31,9 @@ internal class OpenApiSchema(
   /** Original declaration for an expanded alias, kept outside serialized schema fields. */
   val declarationReference: String? = null,
 ) : LinkedHashMap<String, Any?>(fields) {
+  /** Original declaration location, independent of bundled component names. */
+  val declarationUri: String get() = GeneratedDocumentUri.canonical(URI(source.uri)).toString() + "#" + pointer
+
   fun withFields(
     fields: Map<String, Any?>,
     usesBooleanExclusiveBounds: Boolean = this.usesBooleanExclusiveBounds,

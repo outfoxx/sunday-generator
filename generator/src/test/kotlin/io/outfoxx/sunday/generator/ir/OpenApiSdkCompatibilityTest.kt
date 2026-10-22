@@ -182,7 +182,10 @@ class OpenApiSdkCompatibilityTest {
           },
         )
       }
-      assertEquals(outputs[0].models, outputs[1].models)
+      assertEquals(
+        outputs[0].models.map { it.copy(source = null, declarationUri = null) },
+        outputs[1].models.map { it.copy(source = null, declarationUri = null) },
+      )
     }
   }
 
