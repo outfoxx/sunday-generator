@@ -36,12 +36,19 @@ class GeneratedPlacementResolver(
   private val matched = mutableSetOf<Int>()
   private val relocationWinners = mutableMapOf<Triple<String, String, String>, List<Int>>()
   private var pythonPackageFallback = ""
+  private var modelDeclarationPointers = emptyMap<URI, Set<String>>()
 
   /** Resolves every declaration, including declarations excluded from emitted output. */
   fun resolve(api: GeneratedApi): GeneratedApi {
     matched.clear()
     relocationWinners.clear()
     pythonPackageFallback = (api.id ?: api.name).pythonIdentifierName
+    modelDeclarationPointers =
+      api.models
+        .flatMap { it.placementDeclarations.ifEmpty { listOf(it) } }
+        .mapNotNull { it.declarationUri?.let(::URI) }
+        .groupBy(GeneratedDocumentUri::canonical)
+        .mapValues { (_, declarations) -> declarations.mapNotNull { it.fragment }.toSet() }
     val services =
       api.services.map { service ->
         service.placementScopes
@@ -458,12 +465,20 @@ class GeneratedPlacementResolver(
           }
         rule.placement.requireDeclaration(relocationScope, "Placement selector '${rule.target}'")
         matched += index
-        val pointer = URI(rule.target).fragment.orEmpty()
+        val target = URI(rule.target)
+        val pointer = target.fragment.orEmpty()
+        // A declaration selection retains its priority for owned anonymous descendants.
+        // A nearer declaration can still override its ancestor's placement.
+        val declarationHit =
+          uris.any { URI(it).fragment == pointer } ||
+            category == "model" &&
+            !serviceRule &&
+            pointer in modelDeclarationPointers[GeneratedDocumentUri.canonical(target)].orEmpty()
         val rank =
           when {
             explicitHit -> 20000
             pointer.isEmpty() -> 0
-            uris.any { URI(it).fragment == pointer } -> 40000
+            declarationHit -> 40000 + pointer.count { it == '/' }
             operationHit -> 30000
             else -> 10000 + pointer.count { it == '/' }
           }

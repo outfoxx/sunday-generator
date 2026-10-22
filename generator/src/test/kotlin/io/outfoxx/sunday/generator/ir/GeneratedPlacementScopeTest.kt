@@ -16,6 +16,44 @@ import java.nio.file.Path
 class GeneratedPlacementScopeTest {
   @TempDir lateinit var directory: Path
 
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi2", "asyncapi", "composed"])
+  fun `declaration relocation retains priority for owned descendants`(kind: String) {
+    val api = PlacementScopeFixture.inheritedRelocation(directory, kind)
+    val config = api.placementConfiguration
+    val child = api.models.single { model -> model.properties.any { it.name == "value" } }
+    val override =
+      GeneratedPlacementConfiguration.Relocation(
+        child.declarationUri!!,
+        placement = GeneratedPlacement(kotlin = GeneratedPlacement.Scope(packageName = "example.child")),
+      )
+    for (rules in listOf(config.relocations, config.relocations.reversed())) {
+      val resolved =
+        GeneratedPlacementResolver(
+          config.copy(relocations = rules),
+          generationLanguage = "kotlin",
+        ).resolve(api)
+      assertTrue(
+        resolved.models.filter { it.properties.isNotEmpty() }.all {
+          it.targets["kotlinClient"]!!.modelPackageName == "example.selected"
+        },
+      )
+      val overridden =
+        GeneratedPlacementResolver(
+          config.copy(relocations = rules + override),
+          generationLanguage = "kotlin",
+        ).resolve(api)
+      assertEquals(
+        "example.child",
+        overridden.models
+          .single {
+            it.declarationUri == child.declarationUri
+          }.targets["kotlinClient"]!!
+          .modelPackageName,
+      )
+    }
+  }
+
   private fun invalidPlacements(block: String): List<GeneratedPlacement> =
     listOf("kotlin", "swift", "typescript", "python").flatMap { language ->
       val fields = mapOf((if (language in setOf("kotlin", "python")) "package" else "module") to "invalid")

@@ -48,6 +48,32 @@ class TypeScriptPlacementRegressionTest {
   @TempDir lateinit var directory: Path
 
   @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi2", "asyncapi", "composed"])
+  fun `declaration relocation keeps owned payload classes together`(
+    kind: String,
+    compiler: TypeScriptCompiler,
+  ) {
+    val api = PlacementScopeFixture.inheritedRelocation(directory, kind)
+    val child =
+      api.models
+        .single { model -> model.properties.any { it.name == "value" } }
+        .name
+        .toUpperCamelCase()
+    val registry = TypeScriptTypeRegistry(emptySet())
+    TypeScriptSundayIrGenerator(api, registry, typeScriptSundayTestOptions).generateServiceTypes()
+    registry.generateFiles(GeneratedOutputSelection(), compiler.srcDir)
+    Files.writeString(
+      compiler.srcDir.resolve("smoke.ts"),
+      """
+      import {$child} from './selected/${child.camelCaseToKebabCase()}.js';
+      const value: $child = {value: 'relocated'};
+      if(value.value !== 'relocated') throw new Error('placement changed');
+      """.trimIndent(),
+    )
+    assertTrue(compileAndRunGeneratedFiles(compiler, "smoke"))
+  }
+
+  @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "composed"])
   fun `native problem relocations compile with direct placement`(
     kind: String,

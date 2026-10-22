@@ -574,7 +574,7 @@ class KotlinSundayIrGenerator(
     api.models.filter { model -> model.scope == null } +
       services
         .flatMap { service -> apiIndex.referencedScopedModels(service) }
-        .distinctBy { model -> model.kotlinClassName() }
+        .distinct()
 
   private fun generateProblemTypes(services: List<GeneratedService>) {
     val referencedProblems =

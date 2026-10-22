@@ -42,6 +42,35 @@ class SwiftPlacementRegressionTest {
   @TempDir lateinit var directory: Path
 
   @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi2", "asyncapi", "composed"])
+  fun `declaration relocation keeps owned payload classes together`(
+    kind: String,
+    compiler: SwiftCompiler,
+  ) {
+    val api = PlacementScopeFixture.inheritedRelocation(directory, kind)
+    val parent =
+      api.models
+        .single { model -> model.properties.any { it.name == "child" } }
+        .name
+        .toUpperCamelCase()
+    val child =
+      api.models
+        .single { model -> model.properties.any { it.name == "value" } }
+        .name
+        .toUpperCamelCase()
+    compile(
+      api,
+      compiler,
+      true,
+      """
+      let value = SharedModels.$parent(child: SharedModels.$child(value: "relocated"))
+      let encoded = try JSONEncoder().encode(value)
+      XCTAssertEqual(try JSONDecoder().decode(SharedModels.$parent.self, from: encoded).child.value, "relocated")
+      """.trimIndent(),
+    )
+  }
+
+  @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "composed"])
   fun `native problem relocations compile with direct placement`(
     kind: String,

@@ -41,6 +41,32 @@ class PythonPlacementRegressionTest : PythonTest() {
   @TempDir lateinit var directory: Path
 
   @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi2", "asyncapi", "composed"])
+  fun `declaration relocation keeps owned payload classes together`(
+    kind: String,
+    compiler: PythonCompiler,
+  ) {
+    val api = PlacementScopeFixture.inheritedRelocation(directory, kind)
+    val parent =
+      api.models
+        .single { model -> model.properties.any { it.name == "child" } }
+        .name.pythonTypeName
+    val child =
+      api.models
+        .single { model -> model.properties.any { it.name == "value" } }
+        .name.pythonTypeName
+    val smoke =
+      """
+      from selected_sdk.models import $parent, $child
+      value = $parent.model_validate({"child": {"value": "relocated"}})
+      assert isinstance(value.child, $child)
+      assert $parent.model_validate_json(value.model_dump_json()).child.value == "relocated"
+      """.trimIndent()
+    assertTrue(compileModules(compiler, PythonSundayIrGenerator(api).generateModules(), smokeCode = smoke))
+    assertTrue(compileModules(compiler, PythonLitestarIrGenerator(api).generateModules(), smokeCode = smoke))
+  }
+
+  @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "composed"])
   fun `native problem relocations compile with direct placement`(
     kind: String,

@@ -19,8 +19,11 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import com.tschuchort.compiletesting.KotlinCompilation
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedPlacement
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
@@ -39,11 +42,99 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Files
 import java.nio.file.Path
 
 @KotlinTest
 class KotlinPlacementOwnershipTest {
   @TempDir lateinit var directory: Path
+
+  @Test
+  fun `distinct service payloads cannot silently share an emitted class`() {
+    javaClass.getResourceAsStream("/sunday.raml")!!.use {
+      Files.copy(it, directory.resolve("sunday.raml"))
+    }
+    val source = directory.resolve("api.raml")
+    Files.writeString(
+      source,
+      """
+      #%RAML 1.0
+      title: Payloads
+      uses: {sunday: sunday.raml}
+      (sunday.placement):
+        kotlin:
+          package: example.services
+          models: {package: example.models}
+      """.trimIndent() + "\n" +
+        listOf("first", "second").joinToString("\n") { name ->
+          """
+          /$name:
+            (sunday.group): $name
+            get:
+              displayName: getItem
+              responses:
+                200:
+                  body:
+                    application/json:
+                      type: object
+                      properties:
+                        $name: string
+          """.trimIndent()
+        },
+    )
+    val api = GeneratedApiIrExporter().export(source.toUri())
+    val payloads = api.models.filter { it.properties.isNotEmpty() }
+    assertEquals(2, payloads.size)
+    for (backend in listOf("sunday", "client", "server")) {
+      val failure = assertThrows(GenerationException::class.java) { generate(api, backend) }
+      payloads.forEach { assertTrue(failure.message!!.contains(it.declarationUri!!), failure.message) }
+      val configuration =
+        GeneratedPlacementConfiguration(
+          relocations =
+            payloads.map { model ->
+              GeneratedPlacementConfiguration.Relocation(
+                model.declarationUri!!,
+                placement =
+                  GeneratedPlacement(
+                    kotlin = GeneratedPlacement.Scope(packageName = "example.${model.properties.single().name}"),
+                  ),
+              )
+            },
+        )
+      val compiled =
+        compileTypesResult(generate(api.copy(placementConfiguration = configuration), backend).buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+      for (model in payloads) {
+        val name = model.properties.single().name
+        assertEquals(
+          String::class.java,
+          compiled.classLoader
+            .loadClass("example.$name.${model.name.toUpperCamelCase()}")
+            .getDeclaredField(name)
+            .type,
+        )
+      }
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi2", "asyncapi", "composed"])
+  fun `declaration relocation keeps owned payload classes together`(kind: String) {
+    val api = PlacementScopeFixture.inheritedRelocation(directory, kind)
+    val parent = api.models.single { model -> model.properties.any { it.name == "child" } }
+    for (backend in listOf("sunday", "client", "server")) {
+      val compiled = compileTypesResult(generate(api, backend).buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+      assertEquals(
+        "example.selected",
+        compiled.classLoader
+          .loadClass(
+            "example.selected.${parent.name.toUpperCamelCase()}",
+          ).getDeclaredField("child")
+          .type.packageName,
+      )
+    }
+  }
 
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "composed"])
@@ -337,7 +428,7 @@ class KotlinPlacementOwnershipTest {
       val compiled = compileTypesResult(generate(api, backend).buildTypes())
       assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
       val failure =
-        assertThrows(io.outfoxx.sunday.generator.GenerationException::class.java) {
+        assertThrows(GenerationException::class.java) {
           generate(api.copy(placementConfiguration = GeneratedPlacementConfiguration()), backend)
         }
       assertTrue(failure.message!!.contains("No model package"))
@@ -429,9 +520,9 @@ class KotlinPlacementOwnershipTest {
         placementConfiguration =
           GeneratedPlacementConfiguration(
             defaults =
-              io.outfoxx.sunday.generator.ir.GeneratedPlacement(
+              GeneratedPlacement(
                 kotlin =
-                  io.outfoxx.sunday.generator.ir.GeneratedPlacement
+                  GeneratedPlacement
                     .Scope(packageName = "example.support"),
               ),
           ),
@@ -449,7 +540,7 @@ class KotlinPlacementOwnershipTest {
     )
     assertEquals(1, registry.buildTypes().keys.count { it.simpleName == "ZanzibarJwtUserExtractor" })
     val failure =
-      assertThrows(io.outfoxx.sunday.generator.GenerationException::class.java) {
+      assertThrows(GenerationException::class.java) {
         generate(api, "server", quarkus = true)
       }
     assertTrue(failure.message!!.contains("multiple service packages"))

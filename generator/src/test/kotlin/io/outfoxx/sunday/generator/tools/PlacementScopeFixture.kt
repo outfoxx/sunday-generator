@@ -3,6 +3,7 @@ package io.outfoxx.sunday.generator.tools
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
+import io.outfoxx.sunday.generator.ir.GeneratedPlacement
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 import java.nio.file.Files
 import java.nio.file.Path
@@ -74,6 +75,44 @@ internal class PlacementScopeFixture(
   }
 
   companion object {
+    /** An exact payload selector outranks its owning operation for every anonymous descendant. */
+    fun inheritedRelocation(
+      directory: Path,
+      kind: String,
+    ): GeneratedApi {
+      val api = PlacementRegressionFixture(directory, kind).inline()
+      val parent = api.models.single { model -> model.properties.any { it.name == "child" } }
+      val parentUri = parent.declarationUri!!
+      // AsyncAPI 3 channel payloads are owned by the channel, not its referencing operation.
+      val container =
+        api.services
+          .flatMap { it.operations }
+          .flatMap { it.declarationUris() }
+          .firstOrNull { parentUri.startsWith("$it/") }
+          ?: parentUri.substringBefore("/messages/")
+
+      fun placement(name: String) =
+        GeneratedPlacement.read(
+          mapOf(
+            "kotlin" to mapOf("package" to "example.$name"),
+            "swift" to mapOf("module" to if (name == "selected") "SharedModels" else "SundayGenTest"),
+            "typescript" to mapOf("module" to name),
+            "python" to mapOf("package" to "${name}_sdk", "module" to "models"),
+          ),
+          "placement",
+        )
+      val rules =
+        listOf(
+          GeneratedPlacementConfiguration.Relocation(container, placement = placement("operation")),
+          GeneratedPlacementConfiguration.Relocation(parentUri, placement = placement("selected")),
+        )
+      return GeneratedApiYaml.readString(
+        GeneratedApiYaml.writeString(
+          api.copy(placementConfiguration = GeneratedPlacementConfiguration(placement("defaults"), rules)),
+        ),
+      )
+    }
+
     /** Problem declarations have native syntax in RAML and OpenAPI; composition also includes AsyncAPI. */
     fun problems(
       directory: Path,
