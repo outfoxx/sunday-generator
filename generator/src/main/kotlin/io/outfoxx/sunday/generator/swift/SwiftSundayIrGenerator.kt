@@ -74,6 +74,7 @@ import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.OutputDirectory
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
@@ -212,8 +213,15 @@ class SwiftSundayIrGenerator(
   private val scopedModelNames = mutableMapOf<GeneratedModel, DeclaredTypeName>()
   private val swiftEnumEntriesByModel = mutableMapOf<GeneratedModel, List<SwiftEnumEntry>>()
 
+  private fun GeneratedModel.modelOutputOrigin() =
+    outputOrigin(api).let { origin ->
+      if (isProblemModel) origin.copy(category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem) else origin
+    }
+
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
+    typeRegistry.outputOwnership.current = api.outputOrigin()
+
     options.requireBrokerServicesSupported("Swift/Sunday")
     val services = api.swiftSundayServices()
     services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Swift/Sunday")
@@ -222,6 +230,9 @@ class SwiftSundayIrGenerator(
       apiIndex.referencedScopedModels(service).forEach { model ->
         scopedModelNames[model] = serviceName.nestedType(model.name.toUpperCamelCase())
       }
+    }
+    api.models.forEach { model ->
+      typeRegistry.outputOwnership.bind(model.swiftDeclaredTypeName(), model.modelOutputOrigin())
     }
     val serviceOutputGroups = services.swiftOutputGroups()
     generateModelTypes(services, serviceOutputGroups)
@@ -233,6 +244,7 @@ class SwiftSundayIrGenerator(
         val serviceTypeName = DeclaredTypeName.typeName(".${service.typeSimpleName()}")
         val serviceTypeBuilder = generateServiceType(serviceTypeName, service)
 
+        typeRegistry.outputOwnership.bind(serviceTypeName, service.outputOrigin(api))
         typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder, outputGroup = serviceOutputGroups[service])
         GeneratedSwiftService(service, serviceTypeName)
       }
@@ -331,14 +343,16 @@ class SwiftSundayIrGenerator(
         )
         discriminatorFallbacks[model]?.let { fallback ->
           typeRegistry.addModelType(
-            model.swiftFallbackTypeName(fallback),
+            model
+              .swiftFallbackTypeName(
+                fallback,
+              ).also { typeRegistry.outputOwnership.bind(it, model.modelOutputOrigin()) },
             model.swiftFallbackTypeSpec(fallback, outputDirectory, outputGroup),
             outputDirectory = outputDirectory,
             outputGroup = outputGroup,
           )
         }
       }
-    if (patchHelpers.enabled) typeRegistry.addModelType(patchHelpers.supportName, patchHelpers.support())
   }
 
   private fun GeneratedModel.swiftFallbackTypeName(fallback: GeneratedDiscriminatorFallback): DeclaredTypeName {
@@ -575,12 +589,11 @@ class SwiftSundayIrGenerator(
   ) {
     val problemOutputGroups = services.problemOutputGroups(serviceOutputGroups)
 
-    services
-      .flatMap { service -> service.referencedProblems(apiIndex) }
+    (if (api.services.isEmpty()) api.problems else services.flatMap { service -> service.referencedProblems(apiIndex) })
       .distinctBy { problem -> problem.swiftProblemTypeName() }
       .forEach { problem ->
         typeRegistry.addModelType(
-          problem.swiftProblemTypeName(),
+          problem.swiftProblemTypeName().also { typeRegistry.outputOwnership.bind(it, problem.outputOrigin(api)) },
           problem.swiftProblemTypeSpec(),
           outputDirectory = OutputDirectory.Problems,
           outputGroup = problemOutputGroups[problem.swiftProblemKey()],
@@ -1308,84 +1321,86 @@ class SwiftSundayIrGenerator(
     serviceTypeName: DeclaredTypeName,
     service: GeneratedService,
   ): TypeSpec.Builder {
-    val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
-    val referencedProblems = service.referencedProblems(apiIndex)
-    val serviceTypeBuilder =
-      TypeSpec
-        .classBuilder(serviceTypeName)
-        .addModifiers(PUBLIC, FINAL)
-        .addTypeVariable(transportTypeVariable)
-        .addSuperType(SENDABLE)
-        .addSwiftDoc(service.documentation)
-        .addProperty(problemTypesProperty(referencedProblems))
-    val constructorBuilder =
-      FunctionSpec
-        .constructorBuilder()
-        .addModifiers(PUBLIC)
-        .addParameter("transport", transportTypeVariable)
-        .addStatement("self.transport = transport")
-
-    serviceTypeBuilder
-      .addProperty(
-        PropertySpec
-          .builder("transport", transportTypeVariable)
+    return typeRegistry.outputOwnership.within(service.outputOrigin(api)) {
+      val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
+      val referencedProblems = service.referencedProblems(apiIndex)
+      val serviceTypeBuilder =
+        TypeSpec
+          .classBuilder(serviceTypeName)
+          .addModifiers(PUBLIC, FINAL)
+          .addTypeVariable(transportTypeVariable)
+          .addSuperType(SENDABLE)
+          .addSwiftDoc(service.documentation)
+          .addProperty(problemTypesProperty(referencedProblems))
+      val constructorBuilder =
+        FunctionSpec
+          .constructorBuilder()
           .addModifiers(PUBLIC)
-          .build(),
-      ).addProperty(
-        PropertySpec
-          .builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
-          .addModifiers(PUBLIC)
-          .build(),
-      ).addProperty(
-        PropertySpec
-          .builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
-          .addModifiers(PUBLIC)
-          .build(),
-      )
+          .addParameter("transport", transportTypeVariable)
+          .addStatement("self.transport = transport")
 
-    constructorBuilder
-      .addParameter(
-        ParameterSpec
-          .builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
-          .defaultValue("%L", mediaTypesArray(mediaSelection.contentTypes))
-          .build(),
-      ).addStatement("self.defaultContentTypes = defaultContentTypes")
-      .addParameter(
-        ParameterSpec
-          .builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
-          .defaultValue("%L", mediaTypesArray(mediaSelection.acceptTypes))
-          .build(),
-      ).addStatement("self.defaultAcceptTypes = defaultAcceptTypes")
-      .addParameter(
-        ParameterSpec
-          .builder("problemTypes", ARRAY.parameterizedBy(PROBLEM_REGISTRATION))
-          .defaultValue("%T.problemTypes", serviceTypeName)
-          .build(),
-      ).addStatement("problemTypes.forEach { ${'$'}0.register(on: transport) }")
+      serviceTypeBuilder
+        .addProperty(
+          PropertySpec
+            .builder("transport", transportTypeVariable)
+            .addModifiers(PUBLIC)
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
+            .addModifiers(PUBLIC)
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
+            .addModifiers(PUBLIC)
+            .build(),
+        )
 
-    if (options.generateClientConfig) {
-      serviceTypeBuilder.addProperty(
-        PropertySpec.builder("clientSettings", clientSettingsType.makeOptional(), PRIVATE).build(),
-      )
       constructorBuilder
         .addParameter(
-          ParameterSpec.builder("clientSettings", clientSettingsType.makeOptional()).defaultValue("nil").build(),
-        ).addStatement("self.clientSettings = clientSettings")
-      serviceTypeBuilder.tag(AssociatedFunctions(configurationFactories(serviceTypeName, service)))
-    }
-    serviceTypeBuilder.addFunction(constructorBuilder.build())
-    service.baseUrlFunctionOrNull()?.let(serviceTypeBuilder::addFunction)
+          ParameterSpec
+            .builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
+            .defaultValue("%L", mediaTypesArray(mediaSelection.contentTypes))
+            .build(),
+        ).addStatement("self.defaultContentTypes = defaultContentTypes")
+        .addParameter(
+          ParameterSpec
+            .builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
+            .defaultValue("%L", mediaTypesArray(mediaSelection.acceptTypes))
+            .build(),
+        ).addStatement("self.defaultAcceptTypes = defaultAcceptTypes")
+        .addParameter(
+          ParameterSpec
+            .builder("problemTypes", ARRAY.parameterizedBy(PROBLEM_REGISTRATION))
+            .defaultValue("%T.problemTypes", serviceTypeName)
+            .build(),
+        ).addStatement("problemTypes.forEach { ${'$'}0.register(on: transport) }")
 
-    service.localTypeSpecs().forEach { typeSpec ->
-      serviceTypeBuilder.addType(typeSpec)
-    }
+      if (options.generateClientConfig) {
+        serviceTypeBuilder.addProperty(
+          PropertySpec.builder("clientSettings", clientSettingsType.makeOptional(), PRIVATE).build(),
+        )
+        constructorBuilder
+          .addParameter(
+            ParameterSpec.builder("clientSettings", clientSettingsType.makeOptional()).defaultValue("nil").build(),
+          ).addStatement("self.clientSettings = clientSettings")
+        serviceTypeBuilder.tag(AssociatedFunctions(configurationFactories(serviceTypeName, service)))
+      }
+      serviceTypeBuilder.addFunction(constructorBuilder.build())
+      service.baseUrlFunctionOrNull()?.let(serviceTypeBuilder::addFunction)
 
-    service.operations.forEach { operation ->
-      val operationFunction = operation.operationFunction(service)
-      serviceTypeBuilder.addFunction(operationFunction)
-    }
+      service.localTypeSpecs().forEach { typeSpec ->
+        serviceTypeBuilder.addType(typeSpec)
+      }
 
-    return serviceTypeBuilder
+      service.operations.forEach { operation ->
+        val operationFunction = operation.operationFunction(service)
+        serviceTypeBuilder.addFunction(operationFunction)
+      }
+
+      return serviceTypeBuilder
+    }
   }
 
   private fun problemTypesProperty(problems: List<GeneratedProblem>): PropertySpec =
@@ -1478,46 +1493,48 @@ class SwiftSundayIrGenerator(
     outputDirectory: OutputDirectory = OutputDirectory.Models,
     outputGroup: String? = null,
   ): TypeSpec.Builder? {
-    if (target("swift", "swift")?.typeName != null) {
-      addAliasValidation(outputDirectory, outputGroup)
-      return null
-    }
-    val builder =
-      (
-        nominalGenerator.generate(this) ?: when (kind) {
-          GeneratedModel.Kind.ENUM ->
-            if (unknownValue != null) {
-              swiftTolerantEnumTypeSpec()
-            } else {
-              TypeSpec
-                .enumBuilder(swiftDeclaredTypeName())
-                .addModifiers(PUBLIC)
-                .addSwiftDoc(documentation)
-                .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
-                .apply {
-                  swiftEnumEntries().forEach { entry ->
-                    addEnumCase(entry.name, entry.value)
-                  }
-                }.addProperty(swiftEnumDescriptionProperty())
-            }
-
-          GeneratedModel.Kind.OBJECT ->
-            typedEventEnvelopeOrNull()?.swiftTypeSpec()
-              ?: when {
-                isExternalDiscriminatorBaseProtocolModel -> swiftExternalDiscriminatorBaseProtocolTypeSpec()
-                isExternalDiscriminatorCaseValueModel -> swiftExternalDiscriminatorCaseValueTypeSpec()
-                else -> swiftObjectTypeSpec(outputDirectory, outputGroup)
+    return typeRegistry.outputOwnership.within(modelOutputOrigin()) {
+      if (target("swift", "swift")?.typeName != null) {
+        addAliasValidation(outputDirectory, outputGroup)
+        return null
+      }
+      val builder =
+        (
+          nominalGenerator.generate(this) ?: when (kind) {
+            GeneratedModel.Kind.ENUM ->
+              if (unknownValue != null) {
+                swiftTolerantEnumTypeSpec()
+              } else {
+                TypeSpec
+                  .enumBuilder(swiftDeclaredTypeName())
+                  .addModifiers(PUBLIC)
+                  .addSwiftDoc(documentation)
+                  .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+                  .apply {
+                    swiftEnumEntries().forEach { entry ->
+                      addEnumCase(entry.name, entry.value)
+                    }
+                  }.addProperty(swiftEnumDescriptionProperty())
               }
 
-          GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
-          else -> null
+            GeneratedModel.Kind.OBJECT ->
+              typedEventEnvelopeOrNull()?.swiftTypeSpec()
+                ?: when {
+                  isExternalDiscriminatorBaseProtocolModel -> swiftExternalDiscriminatorBaseProtocolTypeSpec()
+                  isExternalDiscriminatorCaseValueModel -> swiftExternalDiscriminatorCaseValueTypeSpec()
+                  else -> swiftObjectTypeSpec(outputDirectory, outputGroup)
+                }
+
+            GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
+            else -> null
+          }
+        )?.also {
+          it.addClosedModelSupport(this, typedEventEnvelopeOrNull() == null)
+          it.addModelValidation(this, outputDirectory, outputGroup)
         }
-      )?.also {
-        it.addClosedModelSupport(this, typedEventEnvelopeOrNull() == null)
-        it.addModelValidation(this, outputDirectory, outputGroup)
-      }
-    if (builder == null && isAliasLike) addAliasValidation(outputDirectory, outputGroup)
-    return builder
+      if (builder == null && isAliasLike) addAliasValidation(outputDirectory, outputGroup)
+      return builder
+    }
   }
 
   private fun GeneratedModel.addAliasValidation(

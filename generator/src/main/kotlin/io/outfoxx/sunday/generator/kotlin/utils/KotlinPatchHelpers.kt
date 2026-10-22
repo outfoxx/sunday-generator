@@ -31,11 +31,12 @@ import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 
-/** Adds conversion adapters to paired models and emits one shared RFC 7396 implementation. */
+/** Adds conversion adapters and a declaration-owned RFC 7396 implementation to each model pair. */
 internal fun addKotlinPatchHelpers(
   models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   validation: BeanValidationTypes?,
-  register: (ClassName, TypeSpec.Builder) -> Unit,
+  allModels: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> = models,
+  methodNames: Pair<String, String>? = null,
 ) {
   val pairs =
     models.entries.mapNotNull { patch ->
@@ -48,22 +49,21 @@ internal fun addKotlinPatchHelpers(
       original?.let { it to patch }
     }
   if (pairs.isEmpty()) return
-  val typeNames = NameAllocator()
-  models.keys.forEach { typeNames.newName(it.simpleName) }
-  val support =
-    ClassName(
-      pairs
-        .first()
-        .first.key.packageName,
-      typeNames.newName("MergePatchSupport"),
-    )
   val names = NameAllocator()
-  models.values
+  allModels.values
     .flatMap { (_, builder) -> builder.propertySpecs.map { it.name } + builder.funSpecs.map { it.name } }
     .distinct()
     .forEach { names.newName(it) }
-  val patchMethod = names.newName("patch")
-  val mergeMethod = names.newName("merge")
+  val patchMethod = methodNames?.first ?: names.newName("patch")
+  val mergeMethod = methodNames?.second ?: names.newName("merge")
+  if (pairs.size > 1) {
+    pairs.forEach { (original, patch) ->
+      addKotlinPatchHelpers(mapOf(original.toPair(), patch.toPair()), validation, allModels, patchMethod to mergeMethod)
+    }
+    return
+  }
+  val original = pairs.single().first
+  val support = original.key.nestedClass("MergePatchSupport")
   val mapper = ClassName("com.fasterxml.jackson.databind", "ObjectMapper")
   val node = ClassName("com.fasterxml.jackson.databind", "JsonNode")
   val mapperParameter = ParameterSpec.builder("mapper", mapper).defaultValue("%T.mapper", support).build()
@@ -76,10 +76,7 @@ internal fun addKotlinPatchHelpers(
     val tagCode = tag?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null")
     val parentHasPair =
       original.value.first.inherits.any { parent ->
-        pairs.any {
-          it.first.value.first.name ==
-            parent.name
-        }
+        allModels.values.any { it.first.patchOf?.name == parent.name }
       }
     val snapshot =
       FunSpec
@@ -143,8 +140,14 @@ internal fun addKotlinPatchHelpers(
   val helper =
     TypeSpec
       .objectBuilder(support)
-      .addModifiers(KModifier.INTERNAL)
-      .addKdoc("Shared wire-tree operations for generated merge-patch companions.\n")
+      .apply {
+        if (original.value.second
+            .build()
+            .kind != TypeSpec.Kind.INTERFACE
+        ) {
+          addModifiers(KModifier.INTERNAL)
+        }
+      }.addKdoc("Shared wire-tree operations for generated merge-patch companions.\n")
       .addProperty(PropertySpec.builder("mapper", mapper).initializer("%T().findAndRegisterModules()", mapper).build())
   val generic = TypeVariableName("T", Any::class)
   helper.addFunction(
@@ -277,7 +280,7 @@ internal fun addKotlinPatchHelpers(
   )
   // Generated Jackson factories apply decoding defaults. A merge must retain deleted members as absent.
   val factories =
-    models.filterValues { (_, b) ->
+    allModels.filterValues { (_, b) ->
       b.typeSpecs.any {
         it.isCompanion &&
           it.funSpecs.any { f -> f.annotations.any { a -> a.typeName == JACKSON_JSON_CREATOR } }
@@ -319,5 +322,5 @@ internal fun addKotlinPatchHelpers(
           ).build(),
       ).build(),
   )
-  register(support, helper)
+  original.value.second.addType(helper.build())
 }

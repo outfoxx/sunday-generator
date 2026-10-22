@@ -89,7 +89,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("project-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("project-3.1.ir.yaml", api)
   }
 
   @Test
@@ -147,7 +147,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("operation-surface-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("operation-surface-3.1.ir.yaml", api)
   }
 
   @Test
@@ -189,7 +189,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("path-item-parameters-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("path-item-parameters-3.1.ir.yaml", api)
   }
 
   @Test
@@ -256,7 +256,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("schema-breadth-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("schema-breadth-3.1.ir.yaml", api)
   }
 
   @Test
@@ -511,7 +511,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("composition-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("composition-3.1.ir.yaml", api)
   }
 
   @Test
@@ -534,7 +534,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("additional-properties-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("additional-properties-3.1.ir.yaml", api)
   }
 
   @Test
@@ -543,7 +543,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("lifecycle-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("lifecycle-3.1.ir.yaml", api)
   }
 
   @Test
@@ -552,7 +552,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("security-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("security-3.1.ir.yaml", api)
   }
 
   @Test
@@ -611,7 +611,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("metadata-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("metadata-3.1.ir.yaml", api)
   }
 
   @Test
@@ -635,7 +635,7 @@ class OpenApiToGeneratedApiTest {
   ) {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
-    assertEquals(expectedYaml("extensions-3.1.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("extensions-3.1.ir.yaml", api)
   }
 
   @Test
@@ -798,6 +798,20 @@ class OpenApiToGeneratedApiTest {
         appendLine("      default: $sourceDefault")
       },
     )
+  }
+
+  private fun assertIrSnapshot(
+    name: String,
+    api: GeneratedApi,
+  ) {
+    val actual = normalizedYaml(api)
+    if (System.getenv("UPDATE_IR_SNAPSHOTS") == "1") {
+      Files.writeString(
+        Path.of("src", "test", "resources", "ir", "expected", "OpenApiToGeneratedApiTest", name),
+        actual,
+      )
+    }
+    assertEquals(expectedYaml(name), actual)
   }
 
   private fun expectedYaml(name: String): String =

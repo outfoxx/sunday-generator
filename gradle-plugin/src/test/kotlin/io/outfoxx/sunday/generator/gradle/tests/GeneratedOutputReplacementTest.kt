@@ -62,7 +62,7 @@ class GeneratedOutputReplacementTest {
         framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
         mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
         outputDir.set(layout.projectDirectory.dir(providers.gradleProperty('targetOutput').get()))
-        generateService.set(false)
+        outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
       }
       """.trimIndent(),
     )
@@ -126,7 +126,7 @@ class GeneratedOutputReplacementTest {
         framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
         mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
         outputDir.set(layout.projectDirectory.dir(providers.gradleProperty('targetOutput').get()))
-        generateService.set(false)
+        outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
       }
       """.trimIndent(),
     )
@@ -174,7 +174,7 @@ class GeneratedOutputReplacementTest {
             framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
             mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
             pkgName.set(generation == 'changing' ? 'test.before' : 'test.independent')
-            generateService.set(false)
+            outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
             disableJacksonAnnotations.set(true)
             disableValidationConstraints.set(true)
           }

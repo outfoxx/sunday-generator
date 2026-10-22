@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -74,7 +75,9 @@ abstract class SwiftSundayIrTestSupport {
       .generateServiceTypes()
 
     typeRegistry.generateFiles(
-      setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model),
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
       compiler.srcDir,
     )
   }

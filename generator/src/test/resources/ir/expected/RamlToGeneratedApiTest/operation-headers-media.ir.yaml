@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Operation Headers Media API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "OperationHeadersMediaService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "createProject"
     method: "POST"
@@ -75,6 +77,7 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/returns/resp/201/payload/application%2Fjson/shape/schema/inherits/shape/Project"
   properties:
   - name: "id"
     type:
@@ -88,6 +91,7 @@ models:
     required: true
 - name: "ProjectCreate"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/default/shape/default/inherits/shape/ProjectCreate"
   properties:
   - name: "name"
     type:

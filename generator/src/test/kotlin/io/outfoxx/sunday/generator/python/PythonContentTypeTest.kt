@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
@@ -71,7 +72,11 @@ class PythonContentTypeTest : PythonTest() {
       PythonLitestarIrGenerator(
         api.copy(services = listOf(service)),
         PythonGeneratorOptions(packageName = "uploads_api"),
-      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -188,7 +193,11 @@ class PythonContentTypeTest : PythonTest() {
           services = listOf(api.services.first().copy(name = "Uploads", operations = operations)),
         ),
         PythonGeneratorOptions(packageName = "uploads_api"),
-      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(
       compileModules(
         compiler,

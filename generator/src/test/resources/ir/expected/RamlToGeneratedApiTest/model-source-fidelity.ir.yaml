@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Model Source Fidelity API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "ModelSourceFidelityService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "getEvent"
     method: "GET"
@@ -36,6 +38,7 @@ services:
 models:
 - name: "AuditEvent"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fevents%2F%7BeventId%7D/supportedOperation/get/returns/resp/200/payload/default/shape/default/inherits/shape/AuditEvent"
   properties:
   - name: "id"
     type:
@@ -67,6 +70,7 @@ models:
   closed: true
 - name: "DynamicLabels"
   kind: "MAP"
+  declarationUri: "SOURCE_LOCATION#/declares/shape/DynamicLabels"
   aliases:
   - kind: "SCALAR"
     name: "string"
@@ -77,6 +81,7 @@ models:
       name: "string"
 - name: "TagSet"
   kind: "ARRAY"
+  declarationUri: "SOURCE_LOCATION#/declares/array/TagSet"
   aliases:
   - kind: "SCALAR"
     name: "string"

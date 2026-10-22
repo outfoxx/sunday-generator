@@ -537,7 +537,14 @@ class GeneratedApiComposerTest {
     val api = GeneratedApiComposer().compose(listOf(first, second))
 
     assertThat(api.models.map { model -> model.name }, equalTo(listOf("Project")))
-    assertThat(api.models.single(), equalTo(first.api.models.single()))
+    assertThat(
+      api.models.single(),
+      equalTo(
+        first.api.models
+          .single()
+          .copy(ownerUris = setOf(openApiSource.location, asyncApiSource.location)),
+      ),
+    )
   }
 
   @Test

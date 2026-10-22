@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Inline Local Shapes API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "InlineLocalShapesService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "fetchProject"
     method: "PUT"
@@ -85,6 +87,7 @@ services:
 models:
 - name: "FetchProjectProjectIdUriParam"
   kind: "ENUM"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/parameter/parameter/path/projectId/scalar/schema"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -97,6 +100,7 @@ models:
     description: "Project id family."
 - name: "FetchProjectRequestBody"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/expects/request/payload/application%2Fjson/shape/schema"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -118,6 +122,7 @@ models:
     description: "Project update body."
 - name: "FetchProjectResponseBody"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/returns/resp/200/payload/application%2Fjson/shape/schema"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -138,6 +143,7 @@ models:
     description: "Project response body."
 - name: "FetchProjectStateQueryParam"
   kind: "ENUM"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/expects/request/parameter/parameter/query/state/scalar/schema"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -150,6 +156,7 @@ models:
     description: "Project state."
 - name: "FetchProjectXModeHeaderParam"
   kind: "ENUM"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/expects/request/header/parameter/header/X-Mode/scalar/schema"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"

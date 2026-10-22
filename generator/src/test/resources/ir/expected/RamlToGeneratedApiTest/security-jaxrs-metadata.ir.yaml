@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Security JAXRS Metadata API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "SecurityJAXRSMetadataService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "secureProject"
     method: "POST"
@@ -89,6 +91,7 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/post/returns/resp/202/payload/application%2Fjson/shape/schema/inherits/shape/Project"
   properties:
   - name: "id"
     type:
@@ -97,6 +100,7 @@ models:
     required: true
 - name: "ProjectCreate"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/post/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectCreate"
   properties:
   - name: "name"
     type:

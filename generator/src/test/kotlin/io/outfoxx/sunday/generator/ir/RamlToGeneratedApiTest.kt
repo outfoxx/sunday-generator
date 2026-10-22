@@ -188,12 +188,12 @@ class RamlToGeneratedApiTest {
       ),
     )
     assertThat(api.auth, equalTo(oauth2Auth()))
-    assertThat(api.models, equalTo(listOf(projectModel())))
+    assertThat(api.models.map { it.copy(declarationUri = null) }, equalTo(listOf(projectModel())))
     assertThat(api.problems, equalTo(listOf(projectNotFoundProblem(api.source.location))))
 
     assertThat(api.services, hasSize(1))
-    assertThat(api.services.single(), equalTo(projectsService()))
-    assertEquals(expectedYaml("craft-project.ir.yaml"), normalizedYaml(api))
+    assertThat(api.services.single(), equalTo(projectsService().copy(ownerUris = setOf(api.source.location))))
+    assertIrSnapshot("craft-project.ir.yaml", api)
   }
 
   @Test
@@ -237,7 +237,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("zanzibar-user-source.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("zanzibar-user-source.ir.yaml", api)
   }
 
   @Test
@@ -327,7 +327,7 @@ class RamlToGeneratedApiTest {
 
     assertThat(api.name, equalTo("Request Shapes API"))
     assertThat(api.auth, equalTo(null))
-    assertThat(api.models, equalTo(requestShapeModels()))
+    assertThat(api.models.map { it.copy(declarationUri = null) }, equalTo(requestShapeModels()))
     assertThat(api.services, hasSize(1))
     assertThat(
       api.services
@@ -336,7 +336,7 @@ class RamlToGeneratedApiTest {
         .single(),
       equalTo(updateProjectOperation()),
     )
-    assertEquals(expectedYaml("request-shapes.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("request-shapes.ir.yaml", api)
   }
 
   @Test
@@ -419,7 +419,7 @@ class RamlToGeneratedApiTest {
         ),
       ),
     )
-    assertEquals(expectedYaml("operation-headers-media.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("operation-headers-media.ir.yaml", api)
   }
 
   @Test
@@ -500,7 +500,7 @@ class RamlToGeneratedApiTest {
         ),
       ),
     )
-    assertEquals(expectedYaml("examples.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("examples.ir.yaml", api)
   }
 
   @Test
@@ -533,7 +533,7 @@ class RamlToGeneratedApiTest {
       ),
     )
     assertThat(api.problems, equalTo(sundayBehaviorProblems(api.source.location)))
-    assertEquals(expectedYaml("sunday-behavior.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("sunday-behavior.ir.yaml", api)
   }
 
   @Test
@@ -594,7 +594,7 @@ class RamlToGeneratedApiTest {
         ),
       ),
     )
-    assertEquals(expectedYaml("problem-payloads.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("problem-payloads.ir.yaml", api)
   }
 
   @Test
@@ -619,7 +619,7 @@ class RamlToGeneratedApiTest {
         .single(),
       equalTo(GeneratedModelProperty("archive", GeneratedTypeRef.scalar("file"))),
     )
-    assertEquals(expectedYaml("file-payloads.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("file-payloads.ir.yaml", api)
   }
 
   @Test
@@ -630,7 +630,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("inline-local-shapes.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("inline-local-shapes.ir.yaml", api)
   }
 
   @Test
@@ -641,7 +641,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("query-string-shapes.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("query-string-shapes.ir.yaml", api)
   }
 
   @Test
@@ -676,7 +676,7 @@ class RamlToGeneratedApiTest {
         ),
       ),
     )
-    assertEquals(expectedYaml("service-annotations.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("service-annotations.ir.yaml", api)
   }
 
   @Test
@@ -707,7 +707,7 @@ class RamlToGeneratedApiTest {
       api.models.single { model -> model.name == "Project" }.documentation,
       equalTo(GeneratedDocumentation(description = "Project model documentation description.")),
     )
-    assertEquals(expectedYaml("documentation.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("documentation.ir.yaml", api)
   }
 
   @Test
@@ -771,7 +771,7 @@ class RamlToGeneratedApiTest {
         ),
       ),
     )
-    assertEquals(expectedYaml("validation-and-names.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("validation-and-names.ir.yaml", api)
   }
 
   @Test
@@ -783,7 +783,7 @@ class RamlToGeneratedApiTest {
     val api = RamlToGeneratedApi().convert(result)
 
     assertThat(
-      api.models.single { model -> model.name == "Animal" },
+      api.models.single { model -> model.name == "Animal" }.copy(declarationUri = null),
       equalTo(
         GeneratedModel(
           name = "Animal",
@@ -798,7 +798,7 @@ class RamlToGeneratedApiTest {
       ),
     )
     assertThat(
-      api.models.single { model -> model.name == "Cat" },
+      api.models.single { model -> model.name == "Cat" }.copy(declarationUri = null),
       equalTo(
         GeneratedModel(
           name = "Cat",
@@ -824,7 +824,7 @@ class RamlToGeneratedApiTest {
         .map { property -> property.name },
       equalTo(listOf("packSize")),
     )
-    assertEquals(expectedYaml("inheritance-discriminator.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("inheritance-discriminator.ir.yaml", api)
   }
 
   @Test
@@ -862,7 +862,7 @@ class RamlToGeneratedApiTest {
         ),
       ),
     )
-    assertEquals(expectedYaml("external-discriminator.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("external-discriminator.ir.yaml", api)
   }
 
   @Test
@@ -873,7 +873,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("target-overrides.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("target-overrides.ir.yaml", api)
   }
 
   @Test
@@ -884,7 +884,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("model-source-fidelity.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("model-source-fidelity.ir.yaml", api)
   }
 
   @Test
@@ -895,7 +895,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("operation-transport-fidelity.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("operation-transport-fidelity.ir.yaml", api)
   }
 
   @Test
@@ -906,7 +906,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("problem-uri-parity.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("problem-uri-parity.ir.yaml", api)
   }
 
   @Test
@@ -942,7 +942,7 @@ class RamlToGeneratedApiTest {
       libraryModel.targets["typescript"]?.modelModuleName,
       equalTo("library-models"),
     )
-    assertEquals(expectedYaml("imported-declarations.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("imported-declarations.ir.yaml", api)
   }
 
   @Test
@@ -953,7 +953,7 @@ class RamlToGeneratedApiTest {
     val result = TestAPIProcessing.process(testUri)
     val api = RamlToGeneratedApi().convert(result)
 
-    assertEquals(expectedYaml("security-jaxrs-metadata.ir.yaml"), normalizedYaml(api))
+    assertIrSnapshot("security-jaxrs-metadata.ir.yaml", api)
   }
 
   private fun normalizedYaml(api: GeneratedApi): String =
@@ -970,6 +970,17 @@ class RamlToGeneratedApiTest {
             normalized.replace(location, "SOURCE_LOCATION_REFERENCE")
           }
       }
+
+  private fun assertIrSnapshot(
+    name: String,
+    api: GeneratedApi,
+  ) {
+    val actual = normalizedYaml(api)
+    if (System.getenv("UPDATE_IR_SNAPSHOTS") == "1") {
+      Files.writeString(Path.of("src", "test", "resources", "ir", "expected", "RamlToGeneratedApiTest", name), actual)
+    }
+    assertEquals(expectedYaml(name), actual)
+  }
 
   private fun expectedYaml(name: String): String =
     Files.readString(

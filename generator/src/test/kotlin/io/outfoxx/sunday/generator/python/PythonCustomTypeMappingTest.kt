@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -593,7 +594,12 @@ class PythonCustomTypeMappingTest : PythonTest() {
       compileModules(
         compiler,
         PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "test_api"))
-          .generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)) + domain,
+          .generateModules(
+            GeneratedOutputSelection(
+              GeneratedTypeCategory.entries.toSet(),
+            ),
+          ) +
+          domain,
         importModules = listOf("test_api.models"),
         smokeCode =
           """

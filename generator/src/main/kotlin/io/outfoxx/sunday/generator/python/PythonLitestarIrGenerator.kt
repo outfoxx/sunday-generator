@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
@@ -25,6 +26,7 @@ import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
 import io.outfoxx.sunday.generator.ir.emit.endpointSecurityPolicy
 import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
+import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates Python Litestar server modules from generated IR. */
@@ -34,30 +36,60 @@ class PythonLitestarIrGenerator(
 ) {
 
   /** Generates the modules for the requested type categories. */
-  fun generateModules(outputCategories: Set<GeneratedTypeCategory>): List<PythonModule> {
+  fun generateModules(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<PythonModule> {
     options.requireBrokerServicesSupported("Python/Litestar")
     val packageName = api.pythonPackageName(options)
     val services = api.pythonHttpServices()
+
+    fun selected(service: GeneratedService): Boolean {
+      val origin = service.outputOrigin(api)
+      return selection.includes(origin.category, origin.ownerUris)
+    }
+    val sharedOrigin = api.outputOrigin()
+    val includeShared = selection.includes(sharedOrigin.category, sharedOrigin.ownerUris)
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
-    if (GeneratedTypeCategory.Model in outputCategories) {
+    val selectedModels =
+      api.models
+        .filter { model ->
+          val origin = model.outputOrigin(api)
+          selection.includes(origin.category, origin.ownerUris)
+        }.toSet()
+    if (selectedModels.isNotEmpty() ||
+      (
+        selection.ownerUris.isEmpty() &&
+          (selection.categories.isEmpty() || GeneratedTypeCategory.Model in selection.categories)
+      )
+    ) {
       modules +=
         PythonModelRenderer(
           packageName,
           options.preserveUnknownFields,
           options.defaultTolerance,
-        ).renderModels(api.models)
-      modules += PythonProblemRenderer(packageName).renderProblems(api.problems)
+        ).renderModels(api.models) { it in selectedModels }
+    }
+    val problems =
+      api.problems.filter { problem ->
+        val origin = problem.outputOrigin(api)
+        selection.includes(origin.category, origin.ownerUris)
+      }
+    if (problems.isNotEmpty() ||
+      (
+        selection.ownerUris.isEmpty() &&
+          (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories)
+      )
+    ) {
+      modules += PythonProblemRenderer(packageName).renderProblems(problems)
     }
 
-    if (GeneratedTypeCategory.Service in outputCategories) {
+    if (services.isNotEmpty()) {
       services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Server), "Python/Litestar")
       val litestarRenderer = PythonLitestarRenderer(packageName, api)
-      if (options.enforceSecuritySchemes) {
+      if (options.enforceSecuritySchemes && includeShared) {
         modules += renderSecurity(packageName, services)
       }
       modules +=
-        services.map { service ->
+        services.mapNotNull { service ->
           val authentication =
             if (options.enforceEndpointSecurity || options.enforceSecuritySchemes) {
               service.operations.associate { operation ->
@@ -66,20 +98,21 @@ class PythonLitestarIrGenerator(
             } else {
               emptyMap()
             }
-          litestarRenderer.renderService(
-            service,
-            authentication,
-            if (options.enforceSecuritySchemes) {
-              service.operations.associate {
-                it.id to
-                  api.endpointSecurityPolicy(service, it, options.generationContext(GenerationMode.Server))
-              }
-            } else {
-              null
-            },
-          )
+          litestarRenderer
+            .renderService(
+              service,
+              authentication,
+              if (options.enforceSecuritySchemes) {
+                service.operations.associate {
+                  it.id to
+                    api.endpointSecurityPolicy(service, it, options.generationContext(GenerationMode.Server))
+                }
+              } else {
+                null
+              },
+            ).takeIf { selected(service) }
         }
-      if (options.aggregateServices && services.size > 1) {
+      if (options.aggregateServices && services.size > 1 && includeShared) {
         modules += renderAggregate(packageName, services)
       }
     }

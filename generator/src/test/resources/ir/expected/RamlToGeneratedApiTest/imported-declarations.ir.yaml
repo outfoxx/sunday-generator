@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Imported Declarations API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "ImportedDeclarationsService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "fetchTest"
     method: "GET"
@@ -36,6 +38,7 @@ services:
 models:
 - name: "Test"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Ftests%2F%7Bid%7D/supportedOperation/get/returns/resp/200/payload/default/shape/default/inherits/shape/Test"
   properties:
   - name: "localValue"
     type:
@@ -53,6 +56,7 @@ models:
   source:
     kind: "RAML"
     location: "SOURCE_LOCATION_REFERENCE"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Ftests%2F%7Bid%7D/supportedOperation/get/returns/resp/200/payload/default/shape/default/inherits/shape/Test/shape/Test"
   properties:
   - name: "libraryValue"
     type:

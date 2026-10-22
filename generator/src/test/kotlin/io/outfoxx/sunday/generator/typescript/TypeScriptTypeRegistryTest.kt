@@ -18,9 +18,14 @@ package io.outfoxx.sunday.generator.typescript
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.ImportStyle
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.compileGeneratedFiles
 import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.typescriptpoet.ClassSpec
@@ -42,7 +47,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 
-@Tag("typescript")
+@TypeScriptTest
 class TypeScriptTypeRegistryTest {
 
   @Test
@@ -53,7 +58,10 @@ class TypeScriptTypeRegistryTest {
     typeRegistry.addServiceType(TypeName.namedImport("ServiceA", sharedModulePath), ClassSpec.builder("ServiceA"))
     typeRegistry.addServiceType(TypeName.namedImport("ServiceB", sharedModulePath), ClassSpec.builder("ServiceB"))
 
-    val files = typeRegistry.generateExportedTypeFiles(setOf(GeneratedTypeCategory.Service))
+    val files =
+      typeRegistry.generateExportedTypeFiles(
+        GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)),
+      )
 
     assertThat(files.size, equalTo(1))
 
@@ -76,7 +84,10 @@ class TypeScriptTypeRegistryTest {
     typeRegistry.addServiceType(TypeName.namedImport("ServiceA", sharedModulePath), ClassSpec.builder("ServiceA"))
     typeRegistry.addServiceType(TypeName.namedImport("ServiceB", sharedModulePath), ClassSpec.builder("ServiceB"))
 
-    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Service), outputDir)
+    typeRegistry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)),
+      outputDir,
+    )
 
     val mergedFile = Files.readString(outputDir.resolve("shared-module.ts"))
     val indexFile = Files.readString(outputDir.resolve("index.ts"))
@@ -128,7 +139,9 @@ class TypeScriptTypeRegistryTest {
   }
 
   @Test
-  fun `generateExportedTypeFiles sorts companion schema members deterministically by type name`() {
+  fun `generateExportedTypeFiles sorts companion schema members deterministically by type name`(
+    compiler: TypeScriptCompiler,
+  ) {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val modulePath = "models-schema"
     val parentType = TypeName.namedImport("Parent", "!models")
@@ -144,26 +157,18 @@ class TypeScriptTypeRegistryTest {
     classSuperTypes[childType] = parentType
     classSuperTypes[alphaType] = null
 
-    val companionSchemaFileMembersField = typeRegistry.javaClass.getDeclaredField("companionSchemaFileMembers")
-    companionSchemaFileMembersField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val companionSchemaFileMembers =
-      companionSchemaFileMembersField.get(typeRegistry) as
-        MutableMap<String, MutableList<Pair<TypeName.Standard, CodeBlock>>>
-    companionSchemaFileMembers[modulePath] =
-      mutableListOf(
-        parentType to CodeBlock.of("const parentSchema = true;\n"),
-        alphaType to CodeBlock.of("const alphaSchema = true;\n"),
-        childType to CodeBlock.of("const childSchema = true;\n"),
+    typeRegistry.addCompanionSchemaFileExtra(parentType, CodeBlock.of("const parentSchema = true;\n"))
+    typeRegistry.addCompanionSchemaFileExtra(alphaType, CodeBlock.of("const alphaSchema = true;\n"))
+    typeRegistry.addCompanionSchemaFileExtra(childType, CodeBlock.of("const childSchema = true;\n"))
+
+    val generatedFiles =
+      typeRegistry.generateExportedTypeFiles(
+        GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
       )
-
-    val generatedFiles = typeRegistry.generateExportedTypeFiles(setOf(GeneratedTypeCategory.Model))
+    generatedFiles.forEach { it.writeTo(compiler.srcDir) }
+    assertTrue(compileGeneratedFiles(compiler))
     assertThat(generatedFiles.size, equalTo(1))
-
-    val output =
-      buildString {
-        generatedFiles.single().writeTo(this)
-      }
+    val output = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "$modulePath.ts")
 
     val childIndex = output.indexOf("childSchema")
     val alphaIndex = output.indexOf("alphaSchema")

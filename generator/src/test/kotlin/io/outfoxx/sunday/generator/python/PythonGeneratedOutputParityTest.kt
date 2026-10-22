@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedApi
@@ -575,7 +576,9 @@ class PythonGeneratedOutputParityTest : PythonTest() {
         PythonSundayIrGenerator(
           api,
           PythonGeneratorOptions(packageName = "parity_api", generateBrokerServices = true),
-        ).generateModules(GeneratedTypeCategory.entries.toSet())
+        ).generateModules(
+          GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+        )
       }
     assertTrue(error.message!!.contains("not supported for Python/Sunday"), error.message)
   }
@@ -649,7 +652,9 @@ class PythonGeneratedOutputParityTest : PythonTest() {
         aggregateServices = aggregate,
         aggregateServiceName = "ParityAPI",
       ),
-    ).generateModules(GeneratedTypeCategory.entries.toSet())
+    ).generateModules(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+    )
 
   private fun GeneratedApi.litestarModules(aggregate: Boolean = false): List<PythonModule> =
     PythonLitestarIrGenerator(
@@ -659,7 +664,9 @@ class PythonGeneratedOutputParityTest : PythonTest() {
         aggregateServices = aggregate,
         aggregateServiceName = "ParityAPI",
       ),
-    ).generateModules(GeneratedTypeCategory.entries.toSet())
+    ).generateModules(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+    )
 
   private fun compileAndSnapshot(
     compiler: PythonCompiler,

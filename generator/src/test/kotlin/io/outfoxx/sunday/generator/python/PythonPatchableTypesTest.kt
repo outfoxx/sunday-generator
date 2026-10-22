@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -126,7 +127,9 @@ class PythonPatchableTypesTest : PythonTest() {
       PythonSundayIrGenerator(
         GeneratedApiIrExporter().export(sources),
         PythonGeneratorOptions(packageName = "test_api"),
-      ).generateModules(setOf(GeneratedTypeCategory.Model))
+      ).generateModules(
+        GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -190,7 +193,11 @@ class PythonPatchableTypesTest : PythonTest() {
       PythonLitestarIrGenerator(
         api.copy(services = listOf(service)),
         PythonGeneratorOptions(packageName = "test_api"),
-      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -263,7 +270,9 @@ class PythonPatchableTypesTest : PythonTest() {
     val patchName = if (frontend == "composed-collisions") "SomeRequestPatch2" else "SomeRequestPatch"
     val modules =
       PythonSundayIrGenerator(patchableApi(frontend, directory), PythonGeneratorOptions(packageName = "test_api"))
-        .generateModules(GeneratedTypeCategory.entries.toSet())
+        .generateModules(
+          GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+        )
     assertTrue(
       compileModules(
         compiler,

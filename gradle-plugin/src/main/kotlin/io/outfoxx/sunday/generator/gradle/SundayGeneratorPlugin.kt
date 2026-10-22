@@ -141,8 +141,8 @@ class SundayGeneratorPlugin : Plugin<Project> {
           genTask.clientConfigurationFileName.set(gen.clientConfigurationFileName)
           genTask.defaultTolerance.set(gen.defaultTolerance)
           genTask.autoPatchable.set(gen.autoPatchable)
-          gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
-          gen.generateService.takeIf { it.isPresent }?.let { genTask.generateService.set(it) }
+          genTask.outputCategories.set(gen.outputCategories)
+          genTask.outputOwners.set(gen.outputOwners)
           gen.generateBrokerServices.takeIf { it.isPresent }?.let { genTask.generateBrokerServices.set(it) }
           gen.pkgName.takeIf { it.isPresent }?.let { genTask.pkgName.set(it) }
           gen.servicePkgName.takeIf { it.isPresent }?.let { genTask.servicePkgName.set(it) }

@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Projects API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "ProjectsService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "getProject"
     method: "GET"
@@ -57,6 +59,7 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/Project"
   properties:
   - name: "id"
     type:

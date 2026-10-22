@@ -18,6 +18,8 @@
 
 package io.outfoxx.sunday.generator.gradle
 
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
@@ -49,6 +51,7 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -147,13 +150,29 @@ abstract class SundayGenerate
     @get:Input
     val autoPatchable: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
+    /** Categories to emit; empty selects models, services, and problems. */
     @get:Input
     @get:Optional
-    val generateModel: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    val outputCategories: SetProperty<GeneratedTypeCategory> =
+      objects
+        .setProperty(
+          GeneratedTypeCategory::class.java,
+        ).convention(emptySet())
 
+    /** Exact owner filenames or document URIs; empty selects every owner. */
     @get:Input
     @get:Optional
-    val generateService: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    val outputOwners: SetProperty<String> = objects.setProperty(String::class.java).convention(emptySet())
+
+    /** Absolute identities participate in the cache key, including resolved symbolic links. */
+    @get:Input
+    val resolvedOutputOwners: Set<String>
+      get() =
+        outputOwners
+          .get()
+          .map {
+            GeneratedDocumentUri.configuration(it, sourceBaseDirectory.get().asFile.toPath()).toString()
+          }.toSet()
 
     @get:Input
     @get:Optional
@@ -311,13 +330,8 @@ abstract class SundayGenerate
       val outputDirFile = outputDir.get().asFile
       validateOutputDirectory(outputDirFile)
 
-      val categories = EnumSet.noneOf(GeneratedTypeCategory::class.java)
-      if (generateModel.get()) {
-        categories.add(GeneratedTypeCategory.Model)
-      }
-      if (generateService.get()) {
-        categories.add(GeneratedTypeCategory.Service)
-      }
+      val selection =
+        GeneratedOutputSelection(outputCategories.get(), resolvedOutputOwners.map(java.net.URI::create).toSet())
 
       val options = EnumSet.allOf(KotlinTypeRegistry.Option::class.java)
       if (!preserveUnknownFields.get()) {
@@ -374,7 +388,7 @@ abstract class SundayGenerate
       // categories while retaining the previous output if generation itself fails.
       val staging = Files.createTempDirectory(temporaryDir.toPath(), "generated-").toFile()
       try {
-        typeRegistry.generateFiles(categories, staging.toPath())
+        typeRegistry.generateFiles(selection, staging.toPath())
         GeneratedOutputOwnership.record(staging, path)
         validateOutputDirectory(outputDirFile)
         fileSystem.sync {

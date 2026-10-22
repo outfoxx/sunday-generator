@@ -23,6 +23,10 @@ data class GeneratedModel(
   val name: String,
   val kind: Kind,
   val source: GeneratedSourceSpec? = null,
+  /** Original schema location, preserved independently of composition names. */
+  val declarationUri: String? = null,
+  /** Candidate owners retained when composition deduplicates distinct declarations. */
+  val ownerUris: Set<String> = emptySet(),
   val scope: GeneratedModelScope? = null,
   val properties: List<GeneratedModelProperty> = listOf(),
   val values: List<String> = listOf(),

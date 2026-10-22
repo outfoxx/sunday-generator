@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -161,7 +162,11 @@ class PythonBinaryResponseTest : PythonTest() {
       )
     val modules =
       PythonSundayIrGenerator(api.copy(services = listOf(service)), PythonGeneratorOptions(packageName = "binary_api"))
-        .generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+        .generateModules(
+          GeneratedOutputSelection(
+            GeneratedTypeCategory.entries.toSet(),
+          ),
+        )
     val methods =
       service.operations
         .filter {

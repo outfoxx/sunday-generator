@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Composition API"
 source:
   kind: "OPENAPI"
   location: "SOURCE_LOCATION"
 services:
 - name: "CompositionService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://api.example.com/v1"
   operations:
   - id: "getWorkItem"
@@ -67,6 +69,10 @@ services:
 models:
 - name: "Activity"
   kind: "UNION"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/Activity"
   aliases:
   - kind: "NAMED"
     name: "Bug"
@@ -83,6 +89,10 @@ models:
       name: "Feature"
 - name: "Bug"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/Bug"
   properties:
   - name: "severity"
     type:
@@ -95,6 +105,10 @@ models:
   discriminatorValue: "bug"
 - name: "Feature"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/Feature"
   properties:
   - name: "rolloutStage"
     type:
@@ -121,6 +135,10 @@ models:
   unionMode: "ONE_OF"
 - name: "WorkItem"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/WorkItem"
   properties:
   - name: "kind"
     type:

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
@@ -45,7 +46,10 @@ class SwiftModelDefaultsTest {
       registry,
       swiftSundayTestOptions,
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("ModelDefaultsTests.swift"),

@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.python
 
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 
 /** CLI command that generates Python Litestar server stubs from supported source specs. */
@@ -39,7 +40,7 @@ open class PythonLitestarGenerateCommand :
   ).flag(default = false)
 
   override fun run() {
-    println("Generating ${this.outputCategories} types")
+    println("Generating ${outputCategories.ifEmpty { GeneratedTypeCategory.entries }} types")
     println("Processing ${files.joinToString()}")
 
     val export = exportApi()
@@ -50,7 +51,7 @@ open class PythonLitestarGenerateCommand :
           enforceEndpointSecurity = enforceEndpointSecurity,
           enforceSecuritySchemes = enforceSecuritySchemes,
         ),
-      ).generateModules(outputCategories.toSet())
+      ).generateModules(outputSelection)
 
     PythonModuleWriter().writeModules(modules, outputDirectory.toPath())
   }

@@ -22,6 +22,8 @@ import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.tag
+import io.outfoxx.sunday.generator.GeneratedOutputOwnership
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
@@ -52,6 +54,9 @@ class KotlinTypeRegistry(
   override val applicationMetadata: KotlinApplicationMetadataOptions = KotlinApplicationMetadataOptions(),
 ) : KotlinTypeOutputRegistry {
 
+  override val outputOwnership =
+    GeneratedOutputOwnership()
+
   enum class Option {
     ImplementModel,
     ValidationConstraints,
@@ -69,6 +74,7 @@ class KotlinTypeRegistry(
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val serviceProviders = linkedMapOf<ClassName, MutableSet<ClassName>>()
   private val propertyResources = linkedMapOf<String, MutableMap<String, String>>()
+  private val propertyContributions = mutableListOf<Triple<String, Map<String, String>, Any>>()
   private val propertyOwners = linkedMapOf<String, MutableSet<String>>()
   internal val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   override val beanValidationTypes =
@@ -80,13 +86,17 @@ class KotlinTypeRegistry(
   override val problemLibrarySupport: KotlinProblemLibrarySupport = problemLibrary.support(problemRfc)
 
   fun generateFiles(
-    categories: Set<GeneratedTypeCategory>,
+    selection: GeneratedOutputSelection = GeneratedOutputSelection(),
     outputDirectory: Path,
   ) {
 
     val builtTypes = buildTypes()
-    if (GeneratedTypeCategory.Service in categories) {
-      propertyResources.keys.forEach {
+    val selectedProperties = linkedMapOf<String, MutableMap<String, String>>()
+    propertyContributions.filter { outputOwnership.includes(selection, it.third) }.forEach { (path, values, _) ->
+      GeneratedProperties.merge(selectedProperties.getOrPut(path) { linkedMapOf() }, values, path)
+    }
+    if (selection.categories.isEmpty() || GeneratedTypeCategory.Service in selection.categories) {
+      selectedProperties.keys.forEach {
         GeneratedProperties
           .destination(outputDirectory, it)
       }
@@ -94,18 +104,20 @@ class KotlinTypeRegistry(
 
     builtTypes.entries
       .filter { it.key.topLevelClassName() == it.key }
-      .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
+      .filter { type -> outputOwnership.includes(selection, type.key) }
       .map { kotlinFileSpec(it.key.packageName, it.value) }
       .forEach { it.writeTo(outputDirectory) }
-    if (GeneratedTypeCategory.Service in categories) {
-      propertyResources.forEach { (path, values) ->
+    if (selection.categories.isEmpty() || GeneratedTypeCategory.Service in selection.categories) {
+      selectedProperties.forEach { (path, values) ->
         GeneratedProperties
           .write(outputDirectory, path, values)
       }
       serviceProviders.forEach { (service, implementations) ->
+        val selected = implementations.filter { outputOwnership.includes(selection, it) }
+        if (selected.isEmpty()) return@forEach
         val resource = outputDirectory.resolve("META-INF/services/${service.canonicalName}")
         Files.createDirectories(resource.parent)
-        Files.writeString(resource, implementations.joinToString("\n", postfix = "\n") { it.canonicalName })
+        Files.writeString(resource, selected.joinToString("\n", postfix = "\n") { it.canonicalName })
       }
     }
   }
@@ -115,6 +127,9 @@ class KotlinTypeRegistry(
     values: Map<String, String>,
     owner: String,
   ) {
+    val contribution = Any()
+    outputOwnership.register(contribution, GeneratedTypeCategory.Service)
+    propertyContributions.add(Triple(path, values, contribution))
     GeneratedProperties
       .validatePath(path)
     val artifactValues =
@@ -167,6 +182,7 @@ class KotlinTypeRegistry(
       .addGenerated(true)
       .addSuppress()
 
+    outputOwnership.register(className, GeneratedTypeCategory.Service)
     serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
     if (typeBuilders.putIfAbsent(className, serviceType) != null) {
@@ -184,6 +200,7 @@ class KotlinTypeRegistry(
       .addGenerated(true)
       .addSuppress()
 
+    outputOwnership.register(className, GeneratedTypeCategory.Model)
     modelType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(className, modelType) != null) {

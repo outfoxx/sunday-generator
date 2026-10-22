@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -144,9 +145,17 @@ class PythonParameterDefaultsTest : PythonTest() {
       PythonSundayIrGenerator(
         api.withOptionalParameterTemplates(),
         PythonGeneratorOptions(packageName = "client_api"),
-      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)) +
+      ).generateModules(
+        GeneratedOutputSelection(
+          GeneratedTypeCategory.entries.toSet(),
+        ),
+      ) +
         PythonLitestarIrGenerator(api, PythonGeneratorOptions(packageName = "server_api"))
-          .generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)) +
+          .generateModules(
+            GeneratedOutputSelection(
+              GeneratedTypeCategory.entries.toSet(),
+            ),
+          ) +
         PythonModuleBuilder("client_api/literals.py")
           .addCode(
             PythonCodeBlock.of(

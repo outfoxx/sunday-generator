@@ -42,6 +42,6 @@ data class GeneratedApi(
   companion object {
 
     /** Current durable IR schema version. */
-    const val CURRENT_IR_VERSION = "1"
+    const val CURRENT_IR_VERSION = "2"
   }
 }

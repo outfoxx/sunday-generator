@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Lifecycle API"
 source:
   kind: "OPENAPI"
   location: "SOURCE_LOCATION"
 services:
 - name: "LifecycleService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://api.example.com/v1"
   operations:
   - id: "listLegacyProjects"
@@ -39,6 +41,10 @@ services:
 models:
 - name: "LegacyProject"
   kind: "OBJECT"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/components/schemas/LegacyProject"
   properties:
   - name: "id"
     type:

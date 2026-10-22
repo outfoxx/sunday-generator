@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -42,7 +43,9 @@ class PythonDiscriminatedPatchTest : PythonTest() {
     val tag = if (frontend == "renamed") "animal-kind" else "kind"
     val modules =
       PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "test_api"))
-        .generateModules(setOf(GeneratedTypeCategory.Model))
+        .generateModules(
+          GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+        )
     assertTrue(
       compileModules(
         compiler,

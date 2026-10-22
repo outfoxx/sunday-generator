@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
@@ -234,6 +235,10 @@ class PythonEndpointSecurityTest : PythonTest() {
     return PythonLitestarIrGenerator(
       api,
       PythonGeneratorOptions(packageName = "security_api", aggregateServices = true, enforceEndpointSecurity = enforce),
-    ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+    ).generateModules(
+      GeneratedOutputSelection(
+        GeneratedTypeCategory.entries.toSet(),
+      ),
+    )
   }
 }

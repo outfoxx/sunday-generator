@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -82,7 +83,10 @@ class SwiftUnionAliasValidationTest {
       registry,
       SwiftSundayOptions("https://example.com/", listOf("application/json"), "API"),
     ).generateServiceTypes()
-    registry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("ScalarUnionTests.swift"),

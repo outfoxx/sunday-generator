@@ -158,7 +158,7 @@ class PythonCLITest {
             "-package",
             "turnpost_api",
             "-category",
-            "model",
+            "models",
             "-out",
             output.toString(),
             openApi.toString(),

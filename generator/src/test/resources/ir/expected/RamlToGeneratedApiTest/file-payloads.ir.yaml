@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "File Payloads API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "FilePayloadsService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "uploadArchive"
     method: "POST"

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
@@ -195,7 +196,10 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
     val typeRegistry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(composedApi, typeRegistry, swiftSundayTestOptions)
       .generateServiceTypes()
-    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    typeRegistry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("TolerantEnumTests.swift"),
@@ -390,7 +394,10 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
     SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
       .generateServiceTypes()
 
-    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    typeRegistry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("EventNullabilityTests.swift"),

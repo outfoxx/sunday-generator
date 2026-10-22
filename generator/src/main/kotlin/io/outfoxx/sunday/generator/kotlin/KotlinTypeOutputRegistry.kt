@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeSpec
+import io.outfoxx.sunday.generator.GeneratedOutputOwnership
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.utils.BeanValidationTypes
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
@@ -27,6 +28,9 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrarySupport
  * Kotlin type registry surface required by IR-backed emitters.
  */
 interface KotlinTypeOutputRegistry {
+
+  /** Declaration provenance used exclusively for output selection. */
+  val outputOwnership: GeneratedOutputOwnership
 
   /** API-derived application metadata output controls. */
   val applicationMetadata: KotlinApplicationMetadataOptions get() = KotlinApplicationMetadataOptions()

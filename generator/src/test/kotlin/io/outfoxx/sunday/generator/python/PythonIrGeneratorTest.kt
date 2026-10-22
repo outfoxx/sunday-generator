@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedMedia
@@ -48,7 +49,10 @@ class PythonIrGeneratorTest : PythonTest() {
           aggregateServiceName = "CraftAPI",
         ),
       )
-    val modules = generator.generateModules(GeneratedTypeCategory.entries.toSet())
+    val modules =
+      generator.generateModules(
+        GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      )
 
     assertThat(
       modules.map { module -> module.path },
@@ -250,7 +254,10 @@ class PythonIrGeneratorTest : PythonTest() {
           aggregateServiceName = "CraftAPI",
         ),
       )
-    val modules = generator.generateModules(GeneratedTypeCategory.entries.toSet())
+    val modules =
+      generator.generateModules(
+        GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      )
 
     assertThat(
       modules.map { module -> module.path },

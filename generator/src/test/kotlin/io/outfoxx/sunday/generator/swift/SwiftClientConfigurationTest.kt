@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -50,7 +51,10 @@ class SwiftClientConfigurationTest {
         aggregateServiceName = "ExampleAPI",
       ),
     ).generateServiceTypes()
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.copy(
       Path.of("src/test/resources/client-config-persistence/swift.swift"),
@@ -103,7 +107,10 @@ class SwiftClientConfigurationTest {
       registry,
       SwiftSundayOptions("https://example.com/", listOf("application/json"), "API"),
     ).generateServiceTypes()
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("ClientConfigTests.swift"),
@@ -156,7 +163,10 @@ class SwiftClientConfigurationTest {
         aggregateServiceName = "ExampleAPI",
       ),
     ).generateServiceTypes()
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("AggregateTests.swift"),

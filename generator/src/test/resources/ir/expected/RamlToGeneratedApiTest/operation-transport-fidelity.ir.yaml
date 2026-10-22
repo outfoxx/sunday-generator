@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Operation Transport Fidelity API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "OperationTransportFidelityService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://{region}.api.example.com/{version}"
   baseUriParameters:
   - name: "region"
@@ -97,6 +99,7 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/Project"
   properties:
   - name: "id"
     type:
@@ -110,6 +113,7 @@ models:
     required: true
 - name: "ProjectCreateJson"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectCreateJson"
   properties:
   - name: "name"
     type:
@@ -118,6 +122,7 @@ models:
     required: true
 - name: "ProjectCreatePatch"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/application%2Fmerge-patch%2Bjson/shape/schema/inherits/shape/ProjectCreatePatch"
   properties:
   - name: "name"
     type:
@@ -125,6 +130,7 @@ models:
       name: "string"
 - name: "ProjectSummary"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/returns/resp/200/payload/application%2Fvnd.project-summary%2Bjson/shape/schema/inherits/shape/ProjectSummary"
   properties:
   - name: "id"
     type:
@@ -133,6 +139,7 @@ models:
     required: true
 - name: "ProjectCreatePatchPatch"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/application%2Fmerge-patch%2Bjson/shape/schema/inherits/shape/ProjectCreatePatch"
   properties:
   - name: "name"
     type:

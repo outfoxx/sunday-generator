@@ -216,7 +216,7 @@ class RamlToGeneratedApi(
             kind = sourceKind,
             location = document.location,
           ),
-        services = services,
+        services = services.map { it.copy(ownerUris = setOf(document.location)) },
         servers =
           api.servers.map { server ->
             GeneratedServer(
@@ -819,6 +819,8 @@ class RamlToGeneratedApi(
             declaringUnit = declaration.unit,
             rootLocation = rootLocation,
             localModels = localModels,
+          )?.copy(
+            declarationUri = declaration.sourceShape.id,
           )
         }.distinctBy { model -> model.name to model.source?.location } + localModels.models
     ).distinctBy { model -> model.name to model.source?.location to model.scope }
@@ -974,6 +976,7 @@ class RamlToGeneratedApi(
       val model =
         modelsByKey.getOrPut(key) {
           localShape.localModel(modelName, scope, serializationName, source).copy(
+            declarationUri = localShape.id,
             tolerance =
               GeneratedTolerance.parse(
                 localShape.findStringAnnotation(APIAnnotationName.Tolerance, null),

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputOwnership
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.OutputDirectory
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.TypeName
@@ -25,6 +26,9 @@ import io.outfoxx.swiftpoet.TypeSpec
  * Swift type registry surface required by IR-backed emitters.
  */
 interface SwiftTypeOutputRegistry {
+
+  /** Declaration provenance used exclusively for output selection. */
+  val outputOwnership: GeneratedOutputOwnership
 
   val options: Set<SwiftTypeRegistry.Option>
 

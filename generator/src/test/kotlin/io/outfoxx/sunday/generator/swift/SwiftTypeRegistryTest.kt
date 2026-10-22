@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.swiftpoet.DeclaredTypeName
@@ -57,7 +58,10 @@ class SwiftTypeRegistryTest {
       outputGroup = "Users",
     )
 
-    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), outputDirectory)
+    typeRegistry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      outputDirectory,
+    )
 
     assertThat(legacyFile.exists(), not(true))
     assertThat(userFile.exists(), not(false))
@@ -77,7 +81,10 @@ class SwiftTypeRegistryTest {
           TypeSpec.classBuilder("OldModel"),
         )
       }
-    oldTypeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), outputDirectory)
+    oldTypeRegistry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      outputDirectory,
+    )
 
     val newTypeRegistry =
       SwiftTypeRegistry(setOf(AddGeneratedHeader)).apply {
@@ -86,7 +93,10 @@ class SwiftTypeRegistryTest {
           TypeSpec.classBuilder("NewModel"),
         )
       }
-    newTypeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), outputDirectory)
+    newTypeRegistry.generateFiles(
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      outputDirectory,
+    )
 
     assertThat(outputDirectory.resolve("Models/OldModel.swift").exists(), not(true))
     assertThat(outputDirectory.resolve("Models/NewModel.swift").exists(), not(false))

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -67,7 +68,10 @@ class SwiftPatchableTypesTest {
           ),
       )
     SwiftSundayIrGenerator(api, registry, swiftSundayTestOptions).generateServiceTypes()
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("PatchIdentityTests.swift"),
@@ -112,7 +116,10 @@ class SwiftPatchableTypesTest {
       registry,
       swiftSundayTestOptions,
     ).generateServiceTypes()
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("RecursivePatchTests.swift"),
@@ -200,7 +207,10 @@ class SwiftPatchableTypesTest {
       registry,
       swiftSundayTestOptions,
     ).generateServiceTypes()
-    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    registry.generateFiles(
+      GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      compiler.srcDir,
+    )
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("PatchTests.swift"),

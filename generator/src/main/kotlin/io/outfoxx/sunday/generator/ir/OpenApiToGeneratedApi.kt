@@ -68,7 +68,7 @@ class OpenApiToGeneratedApi(
             "${document.location}#/x-sunday-quarkus-config",
           ),
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, document.location),
-        services = serviceFragments.map { fragment -> fragment.service },
+        services = serviceFragments.map { fragment -> fragment.service.copy(ownerUris = setOf(document.location)) },
         servers = document.effectiveServers(emptyMap<Any, Any>(), emptyMap<Any, Any>()),
         models = localModels.values.sortedBy { model -> model.name },
         problems = document.problems(),
@@ -468,6 +468,12 @@ class OpenApiToGeneratedApi(
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, localModels, discriminatorValues, scope).let { model ->
       model.copy(
+        source =
+          GeneratedSourceSpec(
+            GeneratedSourceSpec.Kind.OPENAPI,
+            (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+          ),
+        declarationUri = (schema as? OpenApiSchema)?.declarationUri,
         targets = declarationTypeSchema(schema).languageTypeTargets("OpenAPI model '$name'"),
         patchable =
           GeneratedPatchModels.annotation(

@@ -47,9 +47,9 @@ Gradle Plugin Cache Notes
   unowned or modified files are rejected before replacement or cache restoration.
   When upgrading from an older generator without a manifest, use an empty output
   directory or inspect and remove only the old generated files before rebuilding.
-- For shared models, generate models once (`generateModel=true`,
-  `generateService=false`) and make facade modules depend on that artifact with
-  model output disabled. Use distinct service packages when client/server
+- For shared models, select `outputCategories.set(setOf(GeneratedTypeCategory.Model))`
+  and make facade modules depend on that artifact. Use `outputOwners` to select
+  owning document URIs independently of input files; see [output selection](docs/output-selection.md). Use distinct service packages when client/server
   interfaces share names. All languages preserve schema-permitted dynamic model
   fields by default. Use `-no-preserve-unknown-fields` (CLI) or
   `preserveUnknownFields.set(false)` (Kotlin Gradle plugin) to validate and discard

@@ -18,6 +18,8 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GeneratedOutputOwnership
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.genError
@@ -35,6 +37,9 @@ import kotlin.io.path.relativeTo
 class SwiftTypeRegistry(
   override val options: Set<Option>,
 ) : SwiftTypeOutputRegistry {
+
+  override val outputOwnership =
+    GeneratedOutputOwnership()
 
   enum class Option {
     AddGeneratedHeader,
@@ -59,7 +64,7 @@ class SwiftTypeRegistry(
   internal var referenceTypes = mutableMapOf<TypeName, TypeName>()
 
   fun generateFiles(
-    categories: Set<GeneratedTypeCategory>,
+    selection: GeneratedOutputSelection = GeneratedOutputSelection(),
     outputDirectory: Path,
   ) {
 
@@ -68,7 +73,7 @@ class SwiftTypeRegistry(
     val generatedFiles =
       builtTypes.entries
         .filter { it.key.topLevelTypeName() == it.key }
-        .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
+        .filter { type -> outputOwnership.includes(selection, type.key) }
         .map { (typeName, typeSpec) ->
           swiftGeneratedFile(typeName, typeSpec) to typeName.outputLocation(typeSpec)
         }
@@ -138,6 +143,7 @@ class SwiftTypeRegistry(
       serviceType.addDoc(GenerationHeaders.create("${className.simpleName}.swift"))
     }
 
+    outputOwnership.register(className, GeneratedTypeCategory.Service)
     serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
     if (typeBuilders.putIfAbsent(className, serviceType) != null) {
@@ -160,6 +166,7 @@ class SwiftTypeRegistry(
       modelType.addDoc(GenerationHeaders.create("${className.simpleName}.swift"))
     }
 
+    outputOwnership.register(className, GeneratedTypeCategory.Model)
     modelType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(className, modelType) != null) {

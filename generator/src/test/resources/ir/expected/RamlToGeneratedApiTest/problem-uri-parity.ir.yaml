@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Problem URI Parity API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "ProblemURIParityService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   baseUri: "https://api.example.com/v1/"
   operations:
   - id: "fetchProject"
@@ -45,6 +47,7 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/Project"
   properties:
   - name: "id"
     type:

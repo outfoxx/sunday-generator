@@ -128,7 +128,7 @@ class OpenApiRemoteReferencesTest {
               framework.set(Sunday)
               mode.set(Client)
               pkgName.set('io.test.' + project.name)
-              generateService.set(false)
+              outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
               disableValidationConstraints.set(true)
               disableJacksonAnnotations.set(true)
               generatedAnnotation.set(null)

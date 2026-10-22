@@ -1,10 +1,12 @@
-irVersion: "1"
+irVersion: "2"
 name: "Request Shapes API"
 source:
   kind: "RAML"
   location: "SOURCE_LOCATION"
 services:
 - name: "RequestShapesService"
+  ownerUris:
+  - "SOURCE_LOCATION"
   operations:
   - id: "updateProject"
     method: "PATCH"
@@ -92,6 +94,7 @@ services:
 models:
 - name: "ProjectPatch"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectPatch"
   properties:
   - name: "name"
     type:
@@ -112,16 +115,19 @@ models:
       nullable: true
 - name: "ProjectState"
   kind: "ENUM"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectPatch/property/state/scalar/ProjectState"
   values:
   - "active"
   - "archived"
 - name: "ProjectTagList"
   kind: "ARRAY"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectPatch/property/tags/array/ProjectTagList"
   aliases:
   - kind: "SCALAR"
     name: "string"
 - name: "SearchOptions"
   kind: "OBJECT"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/parameter/parameter/query/options/shape/schema/shape/SearchOptions"
   properties:
   - name: "archived"
     type:
@@ -138,6 +144,7 @@ models:
     required: true
 - name: "SearchToken"
   kind: "UNION"
+  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/patch/expects/request/parameter/parameter/query/token/union/SearchToken"
   aliases:
   - kind: "SCALAR"
     name: "string"
