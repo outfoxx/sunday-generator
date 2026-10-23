@@ -412,4 +412,4 @@ IR version 3 extends version 2 ownership provenance with unresolved `placementSc
 
 `placementConfiguration` carries invocation defaults and relocations. Resolution happens for the requested language and role before symbol creation and output filtering. Excluded declarations still receive identities for consumers' imports. `ownerUris` and output categories continue to control emission independently. See [declaration placement](declaration-placement.md) for the public syntax and selector rules.
 
-Operation `jaxrs.sseResponseMode` optionally selects the server SSE representation (`TYPED`, `OUTBOUND_EVENT`, or `RAW`). It is ignored by client generators and does not replace the response payload schema. See [server SSE modes](server-sse.md) for source annotations, target support, and composition rules.
+Operation `jaxrs.sseServerResponseMode` optionally selects the server SSE representation (`TYPED`, `OUTBOUND_EVENT`, or `RAW`). It is ignored by client generators and does not replace the response payload schema. See [server SSE modes](server-sse.md) for source annotations, target support, and composition rules.

@@ -19,13 +19,14 @@ package io.outfoxx.sunday.generator.kotlin
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
-import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
+import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
@@ -107,11 +108,17 @@ open class KotlinJAXRSGenerateCommand :
     help = "Enforce named schemes and permissions using application authenticators; requires -resource-adapters",
   ).flag(default = false)
 
-  /** Default server SSE representation; client generation ignores this setting. */
-  val sseResponseMode by option(
+  // Keep omission distinct from an explicit typed value so client defaults remain valid.
+  private val requestedSseServerResponseMode by option(
     "-sse-response-mode",
-    help = "Server SSE representation: typed, outbound-event, or raw (Quarkus only)",
-  ).enum<GeneratedSseResponseMode> { it.value }.default(GeneratedSseResponseMode.TYPED)
+    help = "Server SSE representation: typed (default), outbound-event, or raw (Quarkus only); requires -mode server",
+  ).enum<GeneratedSseServerResponseMode> { it.value }.validate {
+    require(mode == GenerationMode.Server) { "-sse-response-mode is only supported with -mode server" }
+  }
+
+  /** Effective server SSE representation, defaulting to typed when the CLI option is omitted. */
+  val sseServerResponseMode: GeneratedSseServerResponseMode
+    get() = requestedSseServerResponseMode ?: GeneratedSseServerResponseMode.TYPED
 
   override fun run() {
     println("Generating ${outputCategories.ifEmpty { GeneratedTypeCategory.entries }} types")
@@ -163,6 +170,6 @@ open class KotlinJAXRSGenerateCommand :
       preserveUnknownFields,
       profile,
       defaultTolerance,
-      sseResponseMode,
+      sseServerResponseMode,
     )
 }

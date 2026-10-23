@@ -3,11 +3,11 @@ info: {title: SSE modes, version: '1.0'}
 x-sunday-apiId: sse-modes
 paths:
   /sse/typed:
-    x-sunday-jaxrs: {sse-response-mode: raw}
+    x-sunday-jaxrs: {sse-server-response-mode: raw}
     get:
       x-sunday-service: Events
       operationId: typedEvents
-      x-sunday-jaxrs: {sse-response-mode: typed}
+      x-sunday-jaxrs: {sse-server-response-mode: typed}
       responses:
         '200':
           description: Typed stream
@@ -15,7 +15,7 @@ paths:
             text/event-stream:
               schema: {type: string}
   /sse/envelope:
-    x-sunday-jaxrs: {sse-response-mode: outbound-event}
+    x-sunday-jaxrs: {sse-server-response-mode: outbound-event}
     get:
       x-sunday-service: Events
       operationId: envelopeEvents
@@ -29,7 +29,7 @@ paths:
     get:
       x-sunday-service: Events
       operationId: jsonEvents
-      x-sunday-jaxrs: {sse-response-mode: outbound-event}
+      x-sunday-jaxrs: {sse-server-response-mode: outbound-event}
       responses:
         '200':
           description: JSON envelope
@@ -51,7 +51,7 @@ paths:
       x-sunday-service: Events
       operationId: rawEvents
       security: [{basic: []}]
-      x-sunday-jaxrs: {sse-response-mode: raw}
+      x-sunday-jaxrs: {sse-server-response-mode: raw}
       parameters:
         - name: name
           in: path

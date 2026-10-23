@@ -27,7 +27,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrs
 import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
-import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
+import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
@@ -53,7 +53,7 @@ import java.nio.file.Path
 @KotlinTest
 @Tag("events")
 @OptIn(ExperimentalCompilerApi::class)
-class KotlinJAXRSSseResponseModeTest {
+class KotlinJAXRSSseServerResponseModeTest {
   @TempDir lateinit var tempDir: Path
 
   @ParameterizedTest
@@ -62,8 +62,8 @@ class KotlinJAXRSSseResponseModeTest {
     val api = export("sse-response-modes/$file")
     val roundTrip = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api))
     assertEquals(
-      api.services.flatMap { it.operations }.map { it.jaxrs?.sseResponseMode },
-      roundTrip.services.flatMap { it.operations }.map { it.jaxrs?.sseResponseMode },
+      api.services.flatMap { it.operations }.map { it.jaxrs?.sseServerResponseMode },
+      roundTrip.services.flatMap { it.operations }.map { it.jaxrs?.sseServerResponseMode },
     )
     val output = compile(roundTrip)
     assertTrue(output.contains("fun typedEvents(): Multi<String>"), output)
@@ -78,13 +78,13 @@ class KotlinJAXRSSseResponseModeTest {
     val paths = listOf("sse-response-modes/framing.yaml", "asyncapi/ir/event-stream-payload.yaml")
     val api = export(*(if (reverse) paths.reversed() else paths).toTypedArray())
     assertEquals(
-      GeneratedSseResponseMode.RAW,
+      GeneratedSseServerResponseMode.RAW,
       api.services
         .single()
         .operations
         .single()
         .jaxrs
-        ?.sseResponseMode,
+        ?.sseServerResponseMode,
     )
     val output = compile(api)
     assertTrue(output.contains("RestMulti<ByteArray>"), output)
@@ -103,14 +103,14 @@ class KotlinJAXRSSseResponseModeTest {
       api.mapOperations {
         it.copy(
           jaxrs =
-            it.jaxrs?.copy(sseResponseMode = null)?.takeUnless { value ->
+            it.jaxrs?.copy(sseServerResponseMode = null)?.takeUnless { value ->
               value ==
                 GeneratedJaxrs()
             },
         )
       }
     val expected = compile(withoutModes, client = true)
-    assertEquals(expected, compile(api, client = true, mode = GeneratedSseResponseMode.RAW))
+    assertEquals(expected, compile(api, client = true, mode = GeneratedSseServerResponseMode.RAW))
   }
 
   @ParameterizedTest
@@ -118,9 +118,9 @@ class KotlinJAXRSSseResponseModeTest {
   fun `portable targets retain their namespace and sink API for envelopes`(target: String) {
     val api =
       export("sse-response-modes/api.yaml").mapOperations {
-        it.copy(jaxrs = it.jaxrs?.copy(sseResponseMode = null))
+        it.copy(jaxrs = it.jaxrs?.copy(sseServerResponseMode = null))
       }
-    val output = compile(api, target = target, mode = GeneratedSseResponseMode.OUTBOUND_EVENT, coroutines = true)
+    val output = compile(api, target = target, mode = GeneratedSseServerResponseMode.OUTBOUND_EVENT, coroutines = true)
     assertTrue(output.contains("import $target.ws.rs.sse.SseEventSink"), output)
     assertTrue(output.contains("import $target.ws.rs.sse.Sse"), output)
     assertFalse(output.contains("Multi<"), output)
@@ -132,7 +132,7 @@ class KotlinJAXRSSseResponseModeTest {
       export("sse-response-modes/api.yaml").mapOperations {
         if (it.id == "envelopeEvents") it.copy(jaxrs = null) else it
       }
-    val output = compile(api, mode = GeneratedSseResponseMode.RAW)
+    val output = compile(api, mode = GeneratedSseServerResponseMode.RAW)
     assertTrue(output.contains("fun envelopeEvents(): RestMulti<ByteArray>"), output)
     assertTrue(output.contains("fun typedEvents(): Multi<String>"), output)
     assertTrue(output.contains("@Produces(value = [\"application/json\"])"), output)
@@ -174,7 +174,7 @@ class KotlinJAXRSSseResponseModeTest {
           streaming = it.streaming?.copy(eventMode = GeneratedStreaming.EventMode.DISCRIMINATED),
         )
       }
-    val output = compile(api, mode = GeneratedSseResponseMode.OUTBOUND_EVENT)
+    val output = compile(api, mode = GeneratedSseServerResponseMode.OUTBOUND_EVENT)
     assertTrue(output.contains("fun typedEvents(): Multi<OutboundSseEvent>"), output)
     assertTrue(output.contains("fun jsonEvents(): Multi<OutboundSseEvent>"), output)
   }
@@ -193,7 +193,7 @@ class KotlinJAXRSSseResponseModeTest {
         if (it.id ==
           "jsonValue"
         ) {
-          it.copy(jaxrs = GeneratedJaxrs(sseResponseMode = GeneratedSseResponseMode.RAW))
+          it.copy(jaxrs = GeneratedJaxrs(sseServerResponseMode = GeneratedSseServerResponseMode.RAW))
         } else {
           it
         }
@@ -209,7 +209,7 @@ class KotlinJAXRSSseResponseModeTest {
       conflicting,
       payload.replace(
         "operationId: streamProjectEvents",
-        "operationId: streamProjectEvents\n      x-sunday-jaxrs: {sse-response-mode: outbound-event}",
+        "operationId: streamProjectEvents\n      x-sunday-jaxrs: {sse-server-response-mode: outbound-event}",
       ),
     )
     val framing = requireNotNull(javaClass.getResource("/sse-response-modes/framing.yaml")).toURI()
@@ -221,7 +221,7 @@ class KotlinJAXRSSseResponseModeTest {
       invalid,
       requireNotNull(
         javaClass.getResource("/sse-response-modes/api.yaml"),
-      ).readText().replace("sse-response-mode: raw", "sse-response-mode: typo"),
+      ).readText().replace("sse-server-response-mode: raw", "sse-server-response-mode: typo"),
     )
     assertThrows(IllegalArgumentException::class.java) { GeneratedApiIrExporter().export(invalid.toUri()) }
   }
@@ -235,9 +235,16 @@ class KotlinJAXRSSseResponseModeTest {
     assertTrue(baseline.contains("suspend fun fetchEvents()") == coroutines, baseline)
     val client = compile(api, client = true, coroutines = coroutines)
     assertTrue(client.contains("fun fetchEvents(): SseEventSource"), client)
-    for (mode in listOf(GeneratedSseResponseMode.OUTBOUND_EVENT, GeneratedSseResponseMode.RAW)) {
+    for (mode in listOf(GeneratedSseServerResponseMode.OUTBOUND_EVENT, GeneratedSseServerResponseMode.RAW)) {
       val output = compile(api, mode = mode, coroutines = coroutines)
-      val responseType = if (mode == GeneratedSseResponseMode.RAW) "RestMulti<ByteArray>" else "Multi<OutboundSseEvent>"
+      val responseType =
+        if (mode ==
+          GeneratedSseServerResponseMode.RAW
+        ) {
+          "RestMulti<ByteArray>"
+        } else {
+          "Multi<OutboundSseEvent>"
+        }
       assertTrue(output.contains("fun fetchEvents(): $responseType"), output)
       assertFalse(output.contains("SseEventSink"), output)
       assertFalse(output.contains("suspend fun fetchEvents()"), output)
@@ -274,13 +281,16 @@ class KotlinJAXRSSseResponseModeTest {
     val baseline = compile(api, coroutines = coroutines)
     assertTrue(baseline.contains("Multi<OutboundSseEvent>"), baseline)
     assertEquals(!coroutines, baseline.contains("SseEventSink"), baseline)
-    val client = compile(api, client = true, mode = GeneratedSseResponseMode.RAW, coroutines = coroutines)
+    val client = compile(api, client = true, mode = GeneratedSseServerResponseMode.RAW, coroutines = coroutines)
     assertTrue(client.contains("fun typedEvents(): Multi<InboundSseEvent>"), client)
-    val outbound = compile(api, mode = GeneratedSseResponseMode.OUTBOUND_EVENT, coroutines = coroutines)
+    val outbound = compile(api, mode = GeneratedSseServerResponseMode.OUTBOUND_EVENT, coroutines = coroutines)
     assertTrue(outbound.contains("fun typedEvents(): Multi<OutboundSseEvent>"), outbound)
     assertFalse(outbound.contains("SseEventSink"), outbound)
-    val typed = api.mapOperations { it.copy(jaxrs = legacy.copy(sseResponseMode = GeneratedSseResponseMode.TYPED)) }
-    assertEquals(baseline, compile(typed, mode = GeneratedSseResponseMode.RAW, coroutines = coroutines))
+    val typed =
+      api.mapOperations {
+        it.copy(jaxrs = legacy.copy(sseServerResponseMode = GeneratedSseServerResponseMode.TYPED))
+      }
+    assertEquals(baseline, compile(typed, mode = GeneratedSseServerResponseMode.RAW, coroutines = coroutines))
     val discriminated =
       api.mapOperations {
         it.copy(streaming = it.streaming?.copy(eventMode = GeneratedStreaming.EventMode.DISCRIMINATED))
@@ -301,7 +311,7 @@ class KotlinJAXRSSseResponseModeTest {
     api: GeneratedApi,
     client: Boolean = false,
     target: String = "quarkus",
-    mode: GeneratedSseResponseMode = GeneratedSseResponseMode.TYPED,
+    mode: GeneratedSseServerResponseMode = GeneratedSseServerResponseMode.TYPED,
     coroutines: Boolean = false,
     aggregate: Boolean = false,
     adapters: Boolean = true,
@@ -329,7 +339,7 @@ class KotlinJAXRSSseResponseModeTest {
         resourceAdapters = !client && adapters,
         aggregateServices = aggregate,
         aggregateServiceName = "AllAPI",
-        sseResponseMode = mode,
+        sseServerResponseMode = mode,
       )
     KotlinJAXRSIrGenerator(api, registry, options).generateServiceTypes()
     val types = registry.buildTypes()

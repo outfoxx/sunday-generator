@@ -32,7 +32,7 @@ import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 @QuarkusTest
-class SseResponseModeTest {
+class SseServerResponseModeTest {
   @TestHTTPResource lateinit var baseUri: URI
 
   @Inject lateinit var delegate: SseEvents

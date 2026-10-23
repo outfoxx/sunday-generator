@@ -6,7 +6,7 @@ uses:
   get:
     displayName: typedEvents
     (sunday.eventStream): simple
-    (sunday.sseResponseMode): typed
+    (sunday.sseServerResponseMode): typed
     responses:
       200:
         body:
@@ -15,7 +15,7 @@ uses:
   get:
     displayName: envelopeEvents
     (sunday.eventStream): simple
-    (sunday.sseResponseMode): outbound-event
+    (sunday.sseServerResponseMode): outbound-event
     responses:
       200:
         body:
@@ -24,7 +24,7 @@ uses:
   get:
     displayName: rawEvents
     (sunday.eventStream): simple
-    (sunday.sseResponseMode): raw
+    (sunday.sseServerResponseMode): raw
     responses:
       200:
         body:

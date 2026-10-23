@@ -3,14 +3,14 @@ info: {title: SSE modes, version: '1.0'}
 x-sunday-apiId: sse-modes
 channels:
   /sse/typed:
-    x-sunday-jaxrs: {sse-response-mode: raw}
+    x-sunday-jaxrs: {sse-server-response-mode: raw}
     subscribe:
       operationId: typedEvents
-      x-sunday-jaxrs: {sse-response-mode: typed}
+      x-sunday-jaxrs: {sse-server-response-mode: typed}
       message:
         payload: {type: string}
   /sse/envelope:
-    x-sunday-jaxrs: {sse-response-mode: outbound-event}
+    x-sunday-jaxrs: {sse-server-response-mode: outbound-event}
     subscribe:
       operationId: envelopeEvents
       message:
@@ -18,6 +18,6 @@ channels:
   /sse/raw:
     subscribe:
       operationId: rawEvents
-      x-sunday-jaxrs: {sse-response-mode: raw}
+      x-sunday-jaxrs: {sse-server-response-mode: raw}
       message:
         payload: {type: string}

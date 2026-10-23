@@ -17,7 +17,7 @@
 package io.outfoxx.sunday.generator.ir
 
 /** Server-side representation of an SSE response; the wire payload schema remains unchanged. */
-enum class GeneratedSseResponseMode(
+enum class GeneratedSseServerResponseMode(
   /** Source annotation and command-line spelling. */
   val value: String,
 ) {
@@ -28,7 +28,7 @@ enum class GeneratedSseResponseMode(
 
   companion object {
     /** Reads an optional source setting, rejecting unsupported values instead of ignoring them. */
-    fun parse(value: Any?): GeneratedSseResponseMode? =
+    fun parse(value: Any?): GeneratedSseServerResponseMode? =
       value?.let {
         requireNotNull(entries.find { mode -> mode.value == value }) {
           "Invalid SSE response mode '$value'; expected typed, outbound-event, or raw"

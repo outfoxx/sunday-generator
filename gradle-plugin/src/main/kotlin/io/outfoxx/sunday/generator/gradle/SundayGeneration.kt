@@ -21,7 +21,7 @@ package io.outfoxx.sunday.generator.gradle
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.Tolerance
-import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
+import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
@@ -139,7 +139,10 @@ class SundayGeneration(
   val quarkus: Property<Boolean> = objects.property(Boolean::class.java)
 
   /** Default server SSE representation; client generation ignores this setting. */
-  val sseResponseMode: Property<GeneratedSseResponseMode> = objects.property(GeneratedSseResponseMode::class.java)
+  val sseServerResponseMode: Property<GeneratedSseServerResponseMode> =
+    objects.property(
+      GeneratedSseServerResponseMode::class.java,
+    )
 
   /** Generates JAX-RS endpoint implementations backed by application-owned service delegates. */
   val resourceAdapters: Property<Boolean> = objects.property(Boolean::class.java)

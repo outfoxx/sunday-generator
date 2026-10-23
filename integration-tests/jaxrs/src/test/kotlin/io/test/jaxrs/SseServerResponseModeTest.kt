@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-class SseResponseModeTest : JerseyTest() {
+class SseServerResponseModeTest : JerseyTest() {
   override fun getTestContainerFactory(): TestContainerFactory = GrizzlyTestContainerFactory()
 
   override fun configure(): Application {

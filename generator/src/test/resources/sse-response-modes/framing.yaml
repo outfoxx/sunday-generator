@@ -10,7 +10,7 @@ paths:
   /events:
     get:
       operationId: streamEvents
-      x-sunday-jaxrs: {sse-response-mode: raw}
+      x-sunday-jaxrs: {sse-server-response-mode: raw}
       parameters:
         - name: subscriberId
           in: query

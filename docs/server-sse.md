@@ -2,7 +2,8 @@
 
 Kotlin/JAX-RS server generation supports three SSE response representations. The default is `typed`.
 The mode changes the server transport signature, not the event payload schema or generated client decoding.
-All client generators ignore this server setting, including when it is present in a composed contract.
+All client generators ignore this server setting in contracts, including composed contracts.
+The CLI rejects an explicitly supplied `-sse-response-mode` when generating clients.
 
 | Mode | Quarkus server signature | Standard JAX-RS server |
 | --- | --- | --- |
@@ -30,8 +31,8 @@ security and parameter annotations are omitted.
 | Standard JAX-RS | Events sent through `SseEventSink` | Server | `typed` | `@GET`<br>`@Path(value = "/events")`<br>`@Produces(value = ["text/event-stream"])`<br>`fun events(@Context sse: Sse, @Context sseEvents: SseEventSink)` | `-mode server`; `typed` is the default |
 | Standard JAX-RS | `OutboundSseEvent` sent through the sink | Server | `outbound-event` | `@GET`<br>`@Path(value = "/events")`<br>`@Produces(value = ["text/event-stream"])`<br>`fun events(@Context sse: Sse, @Context sseEvents: SseEventSink)` | `-mode server -sse-response-mode outbound-event` |
 | Standard JAX-RS | Raw SSE bytes | Server | `raw` | Generation error: raw SSE requires Quarkus | Unsupported |
-| Quarkus | Received `DeviceEvent` | Client | Any setting; ignored for clients | `@GET`<br>`@Path(value = "/events")`<br>`@Produces(value = ["text/event-stream"])`<br>`fun events(): Multi<DeviceEvent>` | `-mode client -quarkus` |
-| Standard JAX-RS | Received events through `SseEventSource` | Client | Any setting; ignored for clients | `@GET`<br>`@Path(value = "/events")`<br>`@Produces(value = ["text/event-stream"])`<br>`fun events(): SseEventSource` | `-mode client` |
+| Quarkus | Received `DeviceEvent` | Client | Contract setting ignored; omit CLI option | `@GET`<br>`@Path(value = "/events")`<br>`@Produces(value = ["text/event-stream"])`<br>`fun events(): Multi<DeviceEvent>` | `-mode client -quarkus` |
+| Standard JAX-RS | Received events through `SseEventSource` | Client | Contract setting ignored; omit CLI option | `@GET`<br>`@Path(value = "/events")`<br>`@Produces(value = ["text/event-stream"])`<br>`fun events(): SseEventSource` | `-mode client` |
 
 The contract payload stays `DeviceEvent` when selecting `outbound-event` or `raw`. These settings
 change the server transport signature; they do not change the client's expected payload schema.
@@ -58,20 +59,33 @@ sunday kotlin/jaxrs -mode server -quarkus -resource-adapters \
   -sse-response-mode outbound-event --placement-config placement.yaml -out generated api.yaml
 ```
 
-In Gradle, set `sseResponseMode.set(GeneratedSseResponseMode.OUTBOUND_EVENT)` on the generation or task.
-The enum is `io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode`; its other values are `TYPED` and `RAW`.
+The CLI deliberately keeps the short spelling `-sse-response-mode`. It requires `-mode server`
+when supplied explicitly, including `-sse-response-mode typed`. With `-mode client`, or when `-mode`
+is omitted and therefore defaults to client, it fails before generation:
+
+```text
+-sse-response-mode is only supported with -mode server
+```
+
+Omitting `-sse-response-mode` remains valid in either generation mode. Contract annotations remain
+server-only metadata ignored by client generation, so the same contract can generate both sides.
+Kotlin and Gradle configuration use the server-qualified name `sseServerResponseMode`; client
+generators continue to ignore that programmatic server setting.
+
+In Gradle, set `sseServerResponseMode.set(GeneratedSseServerResponseMode.OUTBOUND_EVENT)` on the generation or task.
+The enum is `io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode`; its other values are `TYPED` and `RAW`.
 
 An operation can override the default, including resetting it to `typed`. OpenAPI uses:
 
 ```yaml
 x-sunday-jaxrs:
-  sse-response-mode: outbound-event
+  sse-server-response-mode: outbound-event
 ```
 
 Place this on an OpenAPI operation or path item, or an AsyncAPI 2 channel/subscribe operation or
 AsyncAPI 3 channel/receive operation. Operation settings take precedence over path/channel settings.
-RAML uses `(sunday.sseResponseMode): outbound-event` on a method or trait, alongside its existing
-SSE/event-stream declaration. Sunday IR retains the setting as `jaxrs.sseResponseMode`.
+RAML uses `(sunday.sseServerResponseMode): outbound-event` on a method or trait, alongside its existing
+SSE/event-stream declaration. Sunday IR retains the setting as `jaxrs.sseServerResponseMode`.
 
 When OpenAPI supplies HTTP framing for an AsyncAPI stream, its response mode is carried into the
 composed operation. Explicit conflicting modes fail composition in either source order.
@@ -120,11 +134,13 @@ the new modes do not repair or redefine the legacy coroutine API.
 
 The new server modes take precedence over these legacy signatures:
 
-| Effective new mode | Quarkus server with legacy SSE enabled | Standard JAX-RS server with legacy SSE enabled | Client effect |
+| Effective new mode | Quarkus server with legacy SSE enabled | Standard JAX-RS server with legacy SSE enabled | Client effect (contract/programmatic setting) |
 | --- | --- | --- | --- |
 | `typed` | Preserve the legacy signature above | Preserve the legacy signature above | None; preserve legacy behavior |
 | `outbound-event` | `fun events(): Multi<OutboundSseEvent>` with SSE media annotations and no automatically added sink parameters | `fun events(@Context sse: Sse, @Context sseEvents: SseEventSink)` with SSE media annotations | None; preserve legacy behavior |
 | `raw` | `fun events(): RestMulti<ByteArray>` without SSE media annotations or automatically added sink parameters | Generation error | None; preserve legacy behavior |
+
+An explicitly supplied CLI `-sse-response-mode` is rejected for clients even when the legacy flag is enabled.
 
 Both non-default server modes are non-suspending regardless of coroutine options and reject an
 explicit asynchronous `AsyncResponse` setting. These precedence rules apply whether the mode comes
@@ -133,8 +149,8 @@ the legacy behavior, not necessarily `Multi<DeviceEvent>`. Explicitly requested 
 are still separate from the automatically added sink parameters discussed here.
 
 For new Quarkus APIs needing server envelopes while preserving typed clients, declare an event
-stream and select `sse-response-mode: outbound-event` without adding the legacy `sunday.sse` flag.
-For example, use `(sunday.eventStream): simple` with `(sunday.sseResponseMode): outbound-event` in
+stream and select `sse-server-response-mode: outbound-event` without adding the legacy `sunday.sse` flag.
+For example, use `(sunday.eventStream): simple` with `(sunday.sseServerResponseMode): outbound-event` in
 RAML. The server returns `Multi<OutboundSseEvent>` and the client retains `Multi<DeviceEvent>`.
 
 ## Standard envelopes
@@ -190,9 +206,9 @@ No new Sunday runtime dependency is required by either mode.
 
 ## Verification
 
-`KotlinJAXRSSseResponseModeTest` compiles generated source before inspecting it, covering RAML,
+`KotlinJAXRSSseServerResponseModeTest` compiles generated source before inspecting it, covering RAML,
 OpenAPI, AsyncAPI 2/3, composition, client parity, namespaces, defaults/overrides, legacy SSE precedence, and invalid combinations.
-`SseResponseModeTest` in the Quarkus integration suite exercises generated routes over real HTTP:
+`SseServerResponseModeTest` in the Quarkus integration suite exercises generated routes over real HTTP:
 standard metadata and JSON, exact raw policy bytes, status/headers, parameter binding, authentication,
 request validation, cancellation, bounded demand, and neighboring media negotiation.
 Portable JAX-RS envelope coverage uses Jersey. Quarkus runtime coverage is JVM-based on 3.39.4;

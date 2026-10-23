@@ -16,18 +16,21 @@
 
 package io.outfoxx.sunday.generator
 
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.parse
-import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
+import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import kotlin.io.path.createTempDirectory
 
 class KotlinJAXRSCLITest {
@@ -142,13 +145,32 @@ class KotlinJAXRSCLITest {
 
   @Test
   fun `SSE response modes are opt in`() {
-    val defaults = KotlinJAXRSGenerateCommandTest()
-    defaults.parse(requiredOptions)
-    assertThat(defaults.sseResponseMode, equalTo(GeneratedSseResponseMode.TYPED))
-    GeneratedSseResponseMode.entries.forEach { mode ->
+    for (modeArgs in listOf(emptyArray(), arrayOf("-mode", "client"), arrayOf("-mode", "server"))) {
+      val defaults = KotlinJAXRSGenerateCommandTest()
+      defaults.parse(arrayOf(*modeArgs, *requiredOptions))
+      assertThat(defaults.sseServerResponseMode, equalTo(GeneratedSseServerResponseMode.TYPED))
+    }
+    GeneratedSseServerResponseMode.entries.forEach { mode ->
       val command = KotlinJAXRSGenerateCommandTest()
-      command.parse(arrayOf("-sse-response-mode", mode.value, *requiredOptions))
-      assertThat(command.sseResponseMode, equalTo(mode))
+      command.parse(arrayOf("-sse-response-mode", mode.value, "-mode", "server", *requiredOptions))
+      assertThat(command.sseServerResponseMode, equalTo(mode))
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["typed", "outbound-event", "raw"])
+  fun `explicit SSE response mode is rejected for default and explicit client generation`(value: String) {
+    val arguments =
+      listOf(
+        arrayOf("-sse-response-mode", value),
+        arrayOf("-mode", "client", "-sse-response-mode", value),
+        arrayOf("-sse-response-mode", value, "-mode", "client"),
+        arrayOf("-sse-response-mode=$value", "-mode=client"),
+      )
+    for (options in arguments) {
+      val command = KotlinJAXRSGenerateCommandTest()
+      val error = assertThrows(UsageError::class.java) { command.parse(arrayOf(*options, *requiredOptions)) }
+      assertTrue(error.message.orEmpty().contains("-sse-response-mode is only supported with -mode server"))
     }
   }
 

@@ -325,8 +325,8 @@ class GeneratedApiComposer {
         if (framing?.policy != null && operation.policy != null && framing.policy != operation.policy) {
           throw GeneratedApiCompositionException("Conflicting policy definitions for event stream '${operation.path}'")
         }
-        val framingMode = framing?.jaxrs?.sseResponseMode
-        val operationMode = operation.jaxrs?.sseResponseMode
+        val framingMode = framing?.jaxrs?.sseServerResponseMode
+        val operationMode = operation.jaxrs?.sseServerResponseMode
         if (framingMode != null && operationMode != null && framingMode != operationMode) {
           throw GeneratedApiCompositionException("Conflicting SSE response modes for event stream '${operation.path}'")
         }
@@ -341,7 +341,7 @@ class GeneratedApiComposer {
           policy = operation.policy ?: framing?.policy,
           jaxrs =
             if (framingMode != null) {
-              (operation.jaxrs ?: GeneratedJaxrs()).copy(sseResponseMode = operationMode ?: framingMode)
+              (operation.jaxrs ?: GeneratedJaxrs()).copy(sseServerResponseMode = operationMode ?: framingMode)
             } else {
               operation.jaxrs
             },

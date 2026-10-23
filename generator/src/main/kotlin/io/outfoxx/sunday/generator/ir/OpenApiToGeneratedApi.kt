@@ -1426,7 +1426,7 @@ class OpenApiToGeneratedApi(
     val jaxrs = mapValue("x-sunday-jaxrs") ?: return null
     return GeneratedJaxrs(
       context = jaxrs.contextParameters(),
-      sseResponseMode = GeneratedSseResponseMode.parse(jaxrs["sse-response-mode"]),
+      sseServerResponseMode = GeneratedSseServerResponseMode.parse(jaxrs["sse-server-response-mode"]),
     ).takeUnless { it == GeneratedJaxrs() }
   }
 

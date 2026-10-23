@@ -64,7 +64,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.GeneratedServer
 import io.outfoxx.sunday.generator.ir.GeneratedService
-import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
+import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
@@ -1367,7 +1367,7 @@ class KotlinJAXRSIrGenerator(
     val responseTypeName = operationReturnTypeName(response, functionBuilder)
     // Raw routes must not inherit a class-level media type that selects Quarkus's SSE/JSON writer.
     if (hasRawSseResponses &&
-      sseResponseMode() != GeneratedSseResponseMode.RAW &&
+      sseServerResponseMode() != GeneratedSseServerResponseMode.RAW &&
       functionBuilder.annotations.none { it.typeName == jaxRsTypes.produces }
     ) {
       val produces = response?.mediaTypes.orEmpty().ifEmpty { defaultMediaTypes }
@@ -2395,13 +2395,13 @@ class KotlinJAXRSIrGenerator(
     val isEventStream = streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM
     val isQuarkusEventStream = options.quarkus && isEventStream
     val isStandardJaxRsEventStream = !options.quarkus && isEventStream
-    val sseMode = sseResponseMode()
-    if (generationMode == Server && jaxrs?.sseResponseMode != null && !isSse && !isEventStream) {
+    val sseMode = sseServerResponseMode()
+    if (generationMode == Server && jaxrs?.sseServerResponseMode != null && !isSse && !isEventStream) {
       genError("SSE response mode requires an SSE operation: $id")
     }
-    if (sseMode != GeneratedSseResponseMode.TYPED) {
+    if (sseMode != GeneratedSseServerResponseMode.TYPED) {
       if (jaxrs?.isAsynchronous == true) genError("SSE response mode cannot be combined with asynchronous: $id")
-      if (sseMode == GeneratedSseResponseMode.RAW) {
+      if (sseMode == GeneratedSseServerResponseMode.RAW) {
         if (!options.quarkus) genError("Raw SSE responses require Quarkus: $id")
         return ClassName("org.jboss.resteasy.reactive", "RestMulti").parameterizedBy(BYTE_ARRAY)
       }
@@ -2501,20 +2501,25 @@ class KotlinJAXRSIrGenerator(
   }
 
   private val hasRawSseResponses by lazy {
-    api.services.any { service -> service.operations.any { it.sseResponseMode() == GeneratedSseResponseMode.RAW } }
+    api.services.any { service ->
+      service.operations.any {
+        it.sseServerResponseMode() ==
+          GeneratedSseServerResponseMode.RAW
+      }
+    }
   }
 
-  private fun GeneratedOperation.sseResponseMode(): GeneratedSseResponseMode =
+  private fun GeneratedOperation.sseServerResponseMode(): GeneratedSseServerResponseMode =
     if (generationMode == Server &&
       (streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM || jaxrs?.sseEnabled(Server) == true)
     ) {
-      jaxrs?.sseResponseMode ?: options.sseResponseMode
+      jaxrs?.sseServerResponseMode ?: options.sseServerResponseMode
     } else {
-      GeneratedSseResponseMode.TYPED
+      GeneratedSseServerResponseMode.TYPED
     }
 
   private fun GeneratedOperation.needsSseContextParameters(): Boolean =
-    if (sseResponseMode() != GeneratedSseResponseMode.TYPED) {
+    if (sseServerResponseMode() != GeneratedSseServerResponseMode.TYPED) {
       !options.quarkus
     } else {
       (jaxrs?.sseEnabled(generationMode) == true && !options.coroutineServiceMethods) ||

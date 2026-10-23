@@ -83,7 +83,10 @@ class AsyncApiToGeneratedApi(
 
   private fun Map<*, *>.sseJaxrs(): GeneratedJaxrs? =
     GeneratedJaxrs(
-      sseResponseMode = GeneratedSseResponseMode.parse(mapValue("x-sunday-jaxrs")?.get("sse-response-mode")),
+      sseServerResponseMode =
+        GeneratedSseServerResponseMode.parse(
+          mapValue("x-sunday-jaxrs")?.get("sse-server-response-mode"),
+        ),
     ).takeUnless { it == GeneratedJaxrs() }
 
   private fun serviceName(apiName: String): String =
