@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -298,6 +299,54 @@ class KotlinJAXRSSseServerResponseModeTest {
     val payload = compile(discriminated, coroutines = coroutines)
     assertTrue(payload.contains("Multi<String>"), payload)
     assertFalse(payload.contains("OutboundSseEvent"), payload)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["012", "021", "102", "120", "201", "210"])
+  fun `conflicting OpenAPI framing modes fail with an AsyncAPI payload in every source order`(order: String) {
+    for (mode in listOf(GeneratedSseServerResponseMode.OUTBOUND_EVENT, GeneratedSseServerResponseMode.TYPED)) {
+      val sources = framingSources(mode)
+      val error =
+        assertThrows(GeneratedApiCompositionException::class.java) {
+          GeneratedApiIrExporter().export(order.map { sources[it.digitToInt()] })
+        }
+      assertEquals("Conflicting SSE response modes for event stream '/events'", error.message)
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `compatible OpenAPI framing modes preserve raw server output in every source order`(explicit: Boolean) {
+    val sources = framingSources(GeneratedSseServerResponseMode.RAW.takeIf { explicit })
+    for (order in listOf("012", "021", "102", "120", "201", "210")) {
+      val api = GeneratedApiIrExporter().export(order.map { sources[it.digitToInt()] })
+      assertEquals(
+        GeneratedSseServerResponseMode.RAW,
+        api.services
+          .single()
+          .operations
+          .single()
+          .jaxrs
+          ?.sseServerResponseMode,
+      )
+      val output = compile(api)
+      assertTrue(output.contains("RestMulti<ByteArray>"), output)
+      assertTrue(output.contains("subscriberId: String"), output)
+      assertTrue(output.contains("ProjectEvent"), output)
+    }
+  }
+
+  private fun framingSources(secondMode: GeneratedSseServerResponseMode?): List<URI> {
+    val framing = requireNotNull(javaClass.getResource("/sse-response-modes/framing.yaml"))
+    val second = tempDir.resolve("second-framing.yaml")
+    val setting = "      x-sunday-jaxrs: {sse-server-response-mode: raw}"
+    val replacement = secondMode?.let { "      x-sunday-jaxrs: {sse-server-response-mode: ${it.value}}" }.orEmpty()
+    Files.writeString(second, framing.readText().replace(setting, replacement))
+    return listOf(
+      framing.toURI(),
+      second.toUri(),
+      requireNotNull(javaClass.getResource("/asyncapi/ir/event-stream-payload.yaml")).toURI(),
+    )
   }
 
   private fun GeneratedApi.mapOperations(transform: (GeneratedOperation) -> GeneratedOperation): GeneratedApi =

@@ -73,7 +73,21 @@ class GeneratedApiComposer {
               }
           }
         }.filter { (key, _) -> key in asyncEventStreams }
-        .toMap()
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (key, operations) ->
+          val modes = operations.mapNotNull { it.jaxrs?.sseServerResponseMode }.distinct()
+          if (modes.size > 1) {
+            throw GeneratedApiCompositionException("Conflicting SSE response modes for event stream '${key.path}'")
+          }
+          // Retain existing framing selection, but an omitted mode must not erase an explicit declaration.
+          val framing = operations.last()
+          val mode = modes.singleOrNull()
+          if (mode == null) {
+            framing
+          } else {
+            framing.copy(jaxrs = (framing.jaxrs ?: GeneratedJaxrs()).copy(sseServerResponseMode = mode))
+          }
+        }
 
     sources.forEach { fragment ->
       fragment.api.services.forEach { service ->
