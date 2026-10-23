@@ -107,6 +107,7 @@ import io.outfoxx.sunday.generator.swift.utils.SENDABLE
 import io.outfoxx.sunday.generator.swift.utils.STREAMING_BODY
 import io.outfoxx.sunday.generator.swift.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.swift.utils.SUNDAY_MODULE
+import io.outfoxx.sunday.generator.swift.utils.SwiftCodingHelpers
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelConstraints
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelDefaults
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelValidation
@@ -189,6 +190,7 @@ class SwiftSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
+  private val codingHelpers by lazy { SwiftCodingHelpers(api.models) { it.swiftDeclaredTypeName() } }
   private val patchHelpers by lazy { SwiftPatchHelpers(api.models) { it.swiftDeclaredTypeName() } }
 
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
@@ -295,6 +297,10 @@ class SwiftSundayIrGenerator(
       }
       typeRegistry.addServiceType(aggregateTypeName, generateAggregateServiceType(aggregateTypeName, serviceTypes))
     }
+    codingHelpers.emit { name, helper, consumers ->
+      typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
+      typeRegistry.addModelType(name, helper)
+    }
   }
 
   private fun GeneratedApi.swiftSundayServices(): List<GeneratedService> =
@@ -357,6 +363,11 @@ class SwiftSundayIrGenerator(
   ) {
     val modelOutputGroups = services.modelOutputGroups(serviceOutputGroups)
     val eventModelKeys = services.eventModelKeys()
+
+    api.models.filter(patchHelpers::hasAdapters).groupBy(patchHelpers::supportName).forEach { (name, consumers) ->
+      typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
+      typeRegistry.addModelType(name, patchHelpers.support(name))
+    }
 
     api
       .models
@@ -501,8 +512,7 @@ class SwiftSundayIrGenerator(
           outputDirectory = outputDirectory,
           outputGroup = outputGroup,
         )
-        addType(unknownPropertyCodingKeyType())
-        addType(extensionValueEncoderType())
+        codingHelpers.add(this, this@swiftFallbackTypeSpec, true)
         exposedProperties.forEach { property ->
           addProperty(
             PropertySpec
@@ -4820,10 +4830,11 @@ class SwiftSundayIrGenerator(
     ) {
       return
     }
-    addType(unknownPropertyCodingKeyType())
-    if (storage && (model.preservesExtensions() || model.properties.any { it.type.containsFreeformMap() })) {
-      addType(extensionValueEncoderType())
-    }
+    codingHelpers.add(
+      this,
+      model,
+      storage && (model.preservesExtensions() || model.properties.any { it.type.containsFreeformMap() }),
+    )
     if (model.preservesExtensions() && storage) {
       if (!model.inheritsExtensionStorage()) {
         addProperty(
@@ -4868,44 +4879,6 @@ class SwiftSundayIrGenerator(
       )
     }
   }
-
-  // AnyValue's ordered dictionary uses an unkeyed representation with Foundation's JSONEncoder.
-  // Encode containers recursively so preserved JSON objects remain objects with any supported encoder.
-  private fun extensionValueEncoderType(): TypeSpec =
-    TypeSpec
-      .structBuilder("AdditionalPropertyValue")
-      .addModifiers(PRIVATE)
-      .addSuperType(DeclaredTypeName.typeName("Swift.Encodable"))
-      .addProperty(PropertySpec.builder("value", ANY_VALUE).build())
-      .addFunction(
-        FunctionSpec
-          .builder("encode")
-          .addParameter("to", "encoder", ENCODER)
-          .throws(true)
-          .addCode(
-            CodeBlock.of(
-              """
-              switch value {
-              case .dictionary(let values):
-                var container = encoder.container(keyedBy: UnknownPropertyCodingKey.self)
-                for (key, item) in values {
-                  guard case .string(let name) = key else {
-                    throw %T.invalidValue(key, .init(codingPath: encoder.codingPath, debugDescription: "JSON object keys must be strings"))
-                  }
-                  try container.encode(AdditionalPropertyValue(value: item), forKey: UnknownPropertyCodingKey(stringValue: name))
-                }
-              case .array(let values):
-                var container = encoder.unkeyedContainer()
-                for item in values { try container.encode(AdditionalPropertyValue(value: item)) }
-              default:
-                try value.encode(to: encoder)
-              }
-
-              """.trimIndent(),
-              DeclaredTypeName.typeName("Swift.EncodingError"),
-            ),
-          ).build(),
-      ).build()
 
   private fun closedModelDecodeValidation(
     model: GeneratedModel,
@@ -4998,28 +4971,6 @@ class SwiftSundayIrGenerator(
 
   private fun allowedPropertyNames(model: GeneratedModel): CodeBlock =
     CodeBlock.of("[%L]", modelProperties.fields(model).map { CodeBlock.of("%S", it.wireName) }.joinToCode(", "))
-
-  // Unlike the model's finite CodingKeys enum, this key accepts every input property name.
-  private fun unknownPropertyCodingKeyType(): TypeSpec =
-    TypeSpec
-      .structBuilder("UnknownPropertyCodingKey")
-      .addModifiers(FILEPRIVATE)
-      .addSuperType(CODING_KEY)
-      .addProperty(PropertySpec.builder("stringValue", STRING).build())
-      .addProperty(PropertySpec.builder("intValue", INT.makeOptional()).initializer("nil").build())
-      .addFunction(
-        FunctionSpec
-          .constructorBuilder()
-          .addParameter("stringValue", STRING)
-          .addStatement("self.stringValue = stringValue")
-          .build(),
-      ).addFunction(
-        FunctionSpec
-          .constructorBuilder()
-          .addParameter("intValue", INT)
-          .addStatement("self.stringValue = String(intValue)")
-          .build(),
-      ).build()
 
   private fun extensionDecode(
     model: GeneratedModel,

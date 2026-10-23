@@ -18,10 +18,14 @@ package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.LambdaTypeName
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
@@ -36,6 +40,7 @@ internal object KotlinJAXRSOptionalBodyReader {
     service: ClassName,
     types: JaxRsTypes,
     jsonBody: Boolean,
+    support: ClassName,
   ): TypeSpec.Builder {
     val namespace = types.path.packageName
     val binding = binding(service)
@@ -68,26 +73,52 @@ internal object KotlinJAXRSOptionalBodyReader {
           .addKdoc("Records wire presence before the reader can collapse an empty body and JSON null.\n")
           .addParameter("context", ClassName("$namespace.ext", "ReaderInterceptorContext"))
           .returns(ANY.copy(nullable = true))
-          .addCode(
-            """
-            if (context.annotations.none { it is %T }) return context.proceed()
-            val stream = %T(context.inputStream, 1)
-            val first = stream.read()
-            if (first != -1) stream.unread(first)
-            context.inputStream = stream
-            val value = context.proceed()
-            if (first != -1 && (%L)) {
-              throw %T("Request body must not be null")
-            }
-            return value
-            """.trimIndent().replace(' ', '·'),
+          .addStatement(
+            "return %T.read(context, %T::class.java) { value -> %L }",
+            support,
             binding,
-            ClassName("java.io", "PushbackInputStream"),
             if (jsonBody) {
               CodeBlock.of("value == null || value is %T && value.isNull", JSON_NODE)
             } else {
               CodeBlock.of("value == null")
             },
+          ).build(),
+      )
+  }
+
+  /** Emits the package implementation; providers retain their own marker and codec-specific null checks. */
+  fun support(
+    name: ClassName,
+    types: JaxRsTypes,
+  ): TypeSpec.Builder {
+    val namespace = types.path.packageName
+    return TypeSpec
+      .objectBuilder(name)
+      .addModifiers(KModifier.INTERNAL)
+      .addKdoc("Shared entity-presence handling for generated optional-body readers.\n")
+      .addFunction(
+        FunSpec
+          .builder("read")
+          .addParameter("context", ClassName("$namespace.ext", "ReaderInterceptorContext"))
+          .addParameter("binding", ClassName("java.lang", "Class").parameterizedBy(STAR))
+          .addParameter(
+            "isNull",
+            LambdaTypeName.get(parameters = arrayOf(ANY.copy(nullable = true)), returnType = BOOLEAN),
+          ).returns(ANY.copy(nullable = true))
+          .addCode(
+            """
+            if (context.annotations.none { binding.isInstance(it) }) return context.proceed()
+            val stream = %T(context.inputStream, 1)
+            val first = stream.read()
+            if (first != -1) stream.unread(first)
+            context.inputStream = stream
+            val value = context.proceed()
+            if (first != -1 && isNull(value)) {
+              throw %T("Request body must not be null")
+            }
+            return value
+            """.trimIndent().replace(' ', '·'),
+            ClassName("java.io", "PushbackInputStream"),
             ClassName(namespace, "BadRequestException"),
           ).build(),
       )

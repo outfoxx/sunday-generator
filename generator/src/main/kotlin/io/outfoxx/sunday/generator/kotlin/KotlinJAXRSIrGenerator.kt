@@ -524,6 +524,7 @@ class KotlinJAXRSIrGenerator(
         )
       }
 
+    generateOptionalBodySupport(serviceTypes)
     val securityPolicies = securityPolicies(serviceTypes)
     val securityGenerators =
       if (!options.quarkus) {
@@ -596,6 +597,26 @@ class KotlinJAXRSIrGenerator(
     }
   }
 
+  private val optionalBodySupportNames = mutableMapOf<String, ClassName>()
+
+  private fun generateOptionalBodySupport(services: List<GeneratedJaxRsService>) {
+    services
+      .filter { service -> service.service.operations.any { it.requestBody?.rejectsSuppliedNull() == true } }
+      .groupBy { it.typeName.packageName }
+      .forEach { (packageName, consumers) ->
+        val names = NameAllocator()
+        (api.models.map { it.kotlinClassName() } + services.map { it.typeName })
+          .filter { it.packageName == packageName }
+          .map { it.topLevelClassName().simpleName }
+          .distinct()
+          .forEach { names.newName(it) }
+        val name = ClassName(packageName, names.newName("OptionalBodySupport"))
+        optionalBodySupportNames[packageName] = name
+        typeRegistry.outputOwnership.bindShared(name, consumers.map { it.service.outputOrigin(api) })
+        typeRegistry.addServiceType(name, KotlinJAXRSOptionalBodyReader.support(name, jaxRsTypes))
+      }
+  }
+
   private fun generateServiceType(
     service: GeneratedJaxRsService,
     securityGenerator: KotlinJAXRSSecurityGenerator?,
@@ -611,6 +632,7 @@ class KotlinJAXRSIrGenerator(
           service.service.operations.any {
             it.requestBody?.rejectsSuppliedNull() == true && it.jaxrs?.jsonBodyEnabled(generationMode) == true
           },
+          optionalBodySupportNames.getValue(service.typeName.packageName),
         ),
       )
     }
@@ -770,7 +792,10 @@ class KotlinJAXRSIrGenerator(
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
       api.models,
-    )
+    ) { name, helper, consumers ->
+      typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
+      typeRegistry.addModelType(name, helper)
+    }
     models
       .flatMap { model ->
         buildList {

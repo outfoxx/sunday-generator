@@ -25,6 +25,7 @@ import java.net.URI
 /** Tracks output provenance independently of the complete type registry. */
 class GeneratedOutputOwnership {
   private val origins = mutableMapOf<Any, GeneratedOutputOrigin>()
+  private val sharedOrigins = mutableMapOf<Any, List<GeneratedOutputOrigin>>()
   private val declarations = mutableMapOf<Any, MutableSet<String>>()
 
   /** Enclosing declaration context while constructing companion output. */
@@ -37,6 +38,16 @@ class GeneratedOutputOwnership {
   ) {
     declarations.getOrPut(symbol) { linkedSetOf() }.addAll(origin.declarationUris)
     origins[symbol] = origin
+  }
+
+  /** Retains shared support whenever any consuming declaration is selected, including its enclosing owners. */
+  fun bindShared(
+    symbol: Any,
+    consumers: List<GeneratedOutputOrigin>,
+  ) {
+    require(consumers.isNotEmpty()) { "Shared output must have at least one consumer" }
+    sharedOrigins[symbol] = consumers
+    consumers.forEach { declarations.getOrPut(symbol) { linkedSetOf() }.addAll(it.declarationUris) }
   }
 
   /** Records a symbol created inside a declaration's emission context. */
@@ -59,6 +70,7 @@ class GeneratedOutputOwnership {
     selection: GeneratedOutputSelection,
     symbol: Any,
   ): Boolean {
+    sharedOrigins[symbol]?.let { consumers -> return consumers.any(selection::includes) }
     val origin = requireNotNull(origins[symbol]) { "Missing output provenance for $symbol" }
     return selection.includes(origin)
   }

@@ -66,6 +66,24 @@ referenced documents; the generator cannot reconstruct erased ownership.
 
 ## Shared artifacts and naming
 
+Generated support follows its consumers. Merge-patch algorithms are emitted once
+per Kotlin package, Swift module, or TypeScript module directory, and retained
+when any consuming model or patch companion is selected. Python emits one set of
+patch functions per selected models module. Excluding every consumer excludes
+the helper too. Helpers do not reference unrelated excluded models.
+
+The same ownership rule applies to Swift's module-shared `ModelCodingSupport`
+and Kotlin/JAX-RS's package-shared `OptionalBodySupport`. Models retain thin
+aliases for dynamic-property coding; body-reader providers retain their own
+binding annotations and null checks. Schema-specific validators, discriminator
+adapters, and decoding defaults remain attached to their declarations. Common
+validation and codec implementations continue to come from the target runtimes.
+
+TypeScript exports `MergePatchSupport` from `merge-patch-support.ts` in each
+applicable directory. Its runtime configuration is shared by the model adapters
+in that directory. A declared type with the same name takes precedence; the
+generator allocates a distinct helper name to avoid a collision.
+
 Generate a shared artifact using its document owner selection, then generate
 consumers with their own owner selections. Compile consumers against the built
 shared artifact, not copies of its generated sources. Keep package/module naming

@@ -166,19 +166,31 @@ class TypeScriptSundayIrGenerator(
       }
 
   private val patchSupportNames by lazy {
-    val names = NameAllocator()
     api.models
-      .map { it.name.toUpperCamelCase() }
-      .distinct()
-      .forEach { names.newName(it) }
-    api.models.filter { model -> api.models.any { it.patchOf?.let(index::modelOrNull) == model } }.associate { model ->
-      model to names.newName(model.name.toUpperCamelCase() + "MergePatchSupport")
-    }
+      .filter { model -> api.models.any { it.patchOf?.let(index::modelOrNull) == model } }
+      .groupBy { it.patchSupportModule() }
+      .flatMap { (module, models) ->
+        val names = NameAllocator()
+        api.models
+          .filter { it.patchSupportModule() == module }
+          .map { it.typeName(it.name.toUpperCamelCase()).simpleName() }
+          .distinct()
+          .forEach { names.newName(it) }
+        val simpleName = names.newName("MergePatchSupport")
+        val path = listOfNotNull(module, simpleName.camelCaseToKebabCase()).joinToString("/")
+        val name = typeRegistry.generatedTypeName(simpleName, path)
+        models.map { it to name }
+      }.toMap()
+  }
+
+  private fun GeneratedModel.patchSupportModule(): String? {
+    nested?.enclosedIn?.modelOrNull(index)?.let { return it.patchSupportModule() }
+    return target("typescript", "typescript")?.let { it.modelModuleName ?: it.moduleName }
   }
 
   private fun patchSupportName(model: GeneratedModel): TypeName.Standard {
     val original = model.patchOf?.let { requireNotNull(index.modelOrNull(it)) } ?: model
-    return original.typeName(patchSupportNames.getValue(original))
+    return patchSupportNames.getValue(original)
   }
 
   private val transportTypeVariable = typeVariable("Factory", bound(TypeName.implicit("SundayTransport")))
@@ -333,10 +345,10 @@ class TypeScriptSundayIrGenerator(
       val type = model.typeName(model.name.toUpperCamelCase())
       typeRegistry.addExternalType(type, type.sibling("Schema"))
     }
-    api.models.filter { model -> api.models.any { it.patchOf?.let(index::modelOrNull) == model } }.forEach { model ->
-      val name = patchSupportName(model)
+    patchSupportNames.entries.groupBy({ it.value }, { it.key }).forEach { (name, models) ->
       val (type, code) = TypeScriptPatchHelpers.support(name)
-      typeRegistry.outputOwnership.bind(name, model.modelOutputOrigin())
+      val consumers = models + api.models.filter { it.patchOf?.let(index::modelOrNull) in models }
+      typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
       typeRegistry.addModelType(name, type, listOf(code))
     }
     api.models

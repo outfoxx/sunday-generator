@@ -32,13 +32,14 @@ import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
-/** Adds conversion adapters and a declaration-owned RFC 7396 implementation to each model pair. */
+/** Adds conversion adapters and a package-shared RFC 7396 implementation. */
 internal fun addKotlinPatchHelpers(
   models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   validation: BeanValidationTypes?,
   declarations: List<GeneratedModel>,
   allModels: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> = models,
   methodNames: Pair<String, String>? = null,
+  registerSupport: (ClassName, TypeSpec.Builder, List<GeneratedModel>) -> Unit,
 ) {
   val index =
     io.outfoxx.sunday.generator.ir.emit
@@ -59,20 +60,28 @@ internal fun addKotlinPatchHelpers(
     .forEach { names.newName(it) }
   val patchMethod = methodNames?.first ?: names.newName("patch")
   val mergeMethod = methodNames?.second ?: names.newName("merge")
-  if (pairs.size > 1) {
-    pairs.forEach { (original, patch) ->
+  val groups = pairs.groupBy { it.first.key.packageName }
+  if (groups.size > 1) {
+    groups.values.forEach { group ->
       addKotlinPatchHelpers(
-        mapOf(original.toPair(), patch.toPair()),
+        group.flatMap { (original, patch) -> listOf(original.toPair(), patch.toPair()) }.toMap(),
         validation,
         declarations,
         allModels,
         patchMethod to mergeMethod,
+        registerSupport,
       )
     }
     return
   }
-  val original = pairs.single().first
-  val support = original.key.nestedClass("MergePatchSupport")
+  val packageName = groups.keys.single()
+  val supportNames = NameAllocator()
+  allModels.keys
+    .filter { it.packageName == packageName }
+    .map { it.topLevelClassName().simpleName }
+    .distinct()
+    .forEach { supportNames.newName(it) }
+  val support = ClassName(packageName, supportNames.newName("MergePatchSupport"))
   val mapper = ClassName("com.fasterxml.jackson.databind", "ObjectMapper")
   val node = ClassName("com.fasterxml.jackson.databind", "JsonNode")
   val mapperParameter = ParameterSpec.builder("mapper", mapper).defaultValue("%T.mapper", support).build()
@@ -112,6 +121,22 @@ internal fun addKotlinPatchHelpers(
         .addStatement("return %T.patch(this, from, %T::class.java, mapper, %L)", support, patch.key, tagCode)
         .build(),
     )
+    // Keep model class literals on the adapter so a shared helper never references excluded declarations.
+    val defaults =
+      CodeBlock
+        .builder()
+        .add("setOf<Class<*>>(")
+        .apply {
+          reachablePatchModels(listOf(original.value.first, patch.value.first), allModels, declarations)
+            .filterValues { (_, b) ->
+              b.typeSpecs.any {
+                it.isCompanion &&
+                  it.funSpecs.any { f -> f.annotations.any { a -> a.typeName == JACKSON_JSON_CREATOR } }
+              }
+            }.keys
+            .forEach { add("%T::class.java,", it) }
+        }.add(")")
+        .build()
     builder.addFunction(
       FunSpec
         .builder(mergeMethod)
@@ -119,8 +144,13 @@ internal fun addKotlinPatchHelpers(
         .addParameter("patch", patch.key)
         .addParameter(mapperParameter)
         .returns(original.key)
-        .addStatement("return %T.apply(this, patch, %T::class.java, mapper, %L)", support, original.key, tagCode)
-        .build(),
+        .addStatement(
+          "return %T.apply(this, patch, %T::class.java, mapper, %L, %L)",
+          support,
+          original.key,
+          tagCode,
+          defaults,
+        ).build(),
     )
     val companion =
       patch.value.second.typeSpecs
@@ -149,14 +179,8 @@ internal fun addKotlinPatchHelpers(
   val helper =
     TypeSpec
       .objectBuilder(support)
-      .apply {
-        if (original.value.second
-            .build()
-            .kind != TypeSpec.Kind.INTERFACE
-        ) {
-          addModifiers(KModifier.INTERNAL)
-        }
-      }.addKdoc("Shared wire-tree operations for generated merge-patch companions.\n")
+      .addModifiers(KModifier.INTERNAL)
+      .addKdoc("Shared wire-tree operations for generated merge-patch companions.\n")
       .addProperty(PropertySpec.builder("mapper", mapper).initializer("%T().findAndRegisterModules()", mapper).build())
   val generic = TypeVariableName("T", Any::class)
   helper.addFunction(
@@ -217,7 +241,10 @@ internal fun addKotlinPatchHelpers(
         },
       ).addParameter("mapper", mapper)
       .addParameter("discriminator", String::class.asTypeName().copy(nullable = true))
-      .returns(generic)
+      .addParameter(
+        "defaults",
+        ClassName("kotlin.collections", "Set").parameterizedBy(ClassName("java.lang", "Class").parameterizedBy(STAR)),
+      ).returns(generic)
       .apply {
         validation?.let {
           addStatement("%T.response(value)", it.modelValidation)
@@ -234,7 +261,7 @@ internal fun addKotlinPatchHelpers(
         addStatement("val tree = merge(mapper.valueToTree(value), mapper.valueToTree(patch))")
         addStatement("val reader = mapper.copy()")
         addStatement(
-          "reader.setAnnotationIntrospector(%T.pair(Defaults(), mapper.deserializationConfig.annotationIntrospector))",
+          "reader.setAnnotationIntrospector(%T.pair(Defaults(defaults), mapper.deserializationConfig.annotationIntrospector))",
           ClassName("com.fasterxml.jackson.databind", "AnnotationIntrospector"),
         )
         addStatement("val result = reader.treeToValue(tree, type)")
@@ -287,24 +314,31 @@ internal fun addKotlinPatchHelpers(
         node,
       ).build(),
   )
-  // Generated Jackson factories apply decoding defaults. A merge must retain deleted members as absent.
-  val factories =
-    reachablePatchModels(models.values.map { it.first }, allModels, declarations).filterValues { (_, b) ->
-      b.typeSpecs.any {
-        it.isCompanion &&
-          it.funSpecs.any { f -> f.annotations.any { a -> a.typeName == JACKSON_JSON_CREATOR } }
-      }
-    }
-  val disabled =
-    CodeBlock
-      .builder()
-      .apply {
-        factories.forEach { (name, _) -> add("%T::class.java,\n", name) }
-      }.build()
   helper.addType(
     TypeSpec
       .classBuilder("Defaults")
-      .addModifiers(KModifier.PRIVATE)
+      .primaryConstructor(
+        FunSpec
+          .constructorBuilder()
+          .addParameter(
+            "types",
+            ClassName(
+              "kotlin.collections",
+              "Set",
+            ).parameterizedBy(ClassName("java.lang", "Class").parameterizedBy(STAR)),
+          ).build(),
+      ).addProperty(
+        PropertySpec
+          .builder(
+            "types",
+            ClassName(
+              "kotlin.collections",
+              "Set",
+            ).parameterizedBy(ClassName("java.lang", "Class").parameterizedBy(STAR)),
+          ).initializer("types")
+          .addModifiers(KModifier.PRIVATE)
+          .build(),
+      ).addModifiers(KModifier.PRIVATE)
       .superclass(ClassName("com.fasterxml.jackson.databind.introspect", "JacksonAnnotationIntrospector"))
       .addFunction(
         FunSpec
@@ -321,17 +355,15 @@ internal fun addKotlinPatchHelpers(
           .returns(JACKSON_JSON_CREATOR.nestedClass("Mode").copy(nullable = true))
           .addCode(
             """
-            if (value is %T && value.rawReturnType in setOf<Class<*>>(
-            %L)) return %T.DISABLED
+            if (value is %T && value.rawReturnType in types) return %T.DISABLED
             return super.findCreatorAnnotation(config, value)
             """.trimIndent() + "\n",
             ClassName("com.fasterxml.jackson.databind.introspect", "AnnotatedMethod"),
-            disabled,
             JACKSON_JSON_CREATOR.nestedClass("Mode"),
           ).build(),
       ).build(),
   )
-  original.value.second.addType(helper.build())
+  registerSupport(support, helper, pairs.flatMap { listOf(it.first.value.first, it.second.value.first) })
 }
 
 // Only types reachable by this pair can participate in its Jackson merge operation.

@@ -529,7 +529,10 @@ class KotlinSundayIrGenerator(
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
       api.models,
-    )
+    ) { name, helper, consumers ->
+      typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
+      typeRegistry.addModelType(name, helper)
+    }
     models
       .flatMap { model ->
         buildList {
