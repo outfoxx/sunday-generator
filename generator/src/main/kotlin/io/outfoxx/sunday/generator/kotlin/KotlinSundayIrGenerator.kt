@@ -1351,7 +1351,7 @@ class KotlinSundayIrGenerator(
           .builder()
           .apply {
             if (KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options) {
-              val view = nativePayloads.name(requestBody.type)
+              val view = nativePayloads.name(requestBody.type, specsTypeName.packageName)
               if (view == null) {
                 addStatement("%T.request(body)", typeRegistry.beanValidationTypes.modelValidation)
               } else {

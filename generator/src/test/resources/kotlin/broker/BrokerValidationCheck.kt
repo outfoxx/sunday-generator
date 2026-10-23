@@ -45,7 +45,9 @@ object BrokerValidationCheck {
     val known = Event(EventKind.Created)
     broker.sendEvent(known)
     broker.sendBatch(listOf(known))
-    check(sent.size == 2)
+    broker.sendCodes(listOf("ABC"))
+    broker.sendCodeMap(mapOf("code" to "ABC"))
+    check(sent.size == 4)
     suspend fun rejected(block: suspend () -> Unit) {
       val before = sent.size
       val failure = runCatching { block() }.exceptionOrNull()
@@ -56,8 +58,12 @@ object BrokerValidationCheck {
     }
     if (namespace == "none") {
       broker.sendEvent(unknown)
-      check(sent.size == 3)
+      broker.sendCodes(listOf("x"))
+      broker.sendCodeMap(mapOf("code" to "x"))
+      check(sent.size == 7)
     } else {
+      rejected { broker.sendCodes(listOf("x")) }
+      rejected { broker.sendCodeMap(mapOf("code" to "x")) }
       rejected { broker.sendEvent(unknown) }
       rejected { broker.sendBatch(listOf(unknown)) }
       rejected { broker.sendBatch(emptyList()) }
