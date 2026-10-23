@@ -19,6 +19,9 @@ types:
       detail:
         type: string
       custom?: object
+      "(sunday.placement)":
+        type: object
+        required: false
     additionalProperties: false
 
   ResponseProblemCodes:
@@ -151,25 +154,14 @@ annotationTypes:
     type: string
     allowedTargets: [Resource, ResourceType]
 
-  kotlinPackage:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
-  kotlinPackage:client:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
-  kotlinPackage:server:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  placement:
+    type: object
+    additionalProperties: true
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration, Resource, ResourceType, Method]
 
-  kotlinModelPackage:
+  typeScriptImport:
     type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
-  kotlinModelPackage:client:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
-  kotlinModelPackage:server:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+    allowedTargets: [TypeDeclaration]
 
   kotlinType:
     type: string
@@ -191,13 +183,6 @@ annotationTypes:
     type: TypeImplementation
     allowedTargets: [TypeDeclaration]
 
-  swiftModule:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
-  swiftModelModule:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
-
   swiftType:
     type: string
     allowedTargets: [TypeDeclaration]
@@ -205,14 +190,6 @@ annotationTypes:
   swiftImplementation:
     type: TypeImplementation
     allowedTargets: [TypeDeclaration]
-
-  typeScriptModule:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
-
-  typeScriptModelModule:
-    type: string
-    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
 
   typeScriptType:
     type: string
