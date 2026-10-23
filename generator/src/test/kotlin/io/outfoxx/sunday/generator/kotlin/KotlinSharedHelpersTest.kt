@@ -22,6 +22,63 @@ import java.nio.file.Path
 @KotlinTest
 class KotlinSharedHelpersTest {
   @ParameterizedTest
+  @CsvSource("service", "aggregate", "problem")
+  fun `shared helper names avoid other generated declarations`(
+    kind: String,
+    @TempDir directory: Path,
+  ) {
+    val name = "MergePatchSupport"
+    val api = SharedHelpersFixture(directory, "openapi").withHelperCollision(kind, name)
+    for (target in listOf("jaxrs", "sunday")) {
+      val registry =
+        KotlinTypeRegistry(
+          null,
+          GenerationMode.Client,
+          setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
+          problemLibrary = KotlinProblemLibrary.SUNDAY,
+        )
+      if (target == "jaxrs") {
+        KotlinJAXRSIrGenerator(
+          api,
+          registry,
+          KotlinJAXRSOptions(
+            false,
+            false,
+            null,
+            false,
+            null,
+            false,
+            GeneratedPlacementConfiguration(),
+            "https://test/",
+            listOf("application/json"),
+            "",
+            false,
+            aggregateServices =
+              kind == "aggregate",
+            aggregateServiceName = name,
+          ),
+        ).generateServiceTypes()
+      } else {
+        KotlinSundayIrGenerator(
+          api,
+          registry,
+          KotlinSundayOptions(
+            GeneratedPlacementConfiguration(),
+            "https://test/",
+            listOf("application/json"),
+            "",
+            aggregateServices =
+              kind == "aggregate",
+            aggregateServiceName = name,
+          ),
+        ).generateServiceTypes()
+      }
+      val result = compileTypesResult(registry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    }
+  }
+
+  @ParameterizedTest
   @CsvSource(
     "raml,all",
     "openapi,all",

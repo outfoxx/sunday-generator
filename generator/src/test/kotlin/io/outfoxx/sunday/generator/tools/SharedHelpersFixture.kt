@@ -3,8 +3,11 @@ package io.outfoxx.sunday.generator.tools
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedPlacement
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
+import io.outfoxx.sunday.generator.ir.GeneratedProblem
+import io.outfoxx.sunday.generator.ir.GeneratedService
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -42,6 +45,37 @@ internal class SharedHelpersFixture(
       "second" -> GeneratedOutputSelection(ownerUris = setOf(second.toUri()))
       "neither" -> GeneratedOutputSelection(ownerUris = setOf(first.resolveSibling("excluded.yaml").toUri()))
       else -> GeneratedOutputSelection()
+    }
+
+  fun withHelperCollision(
+    kind: String,
+    name: String,
+  ): GeneratedApi =
+    if (kind == "problem") {
+      api.copy(
+        problems =
+          listOf(
+            GeneratedProblem(
+              name,
+              source = api.source,
+              typeUri = "https://test/problem",
+              status = 400,
+              title = "Test problem",
+              detail = "A problem used to reserve its generated name",
+            ),
+          ),
+      )
+    } else {
+      api.copy(
+        services =
+          (if (kind == "service") listOf(name) else listOf("FirstService", "SecondService")).map {
+            GeneratedService(
+              it,
+              group = it,
+              operations = listOf(GeneratedOperation("fetch$it", "GET", "/${it.lowercase()}")),
+            )
+          },
+      )
     }
 
   private fun placement(second: Boolean) =

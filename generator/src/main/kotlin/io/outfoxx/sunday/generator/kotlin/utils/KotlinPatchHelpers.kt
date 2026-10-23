@@ -39,6 +39,7 @@ internal fun addKotlinPatchHelpers(
   declarations: List<GeneratedModel>,
   allModels: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> = models,
   methodNames: Pair<String, String>? = null,
+  reservedTypes: List<ClassName> = emptyList(),
   registerSupport: (ClassName, TypeSpec.Builder, List<GeneratedModel>) -> Unit,
 ) {
   val index =
@@ -69,6 +70,7 @@ internal fun addKotlinPatchHelpers(
         declarations,
         allModels,
         patchMethod to mergeMethod,
+        reservedTypes,
         registerSupport,
       )
     }
@@ -76,7 +78,7 @@ internal fun addKotlinPatchHelpers(
   }
   val packageName = groups.keys.single()
   val supportNames = NameAllocator()
-  allModels.keys
+  (allModels.keys + reservedTypes)
     .filter { it.packageName == packageName }
     .map { it.topLevelClassName().simpleName }
     .distinct()

@@ -171,16 +171,30 @@ class TypeScriptSundayIrGenerator(
       .groupBy { it.patchSupportModule() }
       .flatMap { (module, models) ->
         val names = NameAllocator()
-        api.models
-          .filter { it.patchSupportModule() == module }
-          .map { it.typeName(it.name.toUpperCamelCase()).simpleName() }
-          .distinct()
+        (
+          api.models
+            .filter { it.patchSupportModule() == module }
+            .map { it.typeName(it.name.toUpperCamelCase()).simpleName() } +
+            reservedHelperNames[module].orEmpty()
+        ).distinct()
           .forEach { names.newName(it) }
         val simpleName = names.newName("MergePatchSupport")
         val path = listOfNotNull(module, simpleName.camelCaseToKebabCase()).joinToString("/")
         val name = typeRegistry.generatedTypeName(simpleName, path)
         models.map { it to name }
       }.toMap()
+  }
+
+  private val reservedHelperNames by lazy {
+    buildList {
+      val services = api.typeScriptSundayServices()
+      api.problems.forEach {
+        add(it.target("typescript", "typescript")?.modelModuleName to it.name.toUpperCamelCase())
+      }
+      services.forEach { add(it.targets["typescript"]?.moduleName to it.typeSimpleName()) }
+      if (options.aggregateServices && services.size > 1) add(null to aggregateServiceTypeName().simpleName())
+      clientConfigurations.forEach { add(api.targets["typescript"]?.moduleName to it.name) }
+    }.groupBy({ it.first }, { it.second })
   }
 
   private fun GeneratedModel.patchSupportModule(): String? {

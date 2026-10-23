@@ -31,6 +31,7 @@ import io.outfoxx.swiftpoet.TypeSpec
 /** Shares dynamic-property wire coding within each module while retaining consumer ownership. */
 internal class SwiftCodingHelpers(
   models: List<GeneratedModel>,
+  reservedTypes: List<DeclaredTypeName>,
   private val typeName: (GeneratedModel) -> DeclaredTypeName,
 ) {
   private val consumers = linkedMapOf<DeclaredTypeName, MutableSet<GeneratedModel>>()
@@ -38,7 +39,11 @@ internal class SwiftCodingHelpers(
   private val names by lazy {
     models.groupBy { typeName(it).moduleName }.mapValues { (module, declarations) ->
       val names = NameAllocator()
-      declarations.map { typeName(it).topLevelTypeName().simpleName }.distinct().forEach { names.newName(it) }
+      (declarations.map(typeName) + reservedTypes)
+        .filter { it.moduleName == module }
+        .map { it.topLevelTypeName().simpleName }
+        .distinct()
+        .forEach { names.newName(it) }
       DeclaredTypeName.typeName("$module.${names.newName("ModelCodingSupport")}")
     }
   }

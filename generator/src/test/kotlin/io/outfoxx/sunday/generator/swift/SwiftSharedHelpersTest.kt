@@ -18,6 +18,50 @@ import java.nio.file.Path
 class SwiftSharedHelpersTest {
   @ParameterizedTest
   @CsvSource(
+    "service,ModelCodingSupport",
+    "aggregate,ModelCodingSupport",
+    "problem,ModelCodingSupport",
+    "service,MergePatchSupport",
+    "aggregate,MergePatchSupport",
+    "problem,MergePatchSupport",
+  )
+  fun `shared helper names avoid other generated declarations`(
+    kind: String,
+    name: String,
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val api = SharedHelpersFixture(directory, "openapi").withHelperCollision(kind, name)
+    val registry = SwiftTypeRegistry(emptySet())
+    SwiftSundayIrGenerator(
+      api,
+      registry,
+      SwiftSundayOptions(
+        "https://test/",
+        listOf("application/json"),
+        "",
+        aggregateServices = kind == "aggregate",
+        aggregateServiceName = name,
+      ),
+    ).generateServiceTypes()
+    registry.generateFiles(outputDirectory = compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("SharedHelperCollisionTests.swift"),
+      """
+      import Testing
+      import SundayGenTest
+      @Test func sharedHelperCollision() throws {
+        let value = FirstUpdate(value: "before")
+        #expect(try value.merge(FirstUpdatePatch(value: .delete)).value == nil)
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @ParameterizedTest
+  @CsvSource(
     "raml,all",
     "openapi,all",
     "asyncapi,all",

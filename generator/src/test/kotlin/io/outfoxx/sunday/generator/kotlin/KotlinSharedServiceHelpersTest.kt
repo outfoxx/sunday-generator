@@ -26,7 +26,7 @@ import java.net.URI
 @KotlinTest
 class KotlinSharedServiceHelpersTest {
   @ParameterizedTest
-  @ValueSource(strings = ["all", "first", "second", "split", "neither", "models"])
+  @ValueSource(strings = ["all", "first", "second", "split", "neither", "models", "aggregate"])
   fun `optional body providers share package implementation and retain independent bindings`(scenario: String) {
     val owners = listOf(URI("https://example.test/first.yaml"), URI("https://example.test/second.yaml"))
     val api =
@@ -86,6 +86,8 @@ class KotlinSharedServiceHelpersTest {
         listOf("text/plain"),
         "API",
         false,
+        aggregateServices = scenario == "aggregate",
+        aggregateServiceName = "OptionalBodySupport",
       ),
     ).generateServiceTypes()
     val selection =
@@ -99,7 +101,11 @@ class KotlinSharedServiceHelpersTest {
     val types = registry.buildTypes(selection)
     val compiled = compileTypesResult(types, classpathFilter = { !it.name.contains("jackson", true) })
     assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
-    val helpers = types.keys.filter { it.simpleName == "OptionalBodySupport" }
+    val helpers =
+      types.keys.filter {
+        it.simpleName.startsWith("OptionalBodySupport") &&
+          (scenario != "aggregate" || it.simpleName != "OptionalBodySupport")
+      }
     assertEquals(
       when (scenario) {
         "models", "neither" -> 0

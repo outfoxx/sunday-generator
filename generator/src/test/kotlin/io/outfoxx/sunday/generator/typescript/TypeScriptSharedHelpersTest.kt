@@ -21,6 +21,35 @@ import java.nio.file.Path
 
 @TypeScriptTest
 class TypeScriptSharedHelpersTest {
+  @ParameterizedTest
+  @CsvSource("service", "aggregate", "problem")
+  fun `shared helper names avoid other generated declarations`(
+    kind: String,
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val name = "MergePatchSupport"
+    val api = SharedHelpersFixture(directory, "openapi").withHelperCollision(kind, name)
+    val registry = TypeScriptTypeRegistry(emptySet())
+    TypeScriptSundayIrGenerator(
+      api,
+      registry,
+      TypeScriptSundayOptions(
+        "https://test/",
+        listOf("application/json"),
+        "",
+        aggregateServices = kind == "aggregate",
+        aggregateServiceName = name,
+      ),
+    ).generateServiceTypes()
+    registry.generateFiles(outputDirectory = compiler.srcDir)
+    Files.writeString(
+      compiler.srcDir.resolve("check.ts"),
+      "import {FirstUpdate} from './first-update'; if (FirstUpdate.merge({value: 'x'}, {}).value !== 'x') throw new Error('merge');",
+    )
+    assertTrue(compileAndRunGeneratedFiles(compiler, "check"))
+  }
+
   @Test
   fun `nested patch helpers inherit the root module over child target defaults`(
     compiler: TypeScriptCompiler,

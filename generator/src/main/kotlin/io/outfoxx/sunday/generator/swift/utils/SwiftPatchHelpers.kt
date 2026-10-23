@@ -32,6 +32,7 @@ import io.outfoxx.swiftpoet.TypeVariableName.Companion.typeVariable
 /** Generates thin model conveniences over one lossless wire-tree merge implementation. */
 internal class SwiftPatchHelpers(
   private val models: List<GeneratedModel>,
+  reservedTypes: List<DeclaredTypeName>,
   private val typeName: (GeneratedModel) -> DeclaredTypeName,
 ) {
   private val index =
@@ -54,7 +55,11 @@ internal class SwiftPatchHelpers(
   private val supportNames =
     models.groupBy { typeName(it).moduleName }.mapValues { (module, declarations) ->
       val names = NameAllocator()
-      declarations.map { typeName(it).topLevelTypeName().simpleName }.distinct().forEach { names.newName(it) }
+      (declarations.map(typeName) + reservedTypes)
+        .filter { it.moduleName == module }
+        .map { it.topLevelTypeName().simpleName }
+        .distinct()
+        .forEach { names.newName(it) }
       DeclaredTypeName.typeName("$module.${names.newName("MergePatchSupport")}")
     }
 

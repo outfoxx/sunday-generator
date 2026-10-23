@@ -599,13 +599,25 @@ class KotlinJAXRSIrGenerator(
 
   private val optionalBodySupportNames = mutableMapOf<String, ClassName>()
 
+  private val reservedHelperTypes by lazy {
+    buildList {
+      val services = api.jaxRsServices()
+      // Unreferenced problems may be unplaced; reserving names must not require emitting them.
+      addAll(
+        api.problems.filter { it.target(preferredTargetId, "kotlin")?.modelPackageName != null }.map { it.typeName() },
+      )
+      addAll(services.map { serviceTypeName(it) })
+      if (options.aggregateServices && services.size > 1) add(aggregateServiceTypeName())
+    }
+  }
+
   private fun generateOptionalBodySupport(services: List<GeneratedJaxRsService>) {
     services
       .filter { service -> service.service.operations.any { it.requestBody?.rejectsSuppliedNull() == true } }
       .groupBy { it.typeName.packageName }
       .forEach { (packageName, consumers) ->
         val names = NameAllocator()
-        (api.models.map { it.kotlinClassName() } + services.map { it.typeName })
+        (api.models.map { it.kotlinClassName() } + reservedHelperTypes)
           .filter { it.packageName == packageName }
           .map { it.topLevelClassName().simpleName }
           .distinct()
@@ -792,6 +804,7 @@ class KotlinJAXRSIrGenerator(
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
       api.models,
+      reservedTypes = reservedHelperTypes,
     ) { name, helper, consumers ->
       typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
       typeRegistry.addModelType(name, helper)

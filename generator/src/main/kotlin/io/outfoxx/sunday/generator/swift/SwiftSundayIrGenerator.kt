@@ -190,8 +190,33 @@ class SwiftSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
-  private val codingHelpers by lazy { SwiftCodingHelpers(api.models) { it.swiftDeclaredTypeName() } }
-  private val patchHelpers by lazy { SwiftPatchHelpers(api.models) { it.swiftDeclaredTypeName() } }
+  private val codingHelpers by lazy {
+    SwiftCodingHelpers(
+      api.models,
+      reservedHelperTypes,
+    ) { it.swiftDeclaredTypeName() }
+  }
+  private val patchHelpers by lazy { SwiftPatchHelpers(api.models, reservedHelperTypes) { it.swiftDeclaredTypeName() } }
+
+  // Helpers are named before services and problems are registered, so reserve their planned names too.
+  private val reservedHelperTypes by lazy {
+    buildList {
+      val services = api.swiftSundayServices()
+      addAll(api.problems.map { it.swiftProblemTypeName() })
+      services.forEach { service ->
+        val module = service.target("swift", "swift")?.moduleName.orEmpty()
+        add(DeclaredTypeName.typeName("$module.${service.typeSimpleName()}"))
+        clientConfigurations.filter { service.name in it.services }.forEach {
+          add(DeclaredTypeName.typeName("$module.${it.name}"))
+        }
+      }
+      if (options.aggregateServices && services.size > 1) {
+        val aggregate = aggregateServiceTypeName()
+        add(aggregate)
+        clientConfigurations.forEach { add(DeclaredTypeName.typeName("${aggregate.moduleName}.${it.name}")) }
+      }
+    }
+  }
 
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
   private val nominalGenerator =
