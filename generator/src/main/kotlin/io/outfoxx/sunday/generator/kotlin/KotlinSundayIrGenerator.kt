@@ -1349,7 +1349,16 @@ class KotlinSundayIrGenerator(
       .addCode(
         CodeBlock
           .builder()
-          .add("return this.producer.send(⇥\n")
+          .apply {
+            if (KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options) {
+              val view = nativePayloads.name(requestBody.type, specsTypeName.packageName)
+              if (view == null) {
+                addStatement("%T.request(body)", typeRegistry.beanValidationTypes.modelValidation)
+              } else {
+                addStatement("%T.request(body, %T::class.java)", typeRegistry.beanValidationTypes.modelValidation, view)
+              }
+            }
+          }.add("return this.producer.send(⇥\n")
           .add("%T.%N,\n", specsTypeName, id.kotlinIdentifierName)
           .add(
             "this.codec.encode(body, contentType = %S, routingKey = routingKey)",

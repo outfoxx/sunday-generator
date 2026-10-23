@@ -1,0 +1,85 @@
+asyncapi: 3.1.0
+info:
+  title: Tolerant Broker Events
+  version: 1.0.0
+channels:
+  events:
+    address: example.events
+    x-sunday-service: Events
+    bindings:
+      amqp:
+        exchange:
+          name: example.events
+          type: topic
+        defaultRoutingKey: example.changed
+operations:
+  sendEvent:
+    action: send
+    channel:
+      $ref: '#/channels/events'
+    message:
+      name: Event
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Event'
+  consumeEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/events'
+    message:
+      name: Event
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Event'
+  sendBatch:
+    action: send
+    channel:
+      $ref: '#/channels/events'
+    message:
+      name: Batch
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/EventBatch'
+  sendCodes:
+    action: send
+    channel:
+      $ref: '#/channels/events'
+    message:
+      name: sendCodesPayload
+      contentType: application/json
+      payload:
+        type: array
+        items:
+          $ref: '#/components/schemas/Code'
+  sendCodeMap:
+    action: send
+    channel:
+      $ref: '#/channels/events'
+    message:
+      name: sendCodeMapPayload
+      contentType: application/json
+      payload:
+        type: object
+        additionalProperties:
+          $ref: '#/components/schemas/Code'
+components:
+  schemas:
+    Code:
+      type: string
+      minLength: 3
+      pattern: '^[A-Z]+$'
+    EventBatch:
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/Event'
+    EventKind:
+      type: string
+      enum: [created, updated, unrecognized]
+      x-unknown-value: unrecognized
+    Event:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          $ref: '#/components/schemas/EventKind'
