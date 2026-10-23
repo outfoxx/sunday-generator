@@ -529,7 +529,11 @@ class KotlinSundayIrGenerator(
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
       api.models,
-    )
+      reservedTypes = reservedHelperTypes,
+    ) { name, helper, consumers ->
+      typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
+      typeRegistry.addModelType(name, helper)
+    }
     models
       .flatMap { model ->
         buildList {
@@ -579,6 +583,32 @@ class KotlinSundayIrGenerator(
       services
         .flatMap { service -> apiIndex.referencedScopedModels(service) }
         .distinct()
+
+  private val reservedHelperTypes by lazy {
+    buildList {
+      val services = api.kotlinSundayServices()
+      // Unreferenced problems may be unplaced; reserving names must not require emitting them.
+      addAll(
+        api.problems.filter { it.target("kotlinClient", "kotlin")?.modelPackageName != null }.map { it.typeName() },
+      )
+      services.forEach { service ->
+        val packageName = servicePackageName(service)
+        add(ClassName(packageName, service.typeSimpleName()))
+        clientConfigurations.filter { service.name in it.services }.forEach { add(ClassName(packageName, it.name)) }
+      }
+      if (options.aggregateServices && services.size > 1) {
+        val aggregate = aggregateServiceTypeName()
+        add(aggregate)
+        clientConfigurations.forEach { add(ClassName(aggregate.packageName, it.name)) }
+      }
+      if (options.generateBrokerServices) {
+        val serviceNames = services.map { it.typeSimpleName() }.toSet()
+        api.kotlinSundayBrokerServices().forEach {
+          add(ClassName(servicePackageName(it), it.brokerTypeSimpleName(serviceNames)))
+        }
+      }
+    }
+  }
 
   private fun generateProblemTypes(services: List<GeneratedService>) {
     val referencedProblems =

@@ -91,43 +91,8 @@ public struct Child2 : Parent, ModelValidatable {
 
   }
 
-  fileprivate struct UnknownPropertyCodingKey : CodingKey {
+  private typealias UnknownPropertyCodingKey = ModelCodingSupport.UnknownPropertyCodingKey
 
-    let stringValue: String
-    let intValue: Int? = nil
-
-    init(stringValue: String) {
-      self.stringValue = stringValue
-    }
-
-    init(intValue: Int) {
-      self.stringValue = String(intValue)
-    }
-
-  }
-
-  private struct AdditionalPropertyValue : Encodable {
-
-    let value: AnyValue
-
-    func encode(to encoder: Encoder) throws {
-      switch value {
-      case .dictionary(let values):
-        var container = encoder.container(keyedBy: UnknownPropertyCodingKey.self)
-        for (key, item) in values {
-          guard case .string(let name) = key else {
-            throw EncodingError.invalidValue(key, .init(codingPath: encoder.codingPath, debugDescription: "JSON object keys must be strings"))
-          }
-          try container.encode(AdditionalPropertyValue(value: item), forKey: UnknownPropertyCodingKey(stringValue: name))
-        }
-      case .array(let values):
-        var container = encoder.unkeyedContainer()
-        for item in values { try container.encode(AdditionalPropertyValue(value: item)) }
-      default:
-        try value.encode(to: encoder)
-      }
-    }
-
-  }
+  private typealias AdditionalPropertyValue = ModelCodingSupport.AdditionalPropertyValue
 
 }

@@ -21,7 +21,6 @@ import io.outfoxx.swiftpoet.CODABLE
 import io.outfoxx.swiftpoet.CodeBlock
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FunctionSpec
-import io.outfoxx.swiftpoet.Modifier.INTERNAL
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.Modifier.STATIC
 import io.outfoxx.swiftpoet.NameAllocator
@@ -33,6 +32,7 @@ import io.outfoxx.swiftpoet.TypeVariableName.Companion.typeVariable
 /** Generates thin model conveniences over one lossless wire-tree merge implementation. */
 internal class SwiftPatchHelpers(
   private val models: List<GeneratedModel>,
+  reservedTypes: List<DeclaredTypeName>,
   private val typeName: (GeneratedModel) -> DeclaredTypeName,
 ) {
   private val index =
@@ -52,10 +52,24 @@ internal class SwiftPatchHelpers(
   private val mergeName = names.newName("merge")
   private val factoryName = names.newName("fromModel")
 
-  private fun supportName(model: GeneratedModel): DeclaredTypeName {
+  private val supportNames =
+    models.groupBy { typeName(it).moduleName }.mapValues { (module, declarations) ->
+      val names = NameAllocator()
+      (declarations.map(typeName) + reservedTypes)
+        .filter { it.moduleName == module }
+        .map { it.topLevelTypeName().simpleName }
+        .distinct()
+        .forEach { names.newName(it) }
+      DeclaredTypeName.typeName("$module.${names.newName("MergePatchSupport")}")
+    }
+
+  fun supportName(model: GeneratedModel): DeclaredTypeName {
     val original = model.patchOf?.let { requireNotNull(index.modelOrNull(it)) } ?: model
-    return typeName(original).nestedType("MergePatchSupport")
+    return supportNames.getValue(typeName(original).moduleName)
   }
+
+  fun hasAdapters(model: GeneratedModel): Boolean =
+    model.patchOf != null || models.any { it.patchOf?.let(index::modelOrNull) == model }
 
   fun add(
     model: GeneratedModel,
@@ -67,7 +81,6 @@ internal class SwiftPatchHelpers(
     val tag = patch?.properties?.firstOrNull { it.patchDiscriminator }?.let { it.serializationName ?: it.name }
     val tagCode = tag?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil")
     if (patch != null) {
-      builder.addType(support(supportName).build())
       builder.addFunction(
         FunctionSpec
           .builder(patchName)
@@ -123,7 +136,7 @@ internal class SwiftPatchHelpers(
     }
   }
 
-  private fun support(supportName: DeclaredTypeName): TypeSpec.Builder {
+  fun support(supportName: DeclaredTypeName): TypeSpec.Builder {
     val value = typeVariable("Value", bound(CODABLE))
     val patch = typeVariable("Patch", bound(CODABLE))
     val encoder = DeclaredTypeName.typeName("PotentCodables.AnyValueEncoder")
@@ -131,7 +144,6 @@ internal class SwiftPatchHelpers(
     val node = DeclaredTypeName.typeName("PotentCodables.AnyValue")
     return TypeSpec
       .enumBuilder(supportName)
-      .addModifiers(INTERNAL)
       .addDoc("Shared RFC 7396 operations; tree coding preserves scalar types and numeric precision.\n")
       .addFunction(
         FunctionSpec

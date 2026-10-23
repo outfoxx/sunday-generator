@@ -20,6 +20,24 @@ class GeneratedOutputSelectionTest {
   lateinit var directory: Path
 
   @Test
+  fun `shared helpers follow any consumer without merging distinct ownership`() {
+    val first = URI("https://example.test/first.yaml")
+    val second = URI("https://example.test/second.yaml")
+    val model = GeneratedOutputOrigin(GeneratedTypeCategory.Model, setOf(first))
+    val service = GeneratedOutputOrigin(GeneratedTypeCategory.Service, setOf(second))
+    val ownership = GeneratedOutputOwnership()
+    ownership.bindShared("helper", listOf(model, service))
+    assertTrue(ownership.includes(GeneratedOutputSelection(ownerUris = setOf(first)), "helper"))
+    assertTrue(ownership.includes(GeneratedOutputSelection(ownerUris = setOf(second)), "helper"))
+    assertFalse(
+      ownership.includes(GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model), setOf(second)), "helper"),
+    )
+    ownership.bindShared("nested", listOf(model.copy(enclosing = service)))
+    assertFalse(ownership.includes(GeneratedOutputSelection(ownerUris = setOf(first)), "nested"))
+    assertTrue(ownership.includes(GeneratedOutputSelection(ownerUris = setOf(first, second)), "nested"))
+  }
+
+  @Test
   fun `configuration filenames and file URIs share canonical identity`() {
     val file = Files.writeString(directory.resolve("schema with spaces.yaml"), "{}")
     val link = Files.createSymbolicLink(directory.resolve("alias.yaml"), file)

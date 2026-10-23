@@ -524,6 +524,7 @@ class KotlinJAXRSIrGenerator(
         )
       }
 
+    generateOptionalBodySupport(serviceTypes)
     val securityPolicies = securityPolicies(serviceTypes)
     val securityGenerators =
       if (!options.quarkus) {
@@ -596,6 +597,38 @@ class KotlinJAXRSIrGenerator(
     }
   }
 
+  private val optionalBodySupportNames = mutableMapOf<String, ClassName>()
+
+  private val reservedHelperTypes by lazy {
+    buildList {
+      val services = api.jaxRsServices()
+      // Unreferenced problems may be unplaced; reserving names must not require emitting them.
+      addAll(
+        api.problems.filter { it.target(preferredTargetId, "kotlin")?.modelPackageName != null }.map { it.typeName() },
+      )
+      addAll(services.map { serviceTypeName(it) })
+      if (options.aggregateServices && services.size > 1) add(aggregateServiceTypeName())
+    }
+  }
+
+  private fun generateOptionalBodySupport(services: List<GeneratedJaxRsService>) {
+    services
+      .filter { service -> service.service.operations.any { it.requestBody?.rejectsSuppliedNull() == true } }
+      .groupBy { it.typeName.packageName }
+      .forEach { (packageName, consumers) ->
+        val names = NameAllocator()
+        (api.models.map { it.kotlinClassName() } + reservedHelperTypes)
+          .filter { it.packageName == packageName }
+          .map { it.topLevelClassName().simpleName }
+          .distinct()
+          .forEach { names.newName(it) }
+        val name = ClassName(packageName, names.newName("OptionalBodySupport"))
+        optionalBodySupportNames[packageName] = name
+        typeRegistry.outputOwnership.bindShared(name, consumers.map { it.service.outputOrigin(api) })
+        typeRegistry.addServiceType(name, KotlinJAXRSOptionalBodyReader.support(name, jaxRsTypes))
+      }
+  }
+
   private fun generateServiceType(
     service: GeneratedJaxRsService,
     securityGenerator: KotlinJAXRSSecurityGenerator?,
@@ -611,6 +644,7 @@ class KotlinJAXRSIrGenerator(
           service.service.operations.any {
             it.requestBody?.rejectsSuppliedNull() == true && it.jaxrs?.jsonBodyEnabled(generationMode) == true
           },
+          optionalBodySupportNames.getValue(service.typeName.packageName),
         ),
       )
     }
@@ -770,7 +804,11 @@ class KotlinJAXRSIrGenerator(
         KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
       },
       api.models,
-    )
+      reservedTypes = reservedHelperTypes,
+    ) { name, helper, consumers ->
+      typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
+      typeRegistry.addModelType(name, helper)
+    }
     models
       .flatMap { model ->
         buildList {
