@@ -325,6 +325,11 @@ class GeneratedApiComposer {
         if (framing?.policy != null && operation.policy != null && framing.policy != operation.policy) {
           throw GeneratedApiCompositionException("Conflicting policy definitions for event stream '${operation.path}'")
         }
+        val framingMode = framing?.jaxrs?.sseResponseMode
+        val operationMode = operation.jaxrs?.sseResponseMode
+        if (framingMode != null && operationMode != null && framingMode != operationMode) {
+          throw GeneratedApiCompositionException("Conflicting SSE response modes for event stream '${operation.path}'")
+        }
         val auth = fragment.api.effectiveAuth(service, operation)
         if (framing?.auth != null && auth != null && framing.auth != auth) {
           throw GeneratedApiCompositionException(
@@ -334,6 +339,12 @@ class GeneratedApiComposer {
         operation.copy(
           auth = auth ?: framing?.auth,
           policy = operation.policy ?: framing?.policy,
+          jaxrs =
+            if (framingMode != null) {
+              (operation.jaxrs ?: GeneratedJaxrs()).copy(sseResponseMode = operationMode ?: framingMode)
+            } else {
+              operation.jaxrs
+            },
           parameters =
             operation.parameters
               .mergeFramingParameters(framing?.parameters.orEmpty()),

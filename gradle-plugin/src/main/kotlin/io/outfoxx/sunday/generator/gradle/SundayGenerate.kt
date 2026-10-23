@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSource
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
+import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
 import io.outfoxx.sunday.generator.ir.OpenApiDocumentSnapshot
 import io.outfoxx.sunday.generator.kotlin.KotlinApplicationMetadataOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
@@ -270,6 +271,14 @@ abstract class SundayGenerate
     @get:Optional
     val quarkus: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
+    /** Default server SSE representation; client generation ignores this setting. */
+    @get:Input
+    val sseResponseMode: Property<GeneratedSseResponseMode> =
+      objects
+        .property(
+          GeneratedSseResponseMode::class.java,
+        ).convention(GeneratedSseResponseMode.TYPED)
+
     /** Generates JAX-RS endpoint implementations backed by application-owned service delegates. */
     @get:Input
     val resourceAdapters: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
@@ -504,6 +513,7 @@ abstract class SundayGenerate
                   profile = profile.orNull,
                   defaultTolerance = defaultTolerance.get(),
                   resourceAdapters = resourceAdapters.get(),
+                  sseResponseMode = sseResponseMode.get(),
                   enforceSecuritySchemes = enforceSecuritySchemes.get(),
                 ),
               ).generateServiceTypes()

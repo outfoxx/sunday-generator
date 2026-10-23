@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.core.parse
+import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
@@ -137,6 +138,18 @@ class KotlinJAXRSCLITest {
     val commandWithFalse = KotlinJAXRSGenerateCommandTest()
     assertDoesNotThrow { commandWithFalse.parse(requiredOptions) }
     assertThat(commandWithFalse.quarkus, equalTo(false))
+  }
+
+  @Test
+  fun `SSE response modes are opt in`() {
+    val defaults = KotlinJAXRSGenerateCommandTest()
+    defaults.parse(requiredOptions)
+    assertThat(defaults.sseResponseMode, equalTo(GeneratedSseResponseMode.TYPED))
+    GeneratedSseResponseMode.entries.forEach { mode ->
+      val command = KotlinJAXRSGenerateCommandTest()
+      command.parse(arrayOf("-sse-response-mode", mode.value, *requiredOptions))
+      assertThat(command.sseResponseMode, equalTo(mode))
+    }
   }
 
   @Test

@@ -1,0 +1,81 @@
+openapi: 3.1.0
+info: {title: SSE modes, version: '1.0'}
+x-sunday-apiId: sse-modes
+paths:
+  /sse/typed:
+    x-sunday-jaxrs: {sse-response-mode: raw}
+    get:
+      x-sunday-service: Events
+      operationId: typedEvents
+      x-sunday-jaxrs: {sse-response-mode: typed}
+      responses:
+        '200':
+          description: Typed stream
+          content:
+            text/event-stream:
+              schema: {type: string}
+  /sse/envelope:
+    x-sunday-jaxrs: {sse-response-mode: outbound-event}
+    get:
+      x-sunday-service: Events
+      operationId: envelopeEvents
+      responses:
+        '200':
+          description: Standard envelope
+          content:
+            text/event-stream:
+              schema: {type: string}
+  /sse/json:
+    get:
+      x-sunday-service: Events
+      operationId: jsonEvents
+      x-sunday-jaxrs: {sse-response-mode: outbound-event}
+      responses:
+        '200':
+          description: JSON envelope
+          content:
+            text/event-stream:
+              schema: {$ref: '#/components/schemas/EventPayload'}
+  /sse/value:
+    get:
+      x-sunday-service: Events
+      operationId: jsonValue
+      responses:
+        '200':
+          description: Ordinary JSON response
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EventPayload'}
+  /sse/raw/{name}:
+    get:
+      x-sunday-service: Events
+      operationId: rawEvents
+      security: [{basic: []}]
+      x-sunday-jaxrs: {sse-response-mode: raw}
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: {type: string, minLength: 2}
+        - name: count
+          in: query
+          required: true
+          schema: {type: integer, minimum: 1, maximum: 3}
+        - name: Last-Event-ID
+          in: header
+          schema: {type: string}
+      responses:
+        '200':
+          description: Raw SSE with application-defined policy fields
+          content:
+            text/event-stream:
+              schema: {type: string}
+components:
+  securitySchemes:
+    basic: {type: http, scheme: basic}
+  schemas:
+    EventPayload:
+      type: object
+      required: [value]
+      properties:
+        value: {type: string}

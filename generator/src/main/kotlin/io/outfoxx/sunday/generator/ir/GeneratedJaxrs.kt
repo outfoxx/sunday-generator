@@ -26,4 +26,6 @@ data class GeneratedJaxrs(
   val jsonBody: GeneratedModeFlag? = null,
   val context: List<String> = listOf(),
   val restClient: GeneratedJaxrsRestClient? = null,
+  /** Server SSE representation override; payload schemas and client generation are unaffected. */
+  val sseResponseMode: GeneratedSseResponseMode? = null,
 )

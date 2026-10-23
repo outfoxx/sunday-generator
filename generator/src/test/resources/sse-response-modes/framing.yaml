@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Craft HTTP API
+  version: 1.0.0
+x-sunday-apiId: craft
+servers:
+  - name: sse
+    url: https://api.example.com
+paths:
+  /events:
+    get:
+      operationId: streamEvents
+      x-sunday-jaxrs: {sse-response-mode: raw}
+      parameters:
+        - name: subscriberId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: Last-Event-ID
+          in: header
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Server-sent event stream framing.
+          content:
+            text/event-stream:
+              schema:
+                type: string

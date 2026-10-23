@@ -234,6 +234,12 @@ annotationTypes:
     type: boolean
     allowedTargets: [Method, Trait]
 
+  sseResponseMode:
+    type: string
+    enum: [typed, outbound-event, raw]
+    allowedTargets: [Method, Trait]
+    description: Server-only SSE response representation. Raw requires Quarkus.
+
   sse:
     type: boolean
     allowedTargets: [Method, Trait]

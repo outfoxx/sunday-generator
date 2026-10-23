@@ -1,0 +1,23 @@
+asyncapi: '2.6.0'
+info: {title: SSE modes, version: '1.0'}
+x-sunday-apiId: sse-modes
+channels:
+  /sse/typed:
+    x-sunday-jaxrs: {sse-response-mode: raw}
+    subscribe:
+      operationId: typedEvents
+      x-sunday-jaxrs: {sse-response-mode: typed}
+      message:
+        payload: {type: string}
+  /sse/envelope:
+    x-sunday-jaxrs: {sse-response-mode: outbound-event}
+    subscribe:
+      operationId: envelopeEvents
+      message:
+        payload: {type: string}
+  /sse/raw:
+    subscribe:
+      operationId: rawEvents
+      x-sunday-jaxrs: {sse-response-mode: raw}
+      message:
+        payload: {type: string}

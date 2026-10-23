@@ -25,6 +25,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
+import io.outfoxx.sunday.generator.ir.GeneratedSseResponseMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
@@ -106,6 +107,12 @@ open class KotlinJAXRSGenerateCommand :
     help = "Enforce named schemes and permissions using application authenticators; requires -resource-adapters",
   ).flag(default = false)
 
+  /** Default server SSE representation; client generation ignores this setting. */
+  val sseResponseMode by option(
+    "-sse-response-mode",
+    help = "Server SSE representation: typed, outbound-event, or raw (Quarkus only)",
+  ).enum<GeneratedSseResponseMode> { it.value }.default(GeneratedSseResponseMode.TYPED)
+
   override fun run() {
     println("Generating ${outputCategories.ifEmpty { GeneratedTypeCategory.entries }} types")
     println("Processing ${files.joinToString()}")
@@ -156,5 +163,6 @@ open class KotlinJAXRSGenerateCommand :
       preserveUnknownFields,
       profile,
       defaultTolerance,
+      sseResponseMode,
     )
 }
