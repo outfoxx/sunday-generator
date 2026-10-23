@@ -26,4 +26,6 @@ data class GeneratedOutputOrigin(
   val declarationUris: Set<String> = emptySet(),
   /** A nested declaration and its companions require every enclosing declaration to be selected. */
   val enclosing: GeneratedOutputOrigin? = null,
+  /** Service-owned declarations match any contributing document, independently of their output category. */
+  val serviceOwned: Boolean = category == GeneratedTypeCategory.Service,
 )

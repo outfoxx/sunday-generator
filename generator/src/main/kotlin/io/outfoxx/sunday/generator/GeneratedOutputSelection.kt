@@ -28,19 +28,25 @@ class GeneratedOutputSelection(
 
   /** Selects a declaration only when all of its enclosing declarations are also selected. */
   fun includes(origin: GeneratedOutputOrigin): Boolean =
-    (origin.enclosing?.let(::includes) != false) && includes(origin.category, origin.ownerUris)
+    (origin.enclosing?.let(::includes) != false) && includes(origin.category, origin.ownerUris, origin.serviceOwned)
 
   /** Tests the category before resolving ownership. */
   fun includes(
     category: GeneratedTypeCategory,
     owners: Set<URI>,
+  ): Boolean = includes(category, owners, category == GeneratedTypeCategory.Service)
+
+  private fun includes(
+    category: GeneratedTypeCategory,
+    owners: Set<URI>,
+    serviceOwned: Boolean,
   ): Boolean {
     if (categories.isNotEmpty() && category !in categories) return false
     if (ownerUris.isEmpty()) return true
     require(owners.isNotEmpty()) { "Cannot filter generated declaration without document ownership" }
     val canonicalOwners = owners.map(GeneratedDocumentUri::canonical).toSet()
     if (canonicalOwners.none { it in ownerUris }) return false
-    require(category == GeneratedTypeCategory.Service || canonicalOwners.size == 1) {
+    require(serviceOwned || canonicalOwners.size == 1) {
       "Ambiguous declaration ownership: ${canonicalOwners.sortedBy(URI::toString).joinToString()}. " +
         "Reference one shared declaration or disambiguate the declarations before filtering output."
     }

@@ -234,7 +234,12 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedModel.modelOutputOrigin() =
     outputOrigin(api) { model, category ->
-      if (model.isProblemModel) io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem else category
+      val typeName = model.swiftDeclaredTypeName()
+      when {
+        model.isProblemModel -> io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem
+        typeName.topLevelTypeName() == typeName -> io.outfoxx.sunday.generator.GeneratedTypeCategory.Model
+        else -> category
+      }
     }
 
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */

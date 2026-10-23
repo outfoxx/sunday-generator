@@ -55,6 +55,22 @@ class GeneratedOutputSelectionTest {
   }
 
   @Test
+  fun `hoisted models preserve composed service ownership independently of category`() {
+    val first = URI("https://example.test/first.yaml")
+    val second = URI("https://example.test/second.yaml")
+    val service = GeneratedOutputOrigin(GeneratedTypeCategory.Service, setOf(first, second))
+    val model = service.copy(category = GeneratedTypeCategory.Model)
+    for (owner in setOf(first, second)) {
+      assertTrue(GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model), setOf(owner)).includes(model))
+      assertFalse(GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service), setOf(owner)).includes(model))
+      assertFalse(GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model), setOf(owner)).includes(service))
+    }
+    assertThrows(IllegalArgumentException::class.java) {
+      GeneratedOutputSelection(ownerUris = setOf(first)).includes(model.copy(serviceOwned = false))
+    }
+  }
+
+  @Test
   fun `lexical ownership keeps distinct document query identities`() {
     val document = "https://example.test/api.yaml?version=1"
     val operation = "$document#/paths/~1items/get"

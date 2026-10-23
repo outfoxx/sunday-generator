@@ -104,7 +104,15 @@ internal fun GeneratedModel.outputOrigin(
         "Unknown enclosing declaration '${reference.name}' for '$name'"
       }
     }
-  return origin.copy(category = classify(this, origin.category), enclosing = parent?.outputOrigin(api, classify))
+  val enclosing = parent?.outputOrigin(api, classify)
+  // A backend may hoist an operation model into model output; its nested declarations must follow it.
+  val category =
+    if (origin.category == GeneratedTypeCategory.Service && enclosing?.category == GeneratedTypeCategory.Model) {
+      GeneratedTypeCategory.Model
+    } else {
+      origin.category
+    }
+  return origin.copy(category = classify(this, category), enclosing = enclosing)
 }
 
 /** Resolves the provenance of an explicitly declared problem. */
