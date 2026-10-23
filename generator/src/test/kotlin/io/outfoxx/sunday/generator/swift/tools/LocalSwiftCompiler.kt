@@ -138,7 +138,6 @@ class LocalSwiftCompiler(
         }
         add(command)
         add(action)
-        add("--verbose")
         add("--jobs")
         add(System.getProperty("sunday.validation.swift.jobs", "1"))
         add("--package-path")

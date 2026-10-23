@@ -84,9 +84,10 @@ class SwiftPlacementTest {
         }
       }
       assertTrue(Files.exists(artifacts.resolve("SharedModels.swiftmodule")))
+      // SwiftPM 6.2 forwards only -I-prefixed arguments to synthesized test targets.
       val settings =
         """
-        swiftSettings: [.unsafeFlags(["-I", ownerArtifact])],
+        swiftSettings: [.unsafeFlags(["-I" + ownerArtifact])],
         linkerSettings: [.unsafeFlags(["-L", ownerArtifact, "-lSharedModels", "-Xlinker", "-rpath", "-Xlinker", ownerArtifact])]
         """.trimIndent()
       val consumerManifest =
