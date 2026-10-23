@@ -73,7 +73,21 @@ class GeneratedApiComposer {
               }
           }
         }.filter { (key, _) -> key in asyncEventStreams }
-        .toMap()
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (key, operations) ->
+          val modes = operations.mapNotNull { it.jaxrs?.sseServerResponseMode }.distinct()
+          if (modes.size > 1) {
+            throw GeneratedApiCompositionException("Conflicting SSE response modes for event stream '${key.path}'")
+          }
+          // Retain existing framing selection, but an omitted mode must not erase an explicit declaration.
+          val framing = operations.last()
+          val mode = modes.singleOrNull()
+          if (mode == null) {
+            framing
+          } else {
+            framing.copy(jaxrs = (framing.jaxrs ?: GeneratedJaxrs()).copy(sseServerResponseMode = mode))
+          }
+        }
 
     sources.forEach { fragment ->
       fragment.api.services.forEach { service ->
@@ -325,6 +339,11 @@ class GeneratedApiComposer {
         if (framing?.policy != null && operation.policy != null && framing.policy != operation.policy) {
           throw GeneratedApiCompositionException("Conflicting policy definitions for event stream '${operation.path}'")
         }
+        val framingMode = framing?.jaxrs?.sseServerResponseMode
+        val operationMode = operation.jaxrs?.sseServerResponseMode
+        if (framingMode != null && operationMode != null && framingMode != operationMode) {
+          throw GeneratedApiCompositionException("Conflicting SSE response modes for event stream '${operation.path}'")
+        }
         val auth = fragment.api.effectiveAuth(service, operation)
         if (framing?.auth != null && auth != null && framing.auth != auth) {
           throw GeneratedApiCompositionException(
@@ -334,6 +353,12 @@ class GeneratedApiComposer {
         operation.copy(
           auth = auth ?: framing?.auth,
           policy = operation.policy ?: framing?.policy,
+          jaxrs =
+            if (framingMode != null) {
+              (operation.jaxrs ?: GeneratedJaxrs()).copy(sseServerResponseMode = operationMode ?: framingMode)
+            } else {
+              operation.jaxrs
+            },
           parameters =
             operation.parameters
               .mergeFramingParameters(framing?.parameters.orEmpty()),

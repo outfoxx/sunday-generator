@@ -27,6 +27,8 @@ Coroutine `suspend` methods, reactive return types, asynchronous `AsyncResponse`
 
 Interface-only generation remains the default. Resource adapters are a server-only option and do not affect client generation.
 
+See [SSE response modes](server-sse.md) for opt-in standard envelopes and scoped Quarkus raw streams.
+
 ### Explicit Content-Type parameters
 
 An explicitly declared `Content-Type` header is included in server signatures, including interface-only generation and resource delegates. Standard JAX-RS uses `@HeaderParam`; Quarkus uses `@RestHeader`. The parameter keeps its declared type, requiredness, default and validation constraints. Singleton string constants receive a matching validation constraint when validation generation is enabled; configure Bean Validation in the server to enforce those constraints.

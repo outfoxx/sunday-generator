@@ -380,12 +380,36 @@ tasks.processResources {
   from(profiledClientSources) { include("META-INF/services/**") }
 }
 
+val sseSources = layout.buildDirectory.dir("generated/sse")
+val sseContract = rootProject.layout.projectDirectory.file("generator/src/test/resources/sse-response-modes/api.yaml")
+val generateSseApi by tasks.registering(JavaExec::class) {
+  inputs.file(sseContract)
+  outputs.dir(sseSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-quarkus",
+    "-resource-adapters",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.sse.yaml")
+      .asFile.absolutePath,
+    "-out",
+    sseSources.get().asFile.absolutePath,
+    sseContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
   freeCompilerArgs.addAll("-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateSseApi)
   optionalBodyGenerators.forEach { kotlin.srcDir(it) }
   nativePayloadGenerators.forEach { kotlin.srcDir(it) }
   kotlin.srcDir(generateProfiledClient)
@@ -402,6 +426,7 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(generateSseApi)
   dependsOn(optionalBodyGenerators)
   dependsOn(nativePayloadGenerators)
   dependsOn(generateProfiledClient)

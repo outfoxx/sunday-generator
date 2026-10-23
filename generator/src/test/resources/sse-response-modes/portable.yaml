@@ -1,0 +1,14 @@
+openapi: 3.1.0
+info: {title: Portable SSE, version: '1.0'}
+paths:
+  /portable-events:
+    get:
+      operationId: events
+      x-sunday-service: Events
+      x-sunday-jaxrs: {sse-server-response-mode: outbound-event}
+      responses:
+        '200':
+          description: Standard envelope
+          content:
+            text/event-stream:
+              schema: {type: string}

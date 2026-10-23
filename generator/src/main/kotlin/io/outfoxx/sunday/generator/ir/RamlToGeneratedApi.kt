@@ -796,6 +796,10 @@ class RamlToGeneratedApi(
       asynchronous = findBoolAnnotation(APIAnnotationName.Asynchronous, null),
       reactive = findBoolAnnotation(APIAnnotationName.Reactive, null),
       sse = modeFlag(APIAnnotationName.SSE),
+      sseServerResponseMode =
+        GeneratedSseServerResponseMode.parse(
+          findStringAnnotation(APIAnnotationName.SseServerResponseMode, null),
+        ),
       jsonBody = modeFlag(APIAnnotationName.JsonBody),
       context =
         findArrayAnnotation(APIAnnotationName.JaxrsContext, options.generationMode)

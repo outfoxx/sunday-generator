@@ -81,6 +81,14 @@ class AsyncApiToGeneratedApi(
     }
   }
 
+  private fun Map<*, *>.sseJaxrs(): GeneratedJaxrs? =
+    GeneratedJaxrs(
+      sseServerResponseMode =
+        GeneratedSseServerResponseMode.parse(
+          mapValue("x-sunday-jaxrs")?.get("sse-server-response-mode"),
+        ),
+    ).takeUnless { it == GeneratedJaxrs() }
+
   private fun serviceName(apiName: String): String =
     apiName
       .removeSuffix(" API")
@@ -274,6 +282,7 @@ class AsyncApiToGeneratedApi(
             },
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
+          jaxrs = source.sseJaxrs().mergeWith(operation.source.sseJaxrs()),
           serverAuth =
             factoryServerAuth(
               this,
@@ -354,6 +363,7 @@ class AsyncApiToGeneratedApi(
             },
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
+          jaxrs = channel.source.sseJaxrs().mergeWith(source.sseJaxrs()),
           serverAuth =
             factoryServerAuth(
               channel,

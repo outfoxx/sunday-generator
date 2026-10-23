@@ -76,6 +76,7 @@ enum class APIAnnotationName(
   Asynchronous("asynchronous", false),
   Reactive("reactive", false),
   SSE("sse", true),
+  SseServerResponseMode("sseServerResponseMode", false),
   JsonBody("jsonBody", true),
 
   JaxrsContext("jaxrsContext", true),

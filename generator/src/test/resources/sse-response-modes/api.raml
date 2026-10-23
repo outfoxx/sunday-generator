@@ -1,0 +1,31 @@
+#%RAML 1.0
+title: SSE modes
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+/sse/typed:
+  get:
+    displayName: typedEvents
+    (sunday.eventStream): simple
+    (sunday.sseServerResponseMode): typed
+    responses:
+      200:
+        body:
+          text/event-stream: string
+/sse/envelope:
+  get:
+    displayName: envelopeEvents
+    (sunday.eventStream): simple
+    (sunday.sseServerResponseMode): outbound-event
+    responses:
+      200:
+        body:
+          text/event-stream: string
+/sse/raw:
+  get:
+    displayName: rawEvents
+    (sunday.eventStream): simple
+    (sunday.sseServerResponseMode): raw
+    responses:
+      200:
+        body:
+          text/event-stream: string

@@ -37,6 +37,7 @@ internal fun GeneratedJaxrs?.mergeWith(other: GeneratedJaxrs?): GeneratedJaxrs? 
     asynchronous = other.asynchronous ?: asynchronous,
     reactive = other.reactive ?: reactive,
     sse = other.sse ?: sse,
+    sseServerResponseMode = other.sseServerResponseMode ?: sseServerResponseMode,
     jsonBody = other.jsonBody ?: jsonBody,
     context = (context + other.context).distinct(),
     restClient = restClient,

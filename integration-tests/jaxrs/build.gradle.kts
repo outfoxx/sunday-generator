@@ -256,7 +256,34 @@ val generateCustomTypeApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val sseSources = layout.buildDirectory.dir("generated/sse")
+val sseContract =
+  rootProject.layout.projectDirectory.file(
+    "generator/src/test/resources/sse-response-modes/portable.yaml",
+  )
+val generateSseApi by tasks.registering(JavaExec::class) {
+  inputs.file(sseContract)
+  outputs.dir(sseSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-use-jakarta-packages",
+    "-resource-adapters",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.jaxrs.sse.yaml")
+      .asFile.absolutePath,
+    "-out",
+    sseSources.get().asFile.absolutePath,
+    sseContract.asFile.absolutePath,
+  )
+}
+
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateSseApi)
   kotlin.srcDir(generateCustomTypeApi)
   kotlin.srcDir(generateAnyOfApi)
   kotlin.srcDir(generateNativePayloads)

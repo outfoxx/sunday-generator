@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.kotlin
 import io.outfoxx.sunday.generator.GenerationOptions
 import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
+import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 
 /** Options for Kotlin/JAX-RS generation. */
 class KotlinJAXRSOptions(
@@ -45,6 +46,8 @@ class KotlinJAXRSOptions(
   preserveUnknownFields: Boolean = true,
   profile: String? = null,
   defaultTolerance: Tolerance = Tolerance.Response,
+  /** Default server SSE representation, overridable per operation and ignored for clients. */
+  val sseServerResponseMode: GeneratedSseServerResponseMode = GeneratedSseServerResponseMode.TYPED,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
