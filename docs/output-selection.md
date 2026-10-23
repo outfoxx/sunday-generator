@@ -11,6 +11,14 @@ an empty owner set means all documents. Omitting both preserves self-contained
 output. A composed service matches any contributing owner and retains all its
 operations. Selecting an owner does not add it to source inputs or load it.
 
+Top-level Kotlin and Swift model declarations belong to the `models` category.
+This includes operation-local types placed outside their service's package or
+module, synthetic response unions, and their companions. A model artifact contains the interfaces
+implemented by its concrete models. Service-only generation references those model
+declarations without emitting them again. Their owning documents remain those of
+the service, including every contributor to a composed service. Models nested
+inside a service remain service output and are excluded with their containing type.
+
 ## CLI
 
 Repeat `-category models`, `-category services`, or `-category problems` to select

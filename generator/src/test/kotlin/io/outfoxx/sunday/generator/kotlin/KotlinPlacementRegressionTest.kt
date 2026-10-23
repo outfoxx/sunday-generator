@@ -372,10 +372,10 @@ class KotlinPlacementRegressionTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "openapi", "asyncapi2", "composed"])
-  fun `service selection includes anonymous payload descendants`(kind: String) {
+  @ValueSource(strings = ["raml", "openapi", "asyncapi2", "asyncapi", "composed"])
+  fun `model selection includes hoisted anonymous payload descendants`(kind: String) {
     val api = PlacementRegressionFixture(directory, kind).inline()
-    val result = compile(api, GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)))
+    val result = compile(api, GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model)))
     val child = api.models.single { it.properties.any { property -> property.name == "value" } }
     assertEquals(
       String::class.java,

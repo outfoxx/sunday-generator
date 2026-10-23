@@ -473,7 +473,11 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedModel.modelOutputOrigin() =
     outputOrigin(api) { model, category ->
-      if (model.isProblemModel()) io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem else category
+      when {
+        model.isProblemModel() -> io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem
+        model.kotlinClassName().enclosingClassName() == null -> io.outfoxx.sunday.generator.GeneratedTypeCategory.Model
+        else -> category
+      }
     }
 
   /**

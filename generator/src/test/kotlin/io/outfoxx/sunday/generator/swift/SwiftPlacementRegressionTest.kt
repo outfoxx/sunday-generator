@@ -471,7 +471,7 @@ class SwiftPlacementRegressionTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi2", "composed"])
-  fun `service selection includes anonymous payload descendants`(
+  fun `model selection includes top level anonymous payload descendants`(
     kind: String,
     compiler: SwiftCompiler,
   ) {
@@ -491,7 +491,7 @@ class SwiftPlacementRegressionTest {
       let child = try JSONDecoder().decode(${child.name}.self, from: Data(#"{"value":"selected"}"#.utf8))
       XCTAssertEqual(child.value, "selected")
       """.trimIndent(),
-      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)),
+      GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model)),
     )
   }
 
