@@ -147,7 +147,7 @@ class TypeScriptTypeRegistry(
   fun generateExportedTypeFiles(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<FileSpec> {
 
     val generatedFiles =
-      buildTypes()
+      buildTypes(selection)
         .filterKeys { it in exportedTypeBuilders }
         .filter { type -> outputOwnership.includes(selection, type.key) }
         .map { (typeName, moduleSpec) ->
@@ -227,20 +227,53 @@ class TypeScriptTypeRegistry(
   private fun generateIndexFile(files: List<FileSpec>): FileSpec {
 
     val indexBuilder = FileSpec.builder("index")
+    val selectedPaths = files.map { normalizeModulePath(it.modulePath) }.toSet()
+    val types = buildTypes().keys.filter { normalizeModulePath(importModulePath(it)) in selectedPaths }
+    val conflictingPaths =
+      types
+        .groupBy { it.simpleName() }
+        .values
+        .filter { names -> names.map { normalizeModulePath(importModulePath(it)) }.distinct().size > 1 }
+        .flatten()
+        .map { normalizeModulePath(importModulePath(it)) }
+        .toSet()
+    val conflictingCompanionPaths =
+      companionSchemaModules
+        .filterValues {
+          normalizeModulePath(importModulePath(it)) in conflictingPaths
+        }.keys
+    val usedNames = types.map { it.simpleName() }.toMutableSet()
+    val namespaceNames =
+      (conflictingPaths + conflictingCompanionPaths).sorted().associateWith { path ->
+        val base = "module_" + path.replace(Regex("[^A-Za-z0-9_]"), "_")
+        var name = base
+        var suffix = 2
+        while (!usedNames.add(name)) name = "$base${suffix++}"
+        name
+      }
 
     files.forEach { file ->
+      val namespace = namespaceNames[normalizeModulePath(file.modulePath)]
       indexBuilder.addCode(
-        CodeBlock.of(
-          "export * from './%L';",
-          file.modulePath,
-        ),
+        if (namespace !=
+          null
+        ) {
+          CodeBlock.of("export * as %L from %S;", namespace, "./${file.modulePath}")
+        } else {
+          CodeBlock.of(
+            "export * from %S;",
+            "./${file.modulePath}",
+          )
+        },
       )
     }
 
     return indexBuilder.build()
   }
 
-  fun buildTypes(): Map<TypeName.Standard, ModuleSpec> {
+  /** Builds selected declarations after excluding descendants of filtered containers. */
+  fun buildTypes(selection: GeneratedOutputSelection = GeneratedOutputSelection()): Map<TypeName.Standard, ModuleSpec> {
+    val selectedTypes = exportedTypeBuilders.filter { outputOwnership.includes(selection, it.key) }
 
     val typeModBuilders = mutableMapOf<TypeName.Standard, ModuleSpec.Builder>()
 
@@ -264,7 +297,7 @@ class TypeScriptTypeRegistry(
     }
 
     // Add nested classes to parent modules
-    exportedTypeBuilders
+    selectedTypes
       .toList()
       .sortedByDescending { it.first.simpleNames().size }
       .forEach { (typeName, typeBuilder) ->
@@ -283,7 +316,7 @@ class TypeScriptTypeRegistry(
       }
 
     val rootModules =
-      exportedTypeBuilders
+      selectedTypes
         .filterKeys { it.isTopLevelTypeName }
         .mapValues { (typeName, typeBuilder) ->
 
@@ -360,7 +393,7 @@ class TypeScriptTypeRegistry(
     serviceType.tag(GeneratedTypeCategory.Service)
 
     if (exportedTypeBuilders.putIfAbsent(typeName, serviceType) != null) {
-      genError("Service type '$typeName' is already defined")
+      genError("Service type '$typeName' is already defined by ${outputOwnership.declarationDescription(typeName)}")
     }
 
     extras.forEach { extra -> addModuleExtra(typeName, extra) }
@@ -376,7 +409,7 @@ class TypeScriptTypeRegistry(
     modelType.tag(GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(typeName, modelType) != null) {
-      genError("Model type '$typeName' is already defined")
+      genError("Model type '$typeName' is already defined by ${outputOwnership.declarationDescription(typeName)}")
     }
     if (exportedTypeBuilders.putIfAbsent(typeName, modelType) != null) {
       genError("Model type '$typeName' is already exported")

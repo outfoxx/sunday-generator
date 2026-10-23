@@ -38,7 +38,6 @@ class RequestMethodsTest {
 
   private fun typeRegistry(): KotlinTypeRegistry =
     KotlinTypeRegistry(
-      "io.test",
       null,
       GenerationMode.Client,
       setOf(),

@@ -36,6 +36,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.json.patch.PatchOp
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -104,6 +105,7 @@ class KotlinTemporalConstraintsTest {
         "TemporalBase",
         GeneratedModel.Kind.OBJECT,
         properties = fields.map { it.copy(allowedValues = null, validation = emptyMap()) },
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val api =
       GeneratedApi(
@@ -116,11 +118,13 @@ class KotlinTemporalConstraintsTest {
                 temporal.name,
                 GeneratedModel.Kind.SCALAR_ALIAS,
                 aliases = listOf(GeneratedTypeRef.scalar("string", format = temporal.format)),
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
               ),
               GeneratedModel(
                 "${temporal.name}Alias",
                 GeneratedModel.Kind.SCALAR_ALIAS,
                 aliases = listOf(GeneratedTypeRef.named(temporal.name)),
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
               ),
             )
           } +
@@ -150,7 +154,6 @@ class KotlinTemporalConstraintsTest {
       )
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(
@@ -171,7 +174,7 @@ class KotlinTemporalConstraintsTest {
           false,
           null,
           false,
-          "io.test",
+          kotlinPlacement("io.test", "io.test"),
           "https://example.test/",
           listOf("application/json"),
           "API",
@@ -182,7 +185,12 @@ class KotlinTemporalConstraintsTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://example.test/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://example.test/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     }
     val result = compileTypesResult(registry.buildTypes())

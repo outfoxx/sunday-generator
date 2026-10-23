@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Query String Shapes API"
 source:
   kind: "RAML"
@@ -18,6 +18,9 @@ services:
         service: "QueryStringShapesService"
         operation: "searchProjects"
         usage: "QUERY_STRING"
+      source:
+        kind: "RAML"
+        location: "SOURCE_LOCATION"
     responses:
     - status: 200
       type:
@@ -28,6 +31,9 @@ services:
           operation: "searchProjects"
           usage: "RESPONSE_BODY"
           status: 200
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     auth:
@@ -45,11 +51,15 @@ services:
           scope:
             securityScheme: "signed"
             usage: "SECURITY_QUERY_STRING"
+          source:
+            kind: "RAML"
+            location: "SOURCE_LOCATION"
     media:
       request:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects/get"
   media:
     request:
     - "application/json"
@@ -58,7 +68,10 @@ services:
 models:
 - name: "SearchProjectsQueryString"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/expects/request/shape/queryString"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/~1projects/get/queryString"
   scope:
     service: "QueryStringShapesService"
     operation: "searchProjects"
@@ -80,7 +93,10 @@ models:
     description: "Project search query object."
 - name: "SearchProjectsResponseBody"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/~1projects/get/responses/200/body/application~1json"
   scope:
     service: "QueryStringShapesService"
     operation: "searchProjects"
@@ -94,7 +110,10 @@ models:
     required: true
 - name: "SignedQueryString"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/get/security/default-requirement_1/schemes/signed/scheme/signed/shape/queryString"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/securitySchemes/signed/describedBy/queryString"
   scope:
     securityScheme: "signed"
     usage: "SECURITY_QUERY_STRING"
@@ -114,3 +133,5 @@ media:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

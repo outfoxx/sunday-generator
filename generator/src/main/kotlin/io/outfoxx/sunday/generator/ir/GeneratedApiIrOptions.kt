@@ -41,4 +41,6 @@ data class GeneratedApiIrOptions
     val projection: GenerationContext? = null,
     /** Derive patch companions from merge-patch request media types without requiring a schema annotation. */
     val autoPatchable: Boolean = true,
+    /** Invocation fallbacks and relocation rules retained for backend generation. */
+    val placement: GeneratedPlacementConfiguration = GeneratedPlacementConfiguration(),
   )

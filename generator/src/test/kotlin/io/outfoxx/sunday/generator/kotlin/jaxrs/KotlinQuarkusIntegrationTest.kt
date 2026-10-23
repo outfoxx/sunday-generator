@@ -36,6 +36,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.jaxrs.quarkus.ServerSecurityProvider
 import io.outfoxx.sunday.jaxrs.quarkus.ServerSecuritySubjectSelector
@@ -257,7 +258,6 @@ class KotlinQuarkusIntegrationTest {
         val api = scopedSecurityApi(frontend, directory, serverQuarkus = mode, serverTenant = tenant)
         val registry =
           KotlinTypeRegistry(
-            "io.test",
             null,
             GenerationMode.Server,
             setOf(KotlinTypeRegistry.Option.SuppressPublicApiWarnings, KotlinTypeRegistry.Option.UseJakartaPackages),
@@ -615,7 +615,7 @@ class KotlinQuarkusIntegrationTest {
             serverConfigurationFileName = "config/server.properties",
             clientConfigurationFileName = "config/client.properties",
           )
-        val registry = KotlinTypeRegistry("io.test", null, mode, emptySet(), applicationMetadata = metadata)
+        val registry = KotlinTypeRegistry(null, mode, emptySet(), applicationMetadata = metadata)
         KotlinJAXRSIrGenerator(api, registry, options(mode)).generateServiceTypes()
         val types = registry.buildTypes()
         val compiled = compileTypesResult(types)
@@ -990,7 +990,7 @@ class KotlinQuarkusIntegrationTest {
       }
     } as Instance<T>
 
-  private fun registry(mode: GenerationMode) = KotlinTypeRegistry("io.test", null, mode, emptySet())
+  private fun registry(mode: GenerationMode) = KotlinTypeRegistry(null, mode, emptySet())
 
   private fun options(
     mode: GenerationMode,
@@ -1002,7 +1002,7 @@ class KotlinQuarkusIntegrationTest {
     explicitSecurityParameters = false,
     baseUriMode = null,
     alwaysUseResponseReturn = false,
-    defaultServicePackageName = "io.test",
+    placement = kotlinPlacement("io.test", "io.test"),
     defaultProblemBaseUri = "https://example.com/problems/",
     defaultMediaTypes = listOf("application/json"),
     serviceSuffix = "API",

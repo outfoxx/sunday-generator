@@ -41,6 +41,7 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
           kind = GeneratedModel.Kind.ENUM,
           values = listOf("event.one", "unrecognized"),
           unknownValue = "unrecognized",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "EventEnvelope",
@@ -51,6 +52,7 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
             ),
           discriminator = "type",
           discriminatorMappings = mapOf("event.one" to GeneratedTypeRef.named("EventOne")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "EventOne",
@@ -61,12 +63,14 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
             listOf(
               GeneratedModelProperty("data", GeneratedTypeRef.scalar("string"), required = true),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "NotificationEventType",
           kind = GeneratedModel.Kind.ENUM,
           values = listOf("event.one", "unrecognized"),
           unknownValue = "unrecognized",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "NotificationEventEnvelope",
@@ -81,6 +85,7 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
             ),
           discriminator = "type",
           discriminatorMappings = mapOf("event.one" to GeneratedTypeRef.named("EventOne")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "Notification",
@@ -93,6 +98,7 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
                 required = true,
               ),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "CrossPackageMappedEvent",
@@ -106,6 +112,7 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
             listOf(
               GeneratedModelProperty("type", GeneratedTypeRef.named("NotificationEventType"), required = true),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "CrossPackageNotificationEventEnvelope",
@@ -121,6 +128,7 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
           discriminator = "type",
           discriminatorMappings =
             mapOf("event.one" to GeneratedTypeRef.named("CrossPackageMappedEvent")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       ),
   )

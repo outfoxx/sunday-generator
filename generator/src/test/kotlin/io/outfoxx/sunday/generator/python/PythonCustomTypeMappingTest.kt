@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTarget
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
@@ -29,6 +30,7 @@ import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -54,6 +56,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
             aliases = listOf(GeneratedTypeRef.scalar("number")),
             validation = mapOf(bound to value) + if (alreadyExclusive) mapOf(exclusive to "true") else emptyMap(),
             targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Number")),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
           )
         }
       }
@@ -78,6 +81,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
               validation = mapOf(bound to value, exclusive to "true"),
             )
           },
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val domain =
       PythonModuleBuilder("test_api/domain.py")
@@ -147,6 +151,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
               ),
             ),
           validation = mapOf("minItems" to "1"),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Groups",
@@ -154,11 +159,13 @@ class PythonCustomTypeMappingTest : PythonTest() {
           aliases = listOf(GeneratedTypeRef.named("Nodes")),
           validation = mapOf("minItems" to "1"),
           targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Groups")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Record",
           GeneratedModel.Kind.OBJECT,
           properties = listOf(GeneratedModelProperty("groups", GeneratedTypeRef.named("Groups"), required = true)),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val domain =
@@ -230,6 +237,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
             ),
           validation = mapOf("minItems" to "1"),
           targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Groups")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Record",
@@ -246,6 +254,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
                   ),
               ),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val domain =
@@ -310,12 +319,14 @@ class PythonCustomTypeMappingTest : PythonTest() {
           aliases = listOf(GeneratedTypeRef.scalar("string")),
           validation = mapOf("pattern" to "^id:"),
           targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Code")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Codes",
           GeneratedModel.Kind.ARRAY,
           aliases = listOf(GeneratedTypeRef.named("Code")),
           validation = mapOf("minItems" to "1", "maxItems" to "2"),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Groups",
@@ -323,11 +334,13 @@ class PythonCustomTypeMappingTest : PythonTest() {
           aliases = listOf(GeneratedTypeRef.named("Codes")),
           validation = mapOf("minItems" to "1"),
           targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Groups")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Record",
           GeneratedModel.Kind.OBJECT,
           properties = listOf(GeneratedModelProperty("groups", GeneratedTypeRef.named("Groups"), required = true)),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val domain =
@@ -399,7 +412,12 @@ class PythonCustomTypeMappingTest : PythonTest() {
   fun `mapped arrays preserve unique collections and nested enum checks`(compiler: PythonCompiler) {
     val models =
       listOf(
-        GeneratedModel("Status", GeneratedModel.Kind.ENUM, values = listOf("active", "inactive")),
+        GeneratedModel(
+          "Status",
+          GeneratedModel.Kind.ENUM,
+          values = listOf("active", "inactive"),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
         GeneratedModel(
           "Statuses",
           GeneratedModel.Kind.ARRAY,
@@ -407,11 +425,13 @@ class PythonCustomTypeMappingTest : PythonTest() {
           collection = GeneratedCollectionKind.SET,
           validation = mapOf("minItems" to "1", "uniqueItems" to "true"),
           targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Statuses")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Record",
           GeneratedModel.Kind.OBJECT,
           properties = listOf(GeneratedModelProperty("statuses", GeneratedTypeRef.named("Statuses"), required = true)),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val domain =
@@ -477,6 +497,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
             mapOf(
               "python" to GeneratedTarget(typeName = "test_api.domain.Code"),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Alias",
@@ -487,6 +508,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
               "pattern" to "^id:a",
             ),
           targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Code")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Record",
@@ -504,6 +526,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
               ),
               GeneratedModelProperty("alias", GeneratedTypeRef.named("Alias"), required = true),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val domain =
@@ -593,7 +616,7 @@ class PythonCustomTypeMappingTest : PythonTest() {
     assertTrue(
       compileModules(
         compiler,
-        PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "test_api"))
+        PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api")))
           .generateModules(
             GeneratedOutputSelection(
               GeneratedTypeCategory.entries.toSet(),

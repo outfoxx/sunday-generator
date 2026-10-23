@@ -25,6 +25,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.arrayMultiplesFixture
 import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.json.patch.PatchOp
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -216,7 +217,6 @@ class KotlinInheritedConstraintsTest {
   ): JvmCompilationResult {
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -233,7 +233,7 @@ class KotlinInheritedConstraintsTest {
           false,
           null,
           false,
-          "io.test",
+          kotlinPlacement("io.test", "io.test"),
           "https://example.test/",
           emptyList(),
           "API",
@@ -244,7 +244,12 @@ class KotlinInheritedConstraintsTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://example.test/", emptyList(), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://example.test/",
+          emptyList(),
+          "API",
+        ),
       ).generateServiceTypes()
     }
     val result = compileTypesResult(registry.buildTypes())

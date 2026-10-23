@@ -32,6 +32,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.json.patch.PatchOp
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -83,6 +84,7 @@ class KotlinPatchConstraintsTest {
               allowedValues = listOf("A".repeat(80)),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "patches.raml"),
       )
     val api =
       GeneratedApi(
@@ -95,11 +97,13 @@ class KotlinPatchConstraintsTest {
               "BytesAlias",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.named("Bytes")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               "Bytes",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string", format = "byte")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -203,7 +207,14 @@ class KotlinPatchConstraintsTest {
           allowedValues = listOf("active", null),
         ),
       )
-    val patch = GeneratedModel("RestrictedPatch", GeneratedModel.Kind.OBJECT, properties = fields, patchable = true)
+    val patch =
+      GeneratedModel(
+        "RestrictedPatch",
+        GeneratedModel.Kind.OBJECT,
+        properties = fields,
+        patchable = true,
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
+      )
     val parentCount = GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer"), required = true)
     val api =
       GeneratedApi(
@@ -216,15 +227,27 @@ class KotlinPatchConstraintsTest {
               GeneratedModel.Kind.ENUM,
               values = listOf("active", "inactive", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "patches.raml"),
             ),
             GeneratedModel(
               "StateAlias",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.named("State")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "patches.raml"),
             ),
             patch,
-            GeneratedModel("Ordinary", GeneratedModel.Kind.OBJECT, properties = listOf(fields.first())),
-            GeneratedModel("OrdinaryBase", GeneratedModel.Kind.OBJECT, properties = listOf(parentCount)),
+            GeneratedModel(
+              "Ordinary",
+              GeneratedModel.Kind.OBJECT,
+              properties = listOf(fields.first()),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "patches.raml"),
+            ),
+            GeneratedModel(
+              "OrdinaryBase",
+              GeneratedModel.Kind.OBJECT,
+              properties = listOf(parentCount),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "patches.raml"),
+            ),
             patch.copy(
               name = "MixedPatch",
               properties = fields + parentCount.copy(validation = mapOf("minimum" to "1", "maximum" to "5")),
@@ -336,7 +359,6 @@ class KotlinPatchConstraintsTest {
   private fun compile(api: GeneratedApi): JvmCompilationResult {
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(
@@ -349,7 +371,12 @@ class KotlinPatchConstraintsTest {
     KotlinSundayIrGenerator(
       api,
       registry,
-      KotlinSundayOptions("io.test", "https://example.test/", listOf("application/json"), "API"),
+      KotlinSundayOptions(
+        kotlinPlacement("io.test", "io.test"),
+        "https://example.test/",
+        listOf("application/json"),
+        "API",
+      ),
     ).generateServiceTypes()
     val result = compileTypesResult(registry.buildTypes())
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)

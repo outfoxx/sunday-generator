@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -39,7 +40,6 @@ class RequestCoroutineMethodsTest {
 
   private fun typeRegistry(mode: GenerationMode): KotlinTypeRegistry =
     KotlinTypeRegistry(
-      "io.test",
       null,
       mode,
       setOf(),
@@ -55,7 +55,7 @@ class RequestCoroutineMethodsTest {
       false,
       null,
       false,
-      "io.test.service",
+      kotlinPlacement("io.test", "io.test.service"),
       "http://example.com/",
       listOf("application/json"),
       "API",
@@ -70,7 +70,7 @@ class RequestCoroutineMethodsTest {
       false,
       null,
       false,
-      "io.test.service",
+      kotlinPlacement("io.test", "io.test.service"),
       "http://example.com/",
       listOf("application/json"),
       "API",
@@ -85,7 +85,7 @@ class RequestCoroutineMethodsTest {
       false,
       null,
       false,
-      "io.test.service",
+      kotlinPlacement("io.test", "io.test.service"),
       "http://example.com/",
       listOf("application/json"),
       "API",

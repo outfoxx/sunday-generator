@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.patchableApi
 import io.outfoxx.sunday.json.patch.PatchOp
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -89,7 +90,6 @@ class KotlinPatchableTypesTest {
     val mode = if (target in setOf("server", "resource", "split")) GenerationMode.Server else GenerationMode.Client
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         mode,
         setOf(
@@ -106,7 +106,12 @@ class KotlinPatchableTypesTest {
         KotlinSundayIrGenerator(
           api,
           registry,
-          KotlinSundayOptions("io.test", "https://test/", listOf("application/json"), "API"),
+          KotlinSundayOptions(
+            kotlinPlacement("io.test", "io.test"),
+            "https://test/",
+            listOf("application/json"),
+            "API",
+          ),
         ).generateServiceTypes()
       } else {
         KotlinJAXRSIrGenerator(
@@ -119,7 +124,7 @@ class KotlinPatchableTypesTest {
             explicitSecurityParameters = false,
             baseUriMode = null,
             alwaysUseResponseReturn = false,
-            defaultServicePackageName = "io.test",
+            placement = kotlinPlacement("io.test", "io.test"),
             defaultProblemBaseUri = "https://test/",
             defaultMediaTypes = listOf("application/json"),
             serviceSuffix = "API",
@@ -134,7 +139,6 @@ class KotlinPatchableTypesTest {
       if (target == "split") {
         val facadeRegistry =
           KotlinTypeRegistry(
-            "io.test",
             null,
             mode,
             registry.options - KotlinTypeRegistry.Option.ImplementModel,

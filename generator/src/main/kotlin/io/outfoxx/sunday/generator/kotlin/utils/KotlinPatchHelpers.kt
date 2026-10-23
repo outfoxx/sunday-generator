@@ -40,14 +40,15 @@ internal fun addKotlinPatchHelpers(
   allModels: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> = models,
   methodNames: Pair<String, String>? = null,
 ) {
+  val index =
+    io.outfoxx.sunday.generator.ir.emit
+      .GeneratedModelIndex(allModels.values.map { it.first })
   val pairs =
     models.entries.mapNotNull { patch ->
-      val original =
-        models.entries.singleOrNull {
-          it.value.first.name ==
-            patch.value.first.patchOf
-              ?.name
-        }
+      val declaration =
+        patch.value.first.patchOf
+          ?.let(index::modelOrNull)
+      val original = models.entries.singleOrNull { it.value.first == declaration }
       original?.let { it to patch }
     }
   if (pairs.isEmpty()) return
@@ -84,7 +85,7 @@ internal fun addKotlinPatchHelpers(
     val tagCode = tag?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null")
     val parentHasPair =
       original.value.first.inherits.any { parent ->
-        allModels.values.any { it.first.patchOf?.name == parent.name }
+        allModels.values.any { it.first.patchOf?.let(index::modelOrNull) == index.modelOrNull(parent) }
       }
     val snapshot =
       FunSpec
@@ -339,12 +340,14 @@ private fun reachablePatchModels(
   models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   allDeclarations: List<GeneratedModel>,
 ): Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> {
-  val declarations = allDeclarations.associateBy { it.name to it.scope }
+  val declarations =
+    io.outfoxx.sunday.generator.ir.emit
+      .GeneratedModelIndex(allDeclarations)
   val reachable = mutableSetOf<GeneratedModel>()
   val pending = ArrayDeque(roots)
 
   fun visit(type: GeneratedTypeRef) {
-    declarations[type.name to type.scope]?.let { pending.add(it) }
+    declarations.modelOrNull(type)?.let { pending.add(it) }
     type.arguments.forEach(::visit)
   }
   while (pending.isNotEmpty()) {
@@ -357,9 +360,9 @@ private fun reachablePatchModels(
     model.patternProperties.forEach { visit(it.type) }
     model.discriminatorMappings.values.forEach(::visit)
     if (model.discriminator != null) {
-      declarations.values
+      allDeclarations
         .filter { child ->
-          child.inherits.any { it.name == model.name && it.scope == model.scope }
+          child.inherits.any { declarations.modelOrNull(it) == model }
         }.forEach { pending.add(it) }
     }
   }

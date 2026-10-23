@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -46,7 +47,7 @@ class RequestExplicitSecurityParamsTest {
         true,
         null,
         false,
-        "io.test.service",
+        kotlinPlacement("io.test", "io.test.service"),
         "http://example.com/",
         listOf("application/json"),
         "API",
@@ -59,7 +60,7 @@ class RequestExplicitSecurityParamsTest {
     @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -81,7 +82,7 @@ class RequestExplicitSecurityParamsTest {
     @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(
@@ -94,7 +95,7 @@ class RequestExplicitSecurityParamsTest {
           true,
           null,
           false,
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",

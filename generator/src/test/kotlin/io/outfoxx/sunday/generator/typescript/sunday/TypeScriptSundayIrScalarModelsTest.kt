@@ -89,6 +89,7 @@ class TypeScriptSundayIrScalarModelsTest : TypeScriptSundayIrTestSupport() {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("active"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -164,22 +165,30 @@ class TypeScriptSundayIrScalarModelsTest : TypeScriptSundayIrTestSupport() {
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         models =
           listOf(
-            GeneratedModel("PlainState", GeneratedModel.Kind.ENUM, values = listOf("a", "good", "bad", "longer")),
+            GeneratedModel(
+              "PlainState",
+              GeneratedModel.Kind.ENUM,
+              values = listOf("a", "good", "bad", "longer"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
             GeneratedModel(
               "State",
               GeneratedModel.Kind.ENUM,
               values = listOf("good", "bad", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               "StateAlias",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.named("State")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               "UrlAlias",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string", format = "uri")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               "Base",
@@ -188,12 +197,14 @@ class TypeScriptSundayIrScalarModelsTest : TypeScriptSundayIrTestSupport() {
                 properties.map {
                   it.copy(validation = emptyMap(), allowedValues = null, defaultValue = null)
                 },
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               "Child",
               GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("Base")),
               properties = properties,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

@@ -35,7 +35,6 @@ interface KotlinTypeOutputRegistry {
   /** API-derived application metadata output controls. */
   val applicationMetadata: KotlinApplicationMetadataOptions get() = KotlinApplicationMetadataOptions()
 
-  val defaultModelPackageName: String?
   val generationMode: GenerationMode
   val options: Set<KotlinTypeRegistry.Option>
   val problemLibrary: KotlinProblemLibrary

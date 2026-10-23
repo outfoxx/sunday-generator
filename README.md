@@ -10,6 +10,8 @@ Code generator for Sunday client libraries and standard server libraries.
 
 ### [Read the Documentation](https://outfoxx.github.io/sunday)
 
+### [Declaration Placement](docs/declaration-placement.md)
+
 ### [Sunday IR Format](docs/sunday-ir-format.md)
 
 ### [Sunday IR Emitter Readiness Audit](docs/ir-emitter-readiness-audit.md)

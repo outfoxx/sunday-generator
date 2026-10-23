@@ -46,7 +46,10 @@ class OpenApiEmptySourcesTest {
             source.set(fileTree('specs') { include '**/*.yaml' })
             framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.Sunday)
             mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
-            pkgName.set('test.' + generation)
+            placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+              text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'test.' + generation]]])
+              it
+            })
             outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
             disableJacksonAnnotations.set(true)
             disableValidationConstraints.set(true)

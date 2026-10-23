@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "External Discriminator API"
 source:
   kind: "RAML"
@@ -23,6 +23,9 @@ services:
       type:
         kind: "NAMED"
         name: "AnimalEnvelope"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     media:
@@ -30,6 +33,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1animals~1%7BanimalId%7D/get"
   media:
     request:
     - "application/json"
@@ -38,7 +42,10 @@ services:
 models:
 - name: "Animal"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fanimals%2F%7BanimalId%7D/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/AnimalEnvelope/property/animal/shape/animal/shape/Animal"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Animal"
   properties:
   - name: "kind"
     type:
@@ -51,17 +58,29 @@ models:
     cat:
       kind: "NAMED"
       name: "Cat"
+      source:
+        kind: "RAML"
+        location: "SOURCE_LOCATION"
     dog:
       kind: "NAMED"
       name: "Dog"
+      source:
+        kind: "RAML"
+        location: "SOURCE_LOCATION"
 - name: "AnimalEnvelope"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fanimals%2F%7BanimalId%7D/supportedOperation/get/returns/resp/200/payload/application%2Fjson/shape/schema/inherits/shape/AnimalEnvelope"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/AnimalEnvelope"
   properties:
   - name: "animal"
     type:
       kind: "NAMED"
       name: "Animal"
+      source:
+        kind: "RAML"
+        location: "SOURCE_LOCATION"
     required: true
     externalDiscriminator: "kind"
   - name: "kind"
@@ -71,7 +90,10 @@ models:
     required: true
 - name: "Cat"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/declares/shape/Cat"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Cat"
   properties:
   - name: "huntingSkill"
     type:
@@ -82,10 +104,16 @@ models:
   inherits:
   - kind: "NAMED"
     name: "Animal"
+    source:
+      kind: "RAML"
+      location: "SOURCE_LOCATION"
   discriminatorValue: "cat"
 - name: "Dog"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/declares/shape/Dog"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Dog"
   properties:
   - name: "packSize"
     type:
@@ -96,9 +124,14 @@ models:
   inherits:
   - kind: "NAMED"
     name: "Animal"
+    source:
+      kind: "RAML"
+      location: "SOURCE_LOCATION"
   discriminatorValue: "dog"
 media:
   request:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

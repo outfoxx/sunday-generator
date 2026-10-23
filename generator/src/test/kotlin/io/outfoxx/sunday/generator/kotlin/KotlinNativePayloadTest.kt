@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.jdk.JdkTransport
 import io.outfoxx.sunday.problems.SundayHttpProblem
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -157,7 +158,6 @@ class KotlinNativePayloadTest {
     val role = if (target == "server") GenerationMode.Server else GenerationMode.Client
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         role,
         buildSet {
@@ -172,7 +172,12 @@ class KotlinNativePayloadTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test.service", "https://example.com/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test.service"),
+          "https://example.com/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -185,7 +190,7 @@ class KotlinNativePayloadTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "https://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",

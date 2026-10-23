@@ -22,7 +22,8 @@ package io.outfoxx.sunday.generator.ir
 data class GeneratedProblem(
   val name: String,
   val sourceName: String? = null,
-  val source: GeneratedSourceSpec? = null,
+  /** Declaring document, retained through composition and independent of reference qualification. */
+  val source: GeneratedSourceSpec,
   val typeUri: String,
   val status: Int? = null,
   val title: String? = null,
@@ -33,6 +34,12 @@ data class GeneratedProblem(
   val fields: List<GeneratedModelProperty> = listOf(),
   val strategy: Strategy? = null,
   val documentation: GeneratedDocumentation? = null,
+  /** Resolved target metadata for this declaration. */
+  val targets: Map<String, GeneratedTarget> = emptyMap(),
+  /** Original source object location before composition. */
+  val declarationUri: String? = null,
+  /** Original lexical placement scopes; references do not add scopes. */
+  val placementScopes: List<GeneratedPlacementScope> = emptyList(),
 ) {
 
   /** Problem code generation strategies. */

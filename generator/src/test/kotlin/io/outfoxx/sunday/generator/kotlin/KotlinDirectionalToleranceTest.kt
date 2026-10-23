@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.directionalToleranceApi
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -51,7 +52,6 @@ class KotlinDirectionalToleranceTest {
     val role = if (target == "server") GenerationMode.Server else GenerationMode.Client
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         role,
         buildSet {
@@ -67,7 +67,12 @@ class KotlinDirectionalToleranceTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test.service", "http://example.com/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test.service"),
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -80,7 +85,7 @@ class KotlinDirectionalToleranceTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "http://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",

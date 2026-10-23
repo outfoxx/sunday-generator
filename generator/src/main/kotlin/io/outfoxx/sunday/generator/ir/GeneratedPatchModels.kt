@@ -24,8 +24,10 @@ internal object GeneratedPatchModels {
 
   /** Projects patch-only IR declarations into optional fields without defaults. */
   fun normalizeFields(models: List<GeneratedModel>): List<GeneratedModel> {
-    val declarations = models.associateBy { it.name }
-    val properties = GeneratedModelProperties { declarations[it.name] }
+    val declarations =
+      io.outfoxx.sunday.generator.ir.emit
+        .GeneratedModelIndex(models)
+    val properties = GeneratedModelProperties(declarations::modelOrNull)
     return models.map { model ->
       if (!model.patchable) {
         model

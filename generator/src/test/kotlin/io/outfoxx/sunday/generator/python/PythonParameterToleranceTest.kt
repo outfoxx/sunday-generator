@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.parameterNameCollisionApi
 import io.outfoxx.sunday.generator.tools.parameterToleranceApi
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -48,7 +49,7 @@ class PythonParameterToleranceTest : PythonTest() {
     val modules =
       PythonSundayIrGenerator(
         parameterNameCollisionApi(frontend, directory, listOf("validateParameters")),
-        PythonGeneratorOptions(packageName = "client_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("client_api")),
       ).generateModules(
         GeneratedOutputSelection(
           GeneratedTypeCategory.entries.toSet(),
@@ -96,14 +97,14 @@ class PythonParameterToleranceTest : PythonTest() {
     val clients =
       PythonSundayIrGenerator(
         api,
-        PythonGeneratorOptions(packageName = "client_api", defaultTolerance = tolerance),
+        PythonGeneratorOptions(placement = pythonPlacement("client_api"), defaultTolerance = tolerance),
       ).generateModules(
         GeneratedOutputSelection(categories),
       )
     val servers =
       PythonLitestarIrGenerator(
         api,
-        PythonGeneratorOptions(packageName = "server_api", defaultTolerance = tolerance),
+        PythonGeneratorOptions(placement = pythonPlacement("server_api"), defaultTolerance = tolerance),
       ).generateModules(
         GeneratedOutputSelection(categories),
       )
@@ -216,14 +217,14 @@ class PythonParameterToleranceTest : PythonTest() {
     val clients =
       PythonSundayIrGenerator(
         api,
-        PythonGeneratorOptions(packageName = "client_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("client_api")),
       ).generateModules(
         GeneratedOutputSelection(categories),
       )
     val servers =
       PythonLitestarIrGenerator(
         api,
-        PythonGeneratorOptions(packageName = "server_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("server_api")),
       ).generateModules(
         GeneratedOutputSelection(categories),
       )

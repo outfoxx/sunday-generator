@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.discriminatedPatchApi
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -65,7 +66,6 @@ class DiscriminatedPatchTest {
     val api = discriminatedPatchApi(frontend, directory)
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         if (target in setOf("server", "resource")) GenerationMode.Server else GenerationMode.Client,
         setOf(
@@ -80,7 +80,12 @@ class DiscriminatedPatchTest {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test", "https://test/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test"),
+          "https://test/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -93,7 +98,7 @@ class DiscriminatedPatchTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test",
+          placement = kotlinPlacement("io.test", "io.test"),
           defaultProblemBaseUri = "https://test/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",

@@ -18,10 +18,12 @@ package io.outfoxx.sunday.generator.kotlin
 
 import io.outfoxx.sunday.generator.GenerationOptions
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 
 /** Options for Kotlin/Sunday generation. */
 class KotlinSundayOptions(
-  val defaultServicePackageName: String?,
+  /** Invocation placement, shared with source exporters and other backends. */
+  val placement: GeneratedPlacementConfiguration = GeneratedPlacementConfiguration(),
   defaultProblemBaseUri: String,
   defaultMediaTypes: List<String>,
   serviceSuffix: String,

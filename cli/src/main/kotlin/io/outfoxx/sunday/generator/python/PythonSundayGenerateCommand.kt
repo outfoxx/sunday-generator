@@ -31,7 +31,7 @@ open class PythonSundayGenerateCommand :
 
     val export = exportApi()
     val modules =
-      PythonSundayIrGenerator(export.api, pythonOptions(export))
+      PythonSundayIrGenerator(export.api, pythonOptions())
         .generateModules(outputSelection)
 
     val obsoleteModulePaths =

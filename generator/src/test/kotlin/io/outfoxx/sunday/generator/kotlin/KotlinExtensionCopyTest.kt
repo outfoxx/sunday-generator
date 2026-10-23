@@ -68,7 +68,6 @@ class KotlinExtensionCopyTest {
     )
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),

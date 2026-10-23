@@ -27,6 +27,36 @@ import kotlin.io.path.writeText
 class GeneratedApiYamlTest {
 
   @Test
+  fun `compact IR materializes declaration ownership before composition`() {
+    val api =
+      GeneratedApiYaml.readString(
+        """
+        irVersion: '3'
+        name: Compact
+        source: {kind: OPENAPI, location: 'https://example.test/api.yaml'}
+        models:
+          - {name: Value, kind: OBJECT}
+        problems:
+          - {name: Invalid, typeUri: 'https://example.test/invalid'}
+        """.trimIndent(),
+      )
+    assertThat(api.models.single().source, equalTo(api.source))
+    assertThat(api.problems.single().source, equalTo(api.source))
+    assertThat(GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)), equalTo(api))
+    assertThrows(com.fasterxml.jackson.databind.exc.MismatchedInputException::class.java) {
+      GeneratedApiYaml.readString(
+        """
+        irVersion: '3'
+        name: Invalid
+        source: {kind: OPENAPI, location: 'https://example.test/api.yaml'}
+        models:
+          - {name: Value, kind: OBJECT, source: null}
+        """.trimIndent(),
+      )
+    }
+  }
+
+  @Test
   fun `preserves empty and nested parameter defaults`() {
     val defaults =
       listOf(
@@ -81,6 +111,7 @@ class GeneratedApiYamlTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("pending", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -100,7 +131,7 @@ class GeneratedApiYamlTest {
     val decoded = GeneratedApiYaml.readString(yaml)
 
     assertThat(decoded, equalTo(api))
-    assertThat(yaml, containsString("irVersion: \"2\""))
+    assertThat(yaml, containsString("irVersion: \"3\""))
     assertThat(yaml, containsString("name: \"Projects\""))
     assertThat(yaml, containsString("zanzibar:"))
     assertThat(yaml, containsString("zanzibarUserSource:"))
@@ -205,6 +236,7 @@ class GeneratedApiYamlTest {
                   ),
                 ),
               deprecated = true,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -257,6 +289,7 @@ class GeneratedApiYamlTest {
                     validation = mapOf("minimum" to "1", "maximum" to "100"),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -374,6 +407,7 @@ class GeneratedApiYamlTest {
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true),
                 ),
               discriminator = "kind",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "Cat",
@@ -384,6 +418,7 @@ class GeneratedApiYamlTest {
                 ),
               inherits = listOf(GeneratedTypeRef.named("Animal")),
               discriminatorValue = "cat",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -413,6 +448,7 @@ class GeneratedApiYamlTest {
                   "cat" to GeneratedTypeRef.named("Cat"),
                   "dog" to GeneratedTypeRef.named("Dog"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "AnimalEnvelope",
@@ -426,6 +462,7 @@ class GeneratedApiYamlTest {
                   ),
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string")),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -696,6 +733,7 @@ class GeneratedApiYamlTest {
                     value = mapOf("id" to "project-1", "name" to "Build IR"),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         services =
@@ -867,6 +905,7 @@ class GeneratedApiYamlTest {
                   name = "User",
                 ),
               patchable = true,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "file:///api.raml"),
             ),
           ),
       )
@@ -892,6 +931,7 @@ class GeneratedApiYamlTest {
                   "notification.pull_request.merged",
                 ),
               enumValueNames = listOf("pullRequestReviewRequested", "pullRequestMerged"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "file:///api.raml"),
             ),
             GeneratedModel(
               name = "AuditEvent",
@@ -928,12 +968,14 @@ class GeneratedApiYamlTest {
                     type = GeneratedTypeRef.scalar("integer", format = "int16"),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "file:///api.raml"),
             ),
             GeneratedModel(
               name = "TagSet",
               kind = GeneratedModel.Kind.ARRAY,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
               collection = GeneratedCollectionKind.SET,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "file:///api.raml"),
             ),
             GeneratedModel(
               name = "DynamicLabels",
@@ -946,6 +988,7 @@ class GeneratedApiYamlTest {
                     type = GeneratedTypeRef.scalar("string"),
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "file:///api.raml"),
             ),
           ),
       )
@@ -971,6 +1014,7 @@ class GeneratedApiYamlTest {
               name = "Test",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("Test", source = librarySource)),
+              source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "library.raml"),
             ),
             GeneratedModel(
               name = "Test",
@@ -1034,6 +1078,7 @@ class GeneratedApiYamlTest {
                 listOf(
                   GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "library.raml"),
             ),
           ),
       )
@@ -1168,6 +1213,7 @@ class GeneratedApiYamlTest {
                 listOf(
                   GeneratedModelProperty("q", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "library.raml"),
             ),
             GeneratedModel(
               name = "SignedQueryString",
@@ -1177,6 +1223,7 @@ class GeneratedApiYamlTest {
                 listOf(
                   GeneratedModelProperty("signature", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "library.raml"),
             ),
           ),
       )
@@ -1291,6 +1338,7 @@ class GeneratedApiYamlTest {
                 GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
                 GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "craft:get-project.raml"),
           ),
         ),
       problems =
@@ -1304,6 +1352,7 @@ class GeneratedApiYamlTest {
               listOf(
                 GeneratedModelProperty("trace_id", GeneratedTypeRef.scalar("string")),
               ),
+            source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.RAML, location = "craft:get-project.raml"),
           ),
         ),
     )

@@ -25,6 +25,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationCo
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -41,7 +42,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -63,7 +64,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -85,7 +86,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -108,7 +109,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf(ValidationConstraints))
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -133,7 +134,6 @@ class RequestBodyParamTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Server,
         setOf(ValidationConstraints, KotlinTypeRegistry.Option.ContainerElementValid),
@@ -159,7 +159,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -181,7 +181,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -203,7 +203,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(
@@ -216,7 +216,7 @@ class RequestBodyParamTest {
           false,
           null,
           false,
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",
@@ -241,7 +241,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(
@@ -254,7 +254,7 @@ class RequestBodyParamTest {
           false,
           null,
           false,
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",
@@ -279,7 +279,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generateJaxrs(
@@ -292,7 +292,7 @@ class RequestBodyParamTest {
           false,
           null,
           false,
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",
@@ -318,7 +318,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf(ValidationConstraints))
 
     val builtTypes =
       generateJaxrs(
@@ -331,7 +331,7 @@ class RequestBodyParamTest {
           false,
           null,
           false,
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",
@@ -356,7 +356,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(
@@ -369,7 +369,7 @@ class RequestBodyParamTest {
           false,
           null,
           false,
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",
@@ -394,7 +394,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generateJaxrs(
@@ -407,7 +407,7 @@ class RequestBodyParamTest {
           false,
           null,
           false,
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",

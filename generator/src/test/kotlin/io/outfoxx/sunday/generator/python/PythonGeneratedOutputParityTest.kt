@@ -32,6 +32,7 @@ import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
 import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -575,7 +576,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
       assertThrows<GenerationException> {
         PythonSundayIrGenerator(
           api,
-          PythonGeneratorOptions(packageName = "parity_api", generateBrokerServices = true),
+          PythonGeneratorOptions(placement = pythonPlacement("parity_api"), generateBrokerServices = true),
         ).generateModules(
           GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
         )
@@ -648,7 +649,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     PythonSundayIrGenerator(
       this,
       PythonGeneratorOptions(
-        packageName = "parity_api",
+        placement = pythonPlacement("parity_api"),
         aggregateServices = aggregate,
         aggregateServiceName = "ParityAPI",
       ),
@@ -660,7 +661,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     PythonLitestarIrGenerator(
       this,
       PythonGeneratorOptions(
-        packageName = "parity_api",
+        placement = pythonPlacement("parity_api"),
         aggregateServices = aggregate,
         aggregateServiceName = "ParityAPI",
       ),

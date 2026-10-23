@@ -9,6 +9,9 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.operation
 import io.outfoxx.sunday.security.ClientSettings
 import io.outfoxx.sunday.withSecurity
+import io.test.FetchTestPageQueryParam
+import io.test.FetchTestSelectUriParam
+import io.test.FetchTestXTypeHeaderParam
 import kotlin.Any
 import kotlin.String
 import kotlin.Unit
@@ -44,34 +47,4 @@ public class API<Req : Request> @JvmOverloads constructor(
       )
     )
   )
-
-  public enum class FetchTestSelectUriParam(
-    private val wireValue: String,
-  ) {
-    All("all"),
-    Limited("limited"),
-    ;
-
-    public override fun toString(): String = wireValue
-  }
-
-  public enum class FetchTestPageQueryParam(
-    private val wireValue: String,
-  ) {
-    All("all"),
-    Limited("limited"),
-    ;
-
-    public override fun toString(): String = wireValue
-  }
-
-  public enum class FetchTestXTypeHeaderParam(
-    private val wireValue: String,
-  ) {
-    All("all"),
-    Limited("limited"),
-    ;
-
-    public override fun toString(): String = wireValue
-  }
 }

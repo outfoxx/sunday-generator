@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.parameterDefaultsApi
 import io.outfoxx.sunday.generator.tools.withOptionalParameterTemplates
 import io.outfoxx.sunday.http.Request
@@ -82,7 +83,7 @@ class KotlinParameterDefaultsTest {
             )
           },
       )
-    val registry = KotlinTypeRegistry("io.test", null, mode, setOf(KotlinTypeRegistry.Option.UseJakartaPackages))
+    val registry = KotlinTypeRegistry(null, mode, setOf(KotlinTypeRegistry.Option.UseJakartaPackages))
     KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
     val result = compileTypesResult(registry.buildTypes())
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
@@ -127,7 +128,7 @@ class KotlinParameterDefaultsTest {
     @TempDir directory: Path,
   ) {
     val api = parameterDefaultsApi(frontend, directory, collections = true)
-    val registry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val registry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
     val error =
       assertThrows(GenerationException::class.java) {
         KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
@@ -158,7 +159,6 @@ class KotlinParameterDefaultsTest {
     val mode = if (target == "server") GenerationMode.Server else GenerationMode.Client
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         mode,
         setOf(KotlinTypeRegistry.Option.UseJakartaPackages),
@@ -169,7 +169,12 @@ class KotlinParameterDefaultsTest {
       KotlinSundayIrGenerator(
         api.withOptionalParameterTemplates(),
         registry,
-        KotlinSundayOptions("io.test.service", "http://example.com/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test.service"),
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()

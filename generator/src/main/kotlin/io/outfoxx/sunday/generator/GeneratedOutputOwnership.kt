@@ -25,6 +25,7 @@ import java.net.URI
 /** Tracks output provenance independently of the complete type registry. */
 class GeneratedOutputOwnership {
   private val origins = mutableMapOf<Any, GeneratedOutputOrigin>()
+  private val declarations = mutableMapOf<Any, MutableSet<String>>()
 
   /** Enclosing declaration context while constructing companion output. */
   var current: GeneratedOutputOrigin? = null
@@ -34,6 +35,7 @@ class GeneratedOutputOwnership {
     symbol: Any,
     origin: GeneratedOutputOrigin,
   ) {
+    declarations.getOrPut(symbol) { linkedSetOf() }.addAll(origin.declarationUris)
     origins[symbol] = origin
   }
 
@@ -42,13 +44,15 @@ class GeneratedOutputOwnership {
     symbol: Any,
     category: GeneratedTypeCategory,
   ) {
+    declarations.getOrPut(symbol) { linkedSetOf() }.addAll(current?.declarationUris.orEmpty())
     origins.putIfAbsent(
       symbol,
-      current?.let {
-        it.copy(category = if (it.category == GeneratedTypeCategory.Problem) it.category else category)
-      } ?: GeneratedOutputOrigin(category, emptySet()),
+      current ?: GeneratedOutputOrigin(category, emptySet()),
     )
   }
+
+  /** Describes every original declaration contributing to a colliding generated symbol. */
+  fun declarationDescription(symbol: Any): String = declarations[symbol].orEmpty().joinToString()
 
   /** Selects a declaration without removing it from the registry. */
   fun includes(
@@ -56,7 +60,7 @@ class GeneratedOutputOwnership {
     symbol: Any,
   ): Boolean {
     val origin = requireNotNull(origins[symbol]) { "Missing output provenance for $symbol" }
-    return selection.includes(origin.category, origin.ownerUris)
+    return selection.includes(origin)
   }
 
   /** Runs generation with inherited provenance, restoring the enclosing context on failure. */
@@ -76,25 +80,49 @@ class GeneratedOutputOwnership {
 
 /** Resolves model provenance without changing naming or reference resolution. */
 fun GeneratedModel.outputOrigin(api: GeneratedApi): GeneratedOutputOrigin =
-  scope?.service?.let { name -> api.services.firstOrNull { it.name == name }?.outputOrigin(api) }
-    ?: GeneratedOutputOrigin(
-      GeneratedTypeCategory.Model,
-      ownerUris
-        .ifEmpty {
-          setOf(source?.location ?: declarationUri?.substringBefore('#') ?: api.source.location)
-        }.map(::URI)
-        .toSet(),
-    )
+  outputOrigin(api) { _, category -> category }
+
+// Backends classify some model declarations as problems. Apply that classification to ancestors too.
+internal fun GeneratedModel.outputOrigin(
+  api: GeneratedApi,
+  classify: (GeneratedModel, GeneratedTypeCategory) -> GeneratedTypeCategory,
+): GeneratedOutputOrigin {
+  val origin =
+    owningService(api)?.outputOrigin(api)?.copy(declarationUris = setOfNotNull(declarationUri))
+      ?: GeneratedOutputOrigin(
+        GeneratedTypeCategory.Model,
+        ownerUris.ifEmpty { setOf(source.location) }.map(::URI).toSet(),
+        declarationUris = setOf(declarationUri ?: source.location),
+      )
+  val parent =
+    nested?.enclosedIn?.let { reference ->
+      requireNotNull(
+        io.outfoxx.sunday.generator.ir.emit
+          .GeneratedModelIndex(api.models)
+          .modelOrNull(reference),
+      ) {
+        "Unknown enclosing declaration '${reference.name}' for '$name'"
+      }
+    }
+  return origin.copy(category = classify(this, origin.category), enclosing = parent?.outputOrigin(api, classify))
+}
 
 /** Resolves the provenance of an explicitly declared problem. */
 fun GeneratedProblem.outputOrigin(api: GeneratedApi): GeneratedOutputOrigin =
-  GeneratedOutputOrigin(GeneratedTypeCategory.Problem, setOf(URI((source ?: api.source).location)))
+  GeneratedOutputOrigin(
+    GeneratedTypeCategory.Problem,
+    setOf(URI(source.location)),
+    setOf(
+      declarationUri ?: source.location,
+    ),
+  )
 
 /** A composed service belongs to every document contributing to it. */
 fun GeneratedService.outputOrigin(api: GeneratedApi): GeneratedOutputOrigin =
   GeneratedOutputOrigin(
     GeneratedTypeCategory.Service,
     ownerUris.ifEmpty { setOf(api.source.location) }.map(::URI).toSet(),
+    declarationUris = declarationUris + operations.flatMap { it.declarationUris() },
   )
 
 /** Invocation support declarations belong to the services they support. */
@@ -108,3 +136,28 @@ fun GeneratedApi.outputOrigin(): GeneratedOutputOrigin =
       .map(::URI)
       .toSet(),
   )
+
+/** Finds lexical ownership without following references to otherwise shared declarations. */
+private fun GeneratedModel.owningService(api: GeneratedApi): GeneratedService? {
+  scope?.service?.let { name -> return api.services.firstOrNull { it.name == name } }
+  val declaration = declarationUri?.let(::URI) ?: return null
+
+  fun owns(location: String?): Boolean {
+    val owner = location?.let(::URI) ?: return false
+    return owner.scheme == declaration.scheme &&
+      owner.rawAuthority == declaration.rawAuthority &&
+      owner.path == declaration.path &&
+      owner.rawQuery == declaration.rawQuery &&
+      owner.fragment != null &&
+      declaration.fragment?.startsWith("${owner.fragment}/") == true
+  }
+  val enclosing =
+    api.models
+      .filter {
+        it.scope?.service != null && owns(it.declarationUri)
+      }.maxByOrNull { it.declarationUri!!.length }
+  return api.services.firstOrNull { service ->
+    service.name == enclosing?.scope?.service ||
+      service.operations.any { operation -> operation.declarationUris().any(::owns) }
+  }
+}

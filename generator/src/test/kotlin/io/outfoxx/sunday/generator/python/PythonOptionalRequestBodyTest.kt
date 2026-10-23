@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.optionalRequestBodyApi
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -33,7 +34,7 @@ class PythonOptionalRequestBodyTest : PythonTest() {
     val modules =
       PythonSundayIrGenerator(
         optionalRequestBodyApi("openapi"),
-        PythonGeneratorOptions(packageName = "optional_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("optional_api")),
       ).generateModules(
         GeneratedOutputSelection(
           GeneratedTypeCategory.entries.toSet(),

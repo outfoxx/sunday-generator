@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
@@ -56,7 +57,7 @@ class PythonSecuritySchemeTest : PythonTest() {
       PythonLitestarIrGenerator(
         api,
         PythonGeneratorOptions(
-          packageName = "security_api",
+          placement = pythonPlacement("security_api"),
           profile = "external",
           enforceSecuritySchemes = true,
         ),
@@ -199,7 +200,7 @@ class PythonSecuritySchemeTest : PythonTest() {
       assertThrows(GenerationException::class.java) {
         PythonLitestarIrGenerator(
           api.copy(services = listOf(duplicate)),
-          PythonGeneratorOptions(packageName = "security_api", enforceSecuritySchemes = true),
+          PythonGeneratorOptions(placement = pythonPlacement("security_api"), enforceSecuritySchemes = true),
         ).generateModules(
           GeneratedOutputSelection(setOf(GeneratedTypeCategory.Service)),
         )
@@ -372,7 +373,7 @@ class PythonSecuritySchemeTest : PythonTest() {
     return PythonLitestarIrGenerator(
       api,
       PythonGeneratorOptions(
-        packageName = "security_api",
+        placement = pythonPlacement("security_api"),
         aggregateServices = true,
         aggregateServiceName = "Secure",
         enforceSecuritySchemes = enforce,

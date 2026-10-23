@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.testing.test
+import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -84,7 +85,7 @@ class IrCLITest {
     assertTrue(publicText.contains("internal"))
     assertTrue(publicText.contains("application"))
     assertTrue(publicText.contains("external"))
-    assertEquals("2", api.irVersion)
+    assertEquals(GeneratedApi.CURRENT_IR_VERSION, api.irVersion)
     val noRole = IrCommand().test(arrayOf("-out", output.toString(), "-profile", "external", source.toString()))
     assertEquals(1, noRole.statusCode)
     assertTrue(noRole.output.contains("requires -mode"))
@@ -680,7 +681,7 @@ class IrCLITest {
       createTempFile("sunday-ir-cli-validate", ".yaml").apply {
         writeText(
           """
-          irVersion: "2"
+          irVersion: "3"
           name: "Projects API"
           source:
             kind: "RAML"

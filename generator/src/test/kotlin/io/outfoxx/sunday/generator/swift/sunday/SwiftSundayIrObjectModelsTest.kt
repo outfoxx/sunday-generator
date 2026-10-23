@@ -82,6 +82,7 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
                   ),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NarrativeProblem",
@@ -91,6 +92,7 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("narrativeId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -133,6 +135,7 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("child", GeneratedTypeRef.named("Child"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "Child",
@@ -146,6 +149,7 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("value", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -210,6 +214,7 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "api.raml"),
             ),
           ),
       )
@@ -265,6 +270,7 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -384,6 +390,7 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -419,16 +426,19 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
               name = "UserRef",
               kind = GeneratedModel.Kind.OBJECT,
               properties = listOf(GeneratedModelProperty("userId", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "TeamRef",
               kind = GeneratedModel.Kind.OBJECT,
               properties = listOf(GeneratedModelProperty("teamID", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotIdentifiable",
               kind = GeneratedModel.Kind.OBJECT,
               properties = listOf(GeneratedModelProperty("userid", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

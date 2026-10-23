@@ -37,6 +37,7 @@ fun inheritedConstraintsFixture(): GeneratedApi {
           count,
           amount,
         ),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
     )
   val second =
     GeneratedModel(
@@ -48,10 +49,19 @@ fun inheritedConstraintsFixture(): GeneratedApi {
           count.copy(validation = mapOf("multipleOf" to "2")),
           amount.copy(validation = mapOf("multipleOf" to "0.1")),
         ),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
     )
   val children =
     listOf("Child" to listOf(first, second), "Reversed" to listOf(second, first)).map { (name, parents) ->
-      GeneratedModel(name, GeneratedModel.Kind.OBJECT, inherits = parents.map { GeneratedTypeRef.named(it.name) })
+      GeneratedModel(
+        name,
+        GeneratedModel.Kind.OBJECT,
+        inherits =
+          parents.map {
+            GeneratedTypeRef.named(it.name)
+          },
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
+      )
     }
   val patch =
     GeneratedModel(
@@ -59,6 +69,7 @@ fun inheritedConstraintsFixture(): GeneratedApi {
       GeneratedModel.Kind.OBJECT,
       patchable = true,
       properties = listOf(count.copy(type = count.type.copy(nullable = true), validation = mapOf("multipleOf" to "2"))),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
     )
   return GeneratedApi(
     name = "Inherited constraints",
@@ -69,6 +80,7 @@ fun inheritedConstraintsFixture(): GeneratedApi {
           "CountAlias",
           GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.scalar("integer")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
         ),
   )
 }

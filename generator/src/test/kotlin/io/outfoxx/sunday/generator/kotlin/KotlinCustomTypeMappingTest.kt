@@ -65,8 +65,16 @@ class KotlinCustomTypeMappingTest {
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         models =
           listOf(
-            GeneratedModel("First", GeneratedModel.Kind.OBJECT),
-            GeneratedModel("Second", GeneratedModel.Kind.OBJECT),
+            GeneratedModel(
+              "First",
+              GeneratedModel.Kind.OBJECT,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
+            GeneratedModel(
+              "Second",
+              GeneratedModel.Kind.OBJECT,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
             GeneratedModel(
               "Choice",
               GeneratedModel.Kind.UNION,
@@ -84,18 +92,19 @@ class KotlinCustomTypeMappingTest {
                   ),
                 ),
               targets = mapOf("kotlin" to GeneratedTarget(typeName = "io.example.Choice")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               "Record",
               GeneratedModel.Kind.OBJECT,
               properties = listOf(GeneratedModelProperty("choice", GeneratedTypeRef.named("Choice"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
     for (jaxrs in if (mode == GenerationMode.Client) listOf(true, false) else listOf(true)) {
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           mode,
           buildSet {
@@ -150,7 +159,6 @@ class KotlinCustomTypeMappingTest {
     for (jaxrs in if (mode == GenerationMode.Client) listOf(true, false) else listOf(true)) {
       val registry =
         KotlinTypeRegistry(
-          "io.test",
           null,
           mode,
           buildSet {
@@ -205,7 +213,7 @@ class KotlinCustomTypeMappingTest {
     val source = OpenApiToGeneratedApi().convert(Path.of("src/test/resources/openapi/ir/custom-types/api.yaml").toUri())
     val api = source.copy(models = source.models.map { it.copy(targets = emptyMap()) })
     for (mode in GenerationMode.entries) {
-      val registry = KotlinTypeRegistry("io.test", null, mode, setOf(KotlinTypeRegistry.Option.ImplementModel))
+      val registry = KotlinTypeRegistry(null, mode, setOf(KotlinTypeRegistry.Option.ImplementModel))
       KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
       val result = compileTypesResult(registry.buildTypes())
       assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
@@ -239,7 +247,7 @@ class KotlinCustomTypeMappingTest {
         "\nx-sunday-kotlinType:$target: io.example.${target.replaceFirstChar { it.uppercase() }}Identifier\n",
     )
     val api = OpenApiToGeneratedApi().convert(directory.resolve("api.yaml").toUri())
-    val registry = KotlinTypeRegistry("io.test", null, mode, setOf(KotlinTypeRegistry.Option.ImplementModel))
+    val registry = KotlinTypeRegistry(null, mode, setOf(KotlinTypeRegistry.Option.ImplementModel))
     KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
     val result = compileTypesResult(registry.buildTypes(), listOf(identifierSource(type)))
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)

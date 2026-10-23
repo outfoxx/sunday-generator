@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -50,6 +51,7 @@ class SwiftUnionAliasValidationTest {
         GeneratedModel.Kind.SCALAR_ALIAS,
         aliases = listOf(GeneratedTypeRef.scalar("string")),
         validation = mapOf("minLength" to "2"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val count =
       GeneratedModel(
@@ -57,12 +59,14 @@ class SwiftUnionAliasValidationTest {
         GeneratedModel.Kind.SCALAR_ALIAS,
         aliases = listOf(GeneratedTypeRef.scalar("integer")),
         validation = mapOf("minimum" to "1"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val choice =
       GeneratedModel(
         "ScalarChoice",
         GeneratedModel.Kind.UNION,
         aliases = listOf(GeneratedTypeRef.named(text.name), GeneratedTypeRef.named(count.name)),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val holder =
       GeneratedModel(
@@ -76,6 +80,7 @@ class SwiftUnionAliasValidationTest {
               GeneratedTypeRef(GeneratedTypeRef.Kind.UNION, "union", arguments = choice.aliases),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(

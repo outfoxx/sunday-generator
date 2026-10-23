@@ -202,7 +202,6 @@ class KotlinOpenModelPropertiesTest {
 
   private fun registry() =
     KotlinTypeRegistry(
-      "io.test",
       null,
       GenerationMode.Client,
       setOf(

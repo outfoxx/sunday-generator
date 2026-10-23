@@ -87,7 +87,7 @@ Identifier:
   type: string
   pattern: '^id:[a-z]+$'
   x-sunday-typeScriptType: Identifier
-  x-sunday-typeScriptModule: '@example/domain'
+  x-sunday-typeScriptImport: '@example/domain'
 ```
 
 The module is imported exactly as supplied (an npm package or a relative module
@@ -97,7 +97,7 @@ the custom type and encodes it back. Generated model schemas retain wire
 restrictions around that codec; request parameters encode typed values before
 passing them to the transport. No replacement class or interface is emitted.
 
-Omit `x-sunday-typeScriptModule` for a global type. Built-in types already known
+Omit `x-sunday-typeScriptImport` for a global type. Built-in types already known
 to Sunday's runtime, such as `Date` and `URL`, retain their built-in schemas.
 Other global types require a matching global `<Type>Schema`.
 

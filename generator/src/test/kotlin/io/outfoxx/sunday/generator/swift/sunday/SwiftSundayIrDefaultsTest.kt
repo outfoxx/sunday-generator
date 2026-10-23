@@ -47,6 +47,7 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
         "IntegerValue",
         GeneratedModel.Kind.SCALAR_ALIAS,
         aliases = listOf(GeneratedTypeRef.scalar("integer")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     for (literal in listOf(
       "1.1",
@@ -69,7 +70,16 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
         GeneratedApi(
           name = "Invalid defaults",
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-          models = listOf(GeneratedModel("Counts", GeneratedModel.Kind.OBJECT, properties = listOf(property)), integer),
+          models =
+            listOf(
+              GeneratedModel(
+                "Counts",
+                GeneratedModel.Kind.OBJECT,
+                properties = listOf(property),
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+              ),
+              integer,
+            ),
         )
       val error =
         assertThrows(GenerationException::class.java) {
@@ -84,7 +94,13 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
   @Test
   fun `exclusive bounds and validated defaults preserve inherited storage`(compiler: SwiftCompiler) {
     val property = GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer"))
-    val base = GeneratedModel("BoundBase", GeneratedModel.Kind.OBJECT, properties = listOf(property))
+    val base =
+      GeneratedModel(
+        "BoundBase",
+        GeneratedModel.Kind.OBJECT,
+        properties = listOf(property),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
 
     fun child(
       name: String,
@@ -95,6 +111,7 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
       GeneratedModel.Kind.OBJECT,
       inherits = listOf(GeneratedTypeRef.named("BoundBase")),
       properties = listOf(property.copy(validation = validation, defaultValue = default)),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
     val booleanBounds =
       child(
@@ -150,7 +167,13 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
   @Test
   fun `invalid effective defaults and unrepresentable bounds fail generation`() {
     val count = GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer"))
-    val parent = GeneratedModel("Parent", GeneratedModel.Kind.OBJECT, properties = listOf(count))
+    val parent =
+      GeneratedModel(
+        "Parent",
+        GeneratedModel.Kind.OBJECT,
+        properties = listOf(count),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
+      )
     val invalid =
       listOf(
         count.copy(defaultValue = "0", validation = mapOf("minimum" to "1")),
@@ -193,6 +216,7 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
           GeneratedModel.Kind.OBJECT,
           inherits = listOf(GeneratedTypeRef.named("Parent")),
           properties = listOf(property),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
         )
       val api =
         GeneratedApi(
@@ -241,6 +265,7 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
               defaultValue = value,
             )
           },
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val patch =
       GeneratedModel(
@@ -264,6 +289,7 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
               allowedValues = listOf("valid"),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val api =
       GeneratedApi(
@@ -277,6 +303,7 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("FormattedDefaults")),
               properties = listOf(defaults.properties.first().copy(required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             patch,
             patch.copy(
@@ -297,11 +324,13 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
               name = "UuidAlias",
               kind = GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.named("UuidValue")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UuidValue",
               kind = GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string", format = "uuid")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

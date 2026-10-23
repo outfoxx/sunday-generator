@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.ir.emit
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -31,21 +32,48 @@ class GeneratedModelPropertiesTest {
     val nullableString = GeneratedTypeRef.scalar("string").copy(nullable = true)
     val models =
       listOf(
-        GeneratedModel("Text", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(nullableString)),
-        GeneratedModel("Items", GeneratedModel.Kind.ARRAY, aliases = listOf(nullableString)),
-        GeneratedModel("Values", GeneratedModel.Kind.MAP, aliases = listOf(nullableString)),
+        GeneratedModel(
+          "Text",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(nullableString),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
+        GeneratedModel(
+          "Items",
+          GeneratedModel.Kind.ARRAY,
+          aliases = listOf(nullableString),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
+        GeneratedModel(
+          "Values",
+          GeneratedModel.Kind.MAP,
+          aliases = listOf(nullableString),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
         GeneratedModel(
           "ItemsAlias",
           GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.named("Items")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "ValuesAlias",
           GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.named("Values")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
-        GeneratedModel("Choice", GeneratedModel.Kind.UNION, aliases = listOf(GeneratedTypeRef.named("Text"))),
-        GeneratedModel("Cycle", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(GeneratedTypeRef.named("Cycle"))),
+        GeneratedModel(
+          "Choice",
+          GeneratedModel.Kind.UNION,
+          aliases = listOf(GeneratedTypeRef.named("Text")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
+        GeneratedModel(
+          "Cycle",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.named("Cycle")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
       ).associateBy { it.name }
     val properties = GeneratedModelProperties { models[it.name] }
     for (name in listOf("Text", "Choice")) {
@@ -60,10 +88,27 @@ class GeneratedModelPropertiesTest {
   @Test
   fun `numeric validation follows scalar and array aliases with nullable elements`() {
     val integer = GeneratedTypeRef.scalar("integer")
-    val item = GeneratedModel("Item", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(integer.copy(nullable = true)))
-    val items = GeneratedModel("Items", GeneratedModel.Kind.ARRAY, aliases = listOf(GeneratedTypeRef.named("Item")))
+    val item =
+      GeneratedModel(
+        "Item",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(integer.copy(nullable = true)),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
+    val items =
+      GeneratedModel(
+        "Items",
+        GeneratedModel.Kind.ARRAY,
+        aliases = listOf(GeneratedTypeRef.named("Item")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val alias =
-      GeneratedModel("Alias", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(GeneratedTypeRef.named("Items")))
+      GeneratedModel(
+        "Alias",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(GeneratedTypeRef.named("Items")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val models = listOf(item, items, alias).associateBy { it.name }
     val properties = GeneratedModelProperties { models[it.name] }
     assertEquals(
@@ -95,7 +140,12 @@ class GeneratedModelPropertiesTest {
       properties.numericValidationTarget(GeneratedTypeRef.scalar("number"), "Example.values"),
     )
     val cycle =
-      GeneratedModel("Cycle", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(GeneratedTypeRef.named("Cycle")))
+      GeneratedModel(
+        "Cycle",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(GeneratedTypeRef.named("Cycle")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val cyclic = GeneratedModelProperties { cycle }
     for (type in listOf(
       GeneratedTypeRef.scalar("string"),
@@ -114,8 +164,20 @@ class GeneratedModelPropertiesTest {
 
   @Test
   fun `retained nominal conflicts have a property diagnostic`() {
-    val statusA = GeneratedModel("StatusA", GeneratedModel.Kind.ENUM, values = listOf("a", "b"))
-    val statusB = GeneratedModel("StatusB", GeneratedModel.Kind.ENUM, values = listOf("b", "c"))
+    val statusA =
+      GeneratedModel(
+        "StatusA",
+        GeneratedModel.Kind.ENUM,
+        values = listOf("a", "b"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
+    val statusB =
+      GeneratedModel(
+        "StatusB",
+        GeneratedModel.Kind.ENUM,
+        values = listOf("b", "c"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val first = model("First", GeneratedTypeRef.named("StatusA"))
     val second = model("Second", GeneratedTypeRef.named("StatusB"))
     val child =
@@ -127,6 +189,7 @@ class GeneratedModelPropertiesTest {
             GeneratedTypeRef.named("First"),
             GeneratedTypeRef.named("Second"),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val models = listOf(statusA, statusB, first, second, child).associateBy { it.name }
     val error =
@@ -139,7 +202,12 @@ class GeneratedModelPropertiesTest {
   @Test
   fun `recursive collection declarations share storage without expanding their elements`() {
     val nodes =
-      GeneratedModel("Nodes", GeneratedModel.Kind.ARRAY, aliases = listOf(GeneratedTypeRef.named("Nodes")))
+      GeneratedModel(
+        "Nodes",
+        GeneratedModel.Kind.ARRAY,
+        aliases = listOf(GeneratedTypeRef.named("Nodes")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val first = model("First", GeneratedTypeRef.named("Nodes"))
     val second = model("Second", GeneratedTypeRef.named("Nodes"))
     val child =
@@ -147,6 +215,7 @@ class GeneratedModelPropertiesTest {
         "Child",
         GeneratedModel.Kind.OBJECT,
         inherits = listOf(GeneratedTypeRef.named("First"), GeneratedTypeRef.named("Second")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val models = listOf(nodes, first, second, child).associateBy { it.name }
     val properties = GeneratedModelProperties { models[it.name] }
@@ -162,7 +231,12 @@ class GeneratedModelPropertiesTest {
   @Test
   fun `aliases share storage while single parent structural overrides remain effective`() {
     val alias =
-      GeneratedModel("Text", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(GeneratedTypeRef.scalar("string")))
+      GeneratedModel(
+        "Text",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(GeneratedTypeRef.scalar("string")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val first = model("First", GeneratedTypeRef.named("Text"))
     val second = model("Second", GeneratedTypeRef.scalar("string"))
     val child =
@@ -174,6 +248,7 @@ class GeneratedModelPropertiesTest {
             GeneratedTypeRef.named("First"),
             GeneratedTypeRef.named("Second"),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val refined =
       model(
@@ -208,7 +283,13 @@ class GeneratedModelPropertiesTest {
   @Test
   fun `every compatible parent contributes effective constraints in either order`() {
     val property = GeneratedModelProperty("text", GeneratedTypeRef.scalar("string", nullable = true))
-    val base = GeneratedModel("Base", GeneratedModel.Kind.OBJECT, properties = listOf(property))
+    val base =
+      GeneratedModel(
+        "Base",
+        GeneratedModel.Kind.OBJECT,
+        properties = listOf(property),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
 
     fun parent(
       name: String,
@@ -228,6 +309,7 @@ class GeneratedModelPropertiesTest {
             type = property.type.copy(nullable = !required),
           ),
         ),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
     val first = parent("First", mapOf("minLength" to "2"), listOf("ab", "abc", "abcd"), true)
     val second = parent("Second", mapOf("maxLength" to "3"), listOf("abc", "abcd"), false)
@@ -237,6 +319,7 @@ class GeneratedModelPropertiesTest {
           "Child",
           GeneratedModel.Kind.OBJECT,
           inherits = parents.map { GeneratedTypeRef.named(it.name) },
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         )
       val models = (parents + base + child).associateBy { it.name }
       val analysis = GeneratedModelProperties { models[it.name] }
@@ -326,5 +409,6 @@ class GeneratedModelPropertiesTest {
     name,
     GeneratedModel.Kind.OBJECT,
     properties = listOf(GeneratedModelProperty("value", type)),
+    source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
   )
 }

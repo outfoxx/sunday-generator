@@ -4,8 +4,8 @@ Enable scheme-aware enforcement when the generated server must enforce the OpenA
 
 ```sh
 sunday kotlin/jaxrs -mode server -resource-adapters -enforce-security-schemes -quarkus \
-  -pkg example.api -out generated api.yaml
-sunday python/litestar -enforce-security-schemes -pkg example_api -out generated api.yaml
+  --placement-config placement.yaml -out generated api.yaml
+sunday python/litestar -enforce-security-schemes --placement-config placement.yaml -out generated api.yaml
 ```
 
 Kotlin supports Quarkus, Jakarta JAX-RS, and javax JAX-RS. Omit `-quarkus` for standard JAX-RS; select Jakarta packages with `-use-jakarta-packages`. The Kotlin Gradle option is `enforceSecuritySchemes.set(true)` together with `resourceAdapters.set(true)` and server mode. The programmatic options are `KotlinJAXRSOptions.enforceSecuritySchemes` and `PythonGeneratorOptions.enforceSecuritySchemes`.
@@ -459,3 +459,5 @@ The shared SPI requires Sunday Kotlin `2.0.0-beta.15` or later, which includes
 [sunday-kt #67](https://github.com/outfoxx/sunday-kt/pull/67). Published artifacts
 include the provider contracts; a local runtime checkout is only needed when
 developing runtime changes.
+
+Package defaults and overrides are configured in [declaration placement](declaration-placement.md).

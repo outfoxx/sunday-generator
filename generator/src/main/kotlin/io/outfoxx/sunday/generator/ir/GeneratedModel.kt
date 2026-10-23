@@ -22,7 +22,8 @@ package io.outfoxx.sunday.generator.ir
 data class GeneratedModel(
   val name: String,
   val kind: Kind,
-  val source: GeneratedSourceSpec? = null,
+  /** Declaring document, retained through composition and independent of reference qualification. */
+  val source: GeneratedSourceSpec,
   /** Original schema location, preserved independently of composition names. */
   val declarationUri: String? = null,
   /** Candidate owners retained when composition deduplicates distinct declarations. */
@@ -57,6 +58,10 @@ data class GeneratedModel(
   val examples: List<GeneratedExample> = listOf(),
   val deprecated: Boolean = false,
   val documentation: GeneratedDocumentation? = null,
+  /** Original lexical placement scopes; references do not add scopes. */
+  val placementScopes: List<GeneratedPlacementScope> = emptyList(),
+  /** Original contributions retained until placement-sensitive deduplication. */
+  val placementDeclarations: List<GeneratedModel> = emptyList(),
 ) {
 
   /** Matching rule of a source union; absent retains the legacy emitter behavior. */

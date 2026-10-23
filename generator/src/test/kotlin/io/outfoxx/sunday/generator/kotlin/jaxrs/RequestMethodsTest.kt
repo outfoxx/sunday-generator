@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -39,7 +40,6 @@ class RequestMethodsTest {
 
   private fun typeRegistry(): KotlinTypeRegistry =
     KotlinTypeRegistry(
-      "io.test",
       null,
       GenerationMode.Server,
       setOf(),
@@ -69,7 +69,6 @@ class RequestMethodsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -92,7 +91,6 @@ class RequestMethodsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -116,7 +114,6 @@ class RequestMethodsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -134,7 +131,7 @@ class RequestMethodsTest {
         false,
         null,
         true,
-        "io.test.service",
+        kotlinPlacement("io.test", "io.test.service"),
         "http://example.com/",
         listOf("application/json"),
         "API",
@@ -165,7 +162,7 @@ class RequestMethodsTest {
         false,
         null,
         false,
-        "io.test.service",
+        kotlinPlacement("io.test", "io.test.service"),
         "http://example.com/",
         listOf("application/json"),
         "API",
@@ -186,7 +183,6 @@ class RequestMethodsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -204,7 +200,7 @@ class RequestMethodsTest {
         false,
         null,
         false,
-        "io.test.service",
+        kotlinPlacement("io.test", "io.test.service"),
         "http://example.com/",
         listOf("application/json"),
         "API",

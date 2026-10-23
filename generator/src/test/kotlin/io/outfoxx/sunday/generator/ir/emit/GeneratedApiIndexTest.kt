@@ -154,7 +154,7 @@ class GeneratedApiIndexTest {
 
   private fun model(
     name: String,
-    source: GeneratedSourceSpec? = null,
+    source: GeneratedSourceSpec = source("api.raml"),
     scope: GeneratedModelScope? = null,
     targets: Map<String, GeneratedTarget> = mapOf(),
     freeform: Boolean = false,

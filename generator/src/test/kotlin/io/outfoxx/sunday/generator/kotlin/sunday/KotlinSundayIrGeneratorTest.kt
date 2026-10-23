@@ -65,6 +65,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -167,7 +168,6 @@ class KotlinSundayIrGeneratorTest {
 
   private fun typeRegistry(options: Set<KotlinTypeRegistry.Option> = setOf()): KotlinTypeRegistry =
     KotlinTypeRegistry(
-      "io.test",
       null,
       GenerationMode.Client,
       options,
@@ -251,27 +251,32 @@ class KotlinSundayIrGeneratorTest {
               name = "TextAlias",
               kind = GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextList",
               kind = GeneratedModel.Kind.ARRAY,
               aliases = listOf(GeneratedTypeRef.named("TextAlias")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextSet",
               kind = GeneratedModel.Kind.ARRAY,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
               collection = GeneratedCollectionKind.SET,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextMap",
               kind = GeneratedModel.Kind.MAP,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "TextUnion",
               kind = GeneratedModel.Kind.UNION,
               aliases = listOf(GeneratedTypeRef.scalar("string"), GeneratedTypeRef.scalar("integer")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "AliasContainer",
@@ -284,6 +289,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("map", GeneratedTypeRef.named("TextMap"), required = true),
                   GeneratedModelProperty("union", GeneratedTypeRef.named("TextUnion"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -313,7 +319,6 @@ class KotlinSundayIrGeneratorTest {
   fun `generates object union sealed interfaces directly from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -367,6 +372,7 @@ class KotlinSundayIrGeneratorTest {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserSummaryResponse",
@@ -377,6 +383,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("email", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserProfile",
@@ -386,6 +393,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedTypeRef.named("UserSelfResponse"),
                   GeneratedTypeRef.named("UserSummaryResponse"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -433,7 +441,6 @@ class KotlinSundayIrGeneratorTest {
   fun `generates concrete request body models when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -474,6 +481,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("password", GeneratedTypeRef.scalar("string"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -503,7 +511,6 @@ class KotlinSundayIrGeneratorTest {
   fun `generates empty request body objects as plain classes when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -538,6 +545,7 @@ class KotlinSundayIrGeneratorTest {
             GeneratedModel(
               name = "AssignPullRequestReviewerRequest",
               kind = GeneratedModel.Kind.OBJECT,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -565,7 +573,6 @@ class KotlinSundayIrGeneratorTest {
   fun `generates discriminated request body roots as inheritable classes when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -606,6 +613,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("label", GeneratedTypeRef.scalar("string"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "SceneUpdate",
@@ -616,6 +624,7 @@ class KotlinSundayIrGeneratorTest {
                 listOf(
                   GeneratedModelProperty("sceneId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -653,7 +662,6 @@ class KotlinSundayIrGeneratorTest {
   ) {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -692,7 +700,6 @@ class KotlinSundayIrGeneratorTest {
   fun `clears inherited JsonDeserialize from direct union member implementations`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -713,6 +720,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("userId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("email", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserSummaryResponse",
@@ -722,6 +730,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("userId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserResponse",
@@ -731,6 +740,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedTypeRef.named("UserSelfResponse"),
                   GeneratedTypeRef.named("UserSummaryResponse"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -771,7 +781,6 @@ class KotlinSundayIrGeneratorTest {
   fun `generates discriminator mapped object union decoders from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -793,6 +802,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "WorkingGraphNotFoundProblem",
@@ -803,6 +813,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CheckoutTargetUnknownProblem",
@@ -818,6 +829,7 @@ class KotlinSundayIrGeneratorTest {
                   "TPG-REPO-404" to GeneratedTypeRef.named("RepoNotFoundProblem"),
                   "TPG-WG-404" to GeneratedTypeRef.named("WorkingGraphNotFoundProblem"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -875,6 +887,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("traceId", GeneratedTypeRef.scalar("string"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "RepoProblem",
@@ -890,6 +903,7 @@ class KotlinSundayIrGeneratorTest {
                   ),
                   GeneratedModelProperty("repoId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -918,7 +932,6 @@ class KotlinSundayIrGeneratorTest {
   fun `generates Sunday throwable source problem models from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -947,6 +960,7 @@ class KotlinSundayIrGeneratorTest {
                   ),
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "RepoProblem",
@@ -957,6 +971,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("code", GeneratedTypeRef.scalar("string", nullable = true), required = false),
                   GeneratedModelProperty("repoId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -993,7 +1008,6 @@ class KotlinSundayIrGeneratorTest {
   fun `generates concrete shared object models when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(KotlinTypeRegistry.Option.ImplementModel),
@@ -1029,6 +1043,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("traceId", GeneratedTypeRef.scalar("string"), required = false),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserProfile",
@@ -1039,6 +1054,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("id", GeneratedTypeRef.scalar("string", nullable = true), required = false),
                   GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1143,7 +1159,7 @@ class KotlinSundayIrGeneratorTest {
       api,
       typeRegistry,
       KotlinSundayOptions(
-        defaultServicePackageName = "io.test.service",
+        placement = kotlinPlacement("io.test", "io.test.service"),
         defaultProblemBaseUri = "http://example.com/",
         defaultMediaTypes = listOf("application/json"),
         serviceSuffix = "API",
@@ -1478,6 +1494,7 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("pending-review"),
               enumValueNames = listOf("pendingReview"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1520,6 +1537,7 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("pending", "running", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1612,6 +1630,7 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobProgress",
@@ -1623,12 +1642,14 @@ class KotlinSundayIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobStarted",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("JobProgress")),
               discriminatorValue = "started",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1679,6 +1700,7 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "paused", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobProgress",
@@ -1690,6 +1712,7 @@ class KotlinSundayIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobStarted",
@@ -1700,12 +1723,14 @@ class KotlinSundayIrGeneratorTest {
                 listOf(
                   GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotificationPhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotificationProgress",
@@ -1716,11 +1741,13 @@ class KotlinSundayIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictNotificationPhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictNotificationProgress",
@@ -1735,6 +1762,7 @@ class KotlinSundayIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictInheritedProgress",
@@ -1748,18 +1776,21 @@ class KotlinSundayIrGeneratorTest {
                   ),
                 ),
               discriminator = "phase",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "StrictInheritedStarted",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("StrictInheritedProgress")),
               discriminatorValue = "started",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CrossPackagePhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CrossPackageProgress",
@@ -1769,6 +1800,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("phase", GeneratedTypeRef.named("CrossPackagePhase"), required = true),
                 ),
               discriminator = "phase",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CrossPackageStarted",
@@ -1780,12 +1812,14 @@ class KotlinSundayIrGeneratorTest {
                 ),
               inherits = listOf(GeneratedTypeRef.named("CrossPackageProgress")),
               discriminatorValue = "started",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UnionNotificationPhase",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UnionNotificationProgress",
@@ -1800,6 +1834,7 @@ class KotlinSundayIrGeneratorTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotificationEvent",
@@ -1809,6 +1844,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedTypeRef.named("UnionNotificationProgress"),
                   GeneratedTypeRef.named("JobStarted"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobPaused",
@@ -1819,6 +1855,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                   GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobEvent",
@@ -1830,12 +1867,14 @@ class KotlinSundayIrGeneratorTest {
                   "started" to GeneratedTypeRef.named("JobStarted"),
                   "paused" to GeneratedTypeRef.named("JobPaused"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventType",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("created", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
@@ -1846,6 +1885,7 @@ class KotlinSundayIrGeneratorTest {
                   GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
               discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "CreatedData",
@@ -1853,6 +1893,7 @@ class KotlinSundayIrGeneratorTest {
               inherits = listOf(GeneratedTypeRef.named("EventData")),
               discriminatorValue = "created",
               properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -1867,6 +1908,7 @@ class KotlinSundayIrGeneratorTest {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1964,6 +2006,7 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("one", "two"),
               enumValueNames = listOf("same", "same"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -1994,6 +2037,7 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("wire"),
               enumValueNames = listOf("123"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -2023,6 +2067,7 @@ class KotlinSundayIrGeneratorTest {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("123"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -2076,6 +2121,7 @@ class KotlinSundayIrGeneratorTest {
               name = "Status",
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("active"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -2270,6 +2316,7 @@ class KotlinSundayIrGeneratorTest {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory:format.yaml"),
             ),
           ),
       )
@@ -2350,18 +2397,21 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.ENUM,
               scope = parameterScope,
               values = listOf("name", "date"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "SearchRequestBody",
               kind = GeneratedModel.Kind.OBJECT,
               scope = requestScope,
               properties = listOf(GeneratedModelProperty("term", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "SearchResponseBody",
               kind = GeneratedModel.Kind.OBJECT,
               scope = responseScope,
               properties = listOf(GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
         services =
@@ -2405,17 +2455,14 @@ class KotlinSundayIrGeneratorTest {
       .generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
-    val source =
-      buildString {
-        FileSpec
-          .get("io.test.service", findType("io.test.service.API", builtTypes))
-          .writeTo(this)
-      }
-
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    findType("io.test.service.API.SearchMode", builtTypes)
-    findType("io.test.service.API.SearchRequestBody", builtTypes)
-    findType("io.test.service.API.SearchResponseBody", builtTypes)
+    findType("io.test.SearchMode", builtTypes)
+    findType("io.test.SearchRequestBody", builtTypes)
+    findType("io.test.SearchResponseBody", builtTypes)
+    val source =
+      listOf("SearchMode", "SearchRequestBody", "SearchResponseBody").joinToString("\n") {
+        CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/$it.kt")
+      }
     assertContains(source, "public enum class SearchMode")
     assertContains(source, "public interface SearchRequestBody")
     assertContains(source, "public interface SearchResponseBody")
@@ -2456,6 +2503,7 @@ class KotlinSundayIrGeneratorTest {
                 listOf(
                   GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = localName,
@@ -2465,6 +2513,7 @@ class KotlinSundayIrGeneratorTest {
                 listOf(
                   GeneratedModelProperty("checkoutId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         services =
@@ -2500,16 +2549,16 @@ class KotlinSundayIrGeneratorTest {
       .generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
-    val source =
-      buildString {
-        FileSpec
-          .get("io.test.service", findType("io.test.service.API", builtTypes))
-          .writeTo(this)
-      }
-
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    findType("io.test.service.API.UpdateWorkingGraphCheckoutTarget400ResponseBody", builtTypes)
-    findType("io.test.service.API.UpdateWorkingGraphCheckoutTarget404ResponseBody", builtTypes)
+    findType("io.test.UpdateWorkingGraphCheckoutTarget400ResponseBody", builtTypes)
+    findType("io.test.UpdateWorkingGraphCheckoutTarget404ResponseBody", builtTypes)
+    val source =
+      listOf(400, 404).joinToString("\n") {
+        CompiledGeneratedSources.source(
+          GeneratedCodeLanguage.Kotlin,
+          "io/test/UpdateWorkingGraphCheckoutTarget${it}ResponseBody.kt",
+        )
+      }
     assertContains(source, "public interface UpdateWorkingGraphCheckoutTarget400ResponseBody")
     assertContains(source, "public interface UpdateWorkingGraphCheckoutTarget404ResponseBody")
   }
@@ -2561,6 +2610,7 @@ class KotlinSundayIrGeneratorTest {
                 mapOf(
                   "kotlinClient" to GeneratedTarget(modelPackageName = "io.example.client"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "UserPreference",
@@ -2571,6 +2621,7 @@ class KotlinSundayIrGeneratorTest {
                   enclosedIn = GeneratedTypeRef.named("UserValue"),
                   name = "Preference",
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "UserPreference-Option",
@@ -2582,12 +2633,14 @@ class KotlinSundayIrGeneratorTest {
                   enclosedIn = GeneratedTypeRef.named("UserPreference"),
                   name = "Option",
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedModel(
               name = "UserPatch",
               kind = GeneratedModel.Kind.OBJECT,
               properties = listOf(GeneratedModelProperty("displayName", GeneratedTypeRef.scalar("string"))),
               patchable = true,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -2635,6 +2688,7 @@ class KotlinSundayIrGeneratorTest {
               name = "Test",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("Test", source = librarySource)),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "main.raml"),
             ),
             GeneratedModel(
               name = "Test",
@@ -2699,6 +2753,7 @@ class KotlinSundayIrGeneratorTest {
                 listOf(
                   GeneratedModelProperty("traceId", GeneratedTypeRef.scalar("string")),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
             GeneratedProblem(
               name = "UnusedProblem",
@@ -2707,6 +2762,7 @@ class KotlinSundayIrGeneratorTest {
               status = 409,
               title = "Unused",
               detail = "Unused problem",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
             ),
           ),
       )
@@ -3392,7 +3448,7 @@ class KotlinSundayIrGeneratorTest {
     val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
     val options =
       KotlinSundayOptions(
-        defaultServicePackageName = "io.test.service",
+        placement = kotlinPlacement("io.test", "io.test.service"),
         defaultProblemBaseUri = "http://example.com/",
         defaultMediaTypes = listOf("application/json"),
         serviceSuffix = "API",
@@ -3421,7 +3477,7 @@ class KotlinSundayIrGeneratorTest {
       api,
       typeRegistry,
       KotlinSundayOptions(
-        defaultServicePackageName = "io.test.service",
+        placement = kotlinPlacement("io.test", "io.test.service"),
         defaultProblemBaseUri = "http://example.com/",
         defaultMediaTypes = listOf("application/json"),
         serviceSuffix = "Broker",
@@ -3594,6 +3650,7 @@ class KotlinSundayIrGeneratorTest {
               listOf(
                 GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
           ),
         ),
     )
@@ -3644,6 +3701,7 @@ class KotlinSundayIrGeneratorTest {
             name = "AvatarContentType",
             kind = GeneratedModel.Kind.ENUM,
             values = listOf("image/png", "image/jpeg", "image/webp"),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
           ),
         ),
     )

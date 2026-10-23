@@ -62,6 +62,7 @@ class NominalScalarIrTest {
         "FactAlias",
         GeneratedModel.Kind.SCALAR_ALIAS,
         aliases = listOf(GeneratedTypeRef.named("BaseFactSid")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "test.yaml"),
       )
     val models = (api.models + alias).associateBy { it.name }
     val nominal = GeneratedNominalTypes { models[it.name] }
@@ -86,6 +87,7 @@ class NominalScalarIrTest {
               "Id",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "test.yaml"),
             ),
           ),
       )

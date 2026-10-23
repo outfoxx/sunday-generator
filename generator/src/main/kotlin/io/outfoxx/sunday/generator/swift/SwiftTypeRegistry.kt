@@ -68,14 +68,15 @@ class SwiftTypeRegistry(
     outputDirectory: Path,
   ) {
 
-    val builtTypes = buildTypes()
+    val builtTypes = buildTypes(selection)
 
     val generatedFiles =
       builtTypes.entries
         .filter { it.key.topLevelTypeName() == it.key }
         .filter { type -> outputOwnership.includes(selection, type.key) }
         .map { (typeName, typeSpec) ->
-          swiftGeneratedFile(typeName, typeSpec) to typeName.outputLocation(typeSpec)
+          swiftGeneratedFile(typeName, typeSpec) to
+            typeName.outputLocation(typeSpec).copy(module = typeName.moduleName.takeIf { it.isNotBlank() })
         }
 
     val generatedPaths =
@@ -104,19 +105,23 @@ class SwiftTypeRegistry(
         else -> TypeOutputLocation()
       }
 
-  fun buildTypes(): Map<DeclaredTypeName, TypeSpec> {
-
-    // Add nested classes to parents
-    typeBuilders.entries
-      .toList()
-      .sortedByDescending { it.key.simpleNames.size }
-      .forEach { (className, typeBuilder) ->
-        // Is this a nested class?
-        val enclosingClassName = className.enclosingTypeName() ?: return@forEach
-        typeBuilders[enclosingClassName]?.addType(typeBuilder.build())
-      }
-
-    return typeBuilders.mapValues { it.value.build() }
+  /** Builds selected declarations after excluding descendants of filtered containers. */
+  fun buildTypes(selection: GeneratedOutputSelection = GeneratedOutputSelection()): Map<DeclaredTypeName, TypeSpec> {
+    // Assemble copies so another output selection cannot inherit previously attached members.
+    val selectedBuilders =
+      typeBuilders
+        .filter { outputOwnership.includes(selection, it.key) }
+        .mapValues { (_, original) ->
+          original.build().toBuilder().apply {
+            // SwiftPoet's toBuilder omits tags carrying file-level functions and extensions.
+            tags.putAll(original.tags)
+          }
+        }
+    selectedBuilders.entries.sortedByDescending { it.key.simpleNames.size }.forEach { (name, builder) ->
+      val enclosing = name.enclosingTypeName() ?: return@forEach
+      selectedBuilders[enclosing]?.addType(builder.build())
+    }
+    return selectedBuilders.mapValues { it.value.build() }
   }
 
   override fun getReferenceType(className: TypeName): TypeName? = referenceTypes[className]
@@ -147,7 +152,7 @@ class SwiftTypeRegistry(
     serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
     if (typeBuilders.putIfAbsent(className, serviceType) != null) {
-      genError("Service type '$className' is already defined")
+      genError("Service type '$className' is already defined by ${outputOwnership.declarationDescription(className)}")
     }
     typeOutputLocations[className] = TypeOutputLocation(group = outputGroup)
   }
@@ -160,7 +165,7 @@ class SwiftTypeRegistry(
     outputGroup: String?,
   ) {
 
-    modelType.addModifiers(PUBLIC)
+    if (io.outfoxx.swiftpoet.Modifier.OPEN !in modelType.build().modifiers) modelType.addModifiers(PUBLIC)
 
     if (options.contains(AddGeneratedHeader) && className.enclosingTypeName() == null) {
       modelType.addDoc(GenerationHeaders.create("${className.simpleName}.swift"))
@@ -170,12 +175,13 @@ class SwiftTypeRegistry(
     modelType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(className, modelType) != null) {
-      genError("Model type '$className' is already defined")
+      genError("Model type '$className' is already defined by ${outputOwnership.declarationDescription(className)}")
     }
     typeOutputLocations[className] = TypeOutputLocation(group = outputGroup, directory = outputDirectory)
   }
 
   private data class TypeOutputLocation(
+    val module: String? = null,
     val group: String? = null,
     val directory: OutputDirectory? = null,
   ) {
@@ -185,6 +191,7 @@ class SwiftTypeRegistry(
       val directorySegment = directory?.path?.takeUnless { it == groupSegment }
       val segments =
         sequenceOf(
+          module,
           groupSegment,
           directorySegment,
         )

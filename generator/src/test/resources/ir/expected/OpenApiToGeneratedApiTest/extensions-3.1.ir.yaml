@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Extensions API"
 source:
   kind: "OPENAPI"
@@ -115,6 +115,7 @@ services:
     tags:
     - "projects"
     - "audit"
+    declarationUri: "SOURCE_LOCATION#/paths/~1projects/post"
   auth:
     zanzibar:
       permission: "project.create"
@@ -131,6 +132,10 @@ services:
       required: true
       defaultValue: "v1"
     sourceUri: "SOURCE_LOCATION"
+  placementTags:
+  - "projects"
+  declarationUris:
+  - "SOURCE_LOCATION#/tags/0"
 problems:
 - name: "InvalidProjectProblem"
   sourceName: "invalid_project"
@@ -189,6 +194,7 @@ problems:
   documentation:
     summary: "Invalid Project"
     description: "Project input is invalid."
+  declarationUri: "SOURCE_LOCATION#/x-sunday-problemTypes/invalid_project"
 auth:
   zanzibar:
     permission: "project.create"
@@ -237,3 +243,5 @@ servers:
     required: true
     defaultValue: "v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

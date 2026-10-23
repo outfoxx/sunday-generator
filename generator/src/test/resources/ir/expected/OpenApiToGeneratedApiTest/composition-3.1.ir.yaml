@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Composition API"
 source:
   kind: "OPENAPI"
@@ -31,6 +31,7 @@ services:
       documentation:
         description: "Work item response."
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1work-items~1%7BitemId%7D/get"
   - id: "getActivity"
     method: "GET"
     path: "/activity"
@@ -44,6 +45,7 @@ services:
       documentation:
         description: "Activity response."
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1activity/get"
   - id: "getInlineActivity"
     method: "GET"
     path: "/activity/inline"
@@ -62,6 +64,7 @@ services:
       documentation:
         description: "Inline activity response."
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1activity~1inline/get"
   media: {}
   servers:
   - url: "https://api.example.com/v1"
@@ -122,6 +125,10 @@ models:
   discriminatorValue: "feature"
 - name: "GetInlineActivityResponseBody"
   kind: "UNION"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/paths/~1activity~1inline/get/responses/200/content/application~1json/schema"
   scope:
     service: "CompositionService"
     operation: "getInlineActivity"
@@ -162,3 +169,5 @@ media: {}
 servers:
 - url: "https://api.example.com/v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

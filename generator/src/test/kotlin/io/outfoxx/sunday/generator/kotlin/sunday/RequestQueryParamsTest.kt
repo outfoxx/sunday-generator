@@ -43,7 +43,6 @@ class RequestQueryParamsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -73,7 +72,6 @@ class RequestQueryParamsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -104,7 +102,6 @@ class RequestQueryParamsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),

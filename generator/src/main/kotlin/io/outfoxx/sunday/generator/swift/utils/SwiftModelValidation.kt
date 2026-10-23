@@ -26,6 +26,7 @@ import io.outfoxx.swiftpoet.DATA
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FunctionSpec
 import io.outfoxx.swiftpoet.Modifier.INOUT
+import io.outfoxx.swiftpoet.Modifier.OPEN
 import io.outfoxx.swiftpoet.Modifier.OVERRIDE
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.Modifier.STATIC
@@ -41,9 +42,7 @@ internal object SwiftModelValidation {
   val validatable = DeclaredTypeName.typeName("Sunday.ModelValidatable")
   private val validator = DeclaredTypeName.typeName("Sunday.ModelValidator")
 
-  fun name(type: DeclaredTypeName): DeclaredTypeName =
-    type.enclosingTypeName()?.nestedType("${type.simpleName}Validation")
-      ?: DeclaredTypeName.typeName("${type.moduleName}.${type.simpleName}Validation")
+  fun name(type: DeclaredTypeName): DeclaredTypeName = type.peerType("${type.simpleName}Validation")
 
   fun type(
     name: DeclaredTypeName,
@@ -65,8 +64,9 @@ internal object SwiftModelValidation {
   fun instance(
     validatorName: DeclaredTypeName,
     override: Boolean = false,
+    open: Boolean = false,
   ): FunctionSpec =
-    function()
+    function(open = open)
       .apply { if (override) addModifiers(OVERRIDE) }
       .addStatement("return %T.isValid(self, mode, context: &context)", validatorName)
       .build()
@@ -75,10 +75,11 @@ internal object SwiftModelValidation {
     valueType: TypeName? = null,
     valueName: String = "value",
     valueLabel: String = "_",
+    open: Boolean = false,
   ): FunctionSpec.Builder =
     FunctionSpec
       .builder("isValid")
-      .addModifiers(PUBLIC)
+      .addModifiers(if (open) OPEN else PUBLIC)
       .addDoc("Checks the schema once using the caller's wire paths and traversal state.\n")
       .apply { valueType?.let { addParameter(valueLabel, valueName, it) } }
       .addParameter("_", "mode", mode)

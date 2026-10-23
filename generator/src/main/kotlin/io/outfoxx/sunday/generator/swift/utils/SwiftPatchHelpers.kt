@@ -35,6 +35,10 @@ internal class SwiftPatchHelpers(
   private val models: List<GeneratedModel>,
   private val typeName: (GeneratedModel) -> DeclaredTypeName,
 ) {
+  private val index =
+    io.outfoxx.sunday.generator.ir.emit
+      .GeneratedModelIndex(models)
+
   val enabled = models.any { it.patchOf != null }
   private val names =
     NameAllocator().apply {
@@ -49,7 +53,7 @@ internal class SwiftPatchHelpers(
   private val factoryName = names.newName("fromModel")
 
   private fun supportName(model: GeneratedModel): DeclaredTypeName {
-    val original = model.patchOf?.name?.let { name -> models.single { it.name == name } } ?: model
+    val original = model.patchOf?.let { requireNotNull(index.modelOrNull(it)) } ?: model
     return typeName(original).nestedType("MergePatchSupport")
   }
 
@@ -59,7 +63,7 @@ internal class SwiftPatchHelpers(
     valueType: Boolean,
   ) {
     val supportName = supportName(model)
-    val patch = models.singleOrNull { it.patchOf?.name == model.name }
+    val patch = models.singleOrNull { it.patchOf?.let(index::modelOrNull) == model }
     val tag = patch?.properties?.firstOrNull { it.patchDiscriminator }?.let { it.serializationName ?: it.name }
     val tagCode = tag?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil")
     if (patch != null) {
@@ -91,7 +95,7 @@ internal class SwiftPatchHelpers(
           .build(),
       )
     }
-    val original = models.singleOrNull { it.name == model.patchOf?.name }
+    val original = model.patchOf?.let(index::modelOrNull)
     if (original != null) {
       builder.addFunction(
         FunctionSpec

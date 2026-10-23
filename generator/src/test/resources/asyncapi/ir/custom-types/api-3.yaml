@@ -43,7 +43,7 @@ components:
       x-sunday-kotlinType: io.example.Identifier
       x-sunday-swiftType: DomainIdentifier
       x-sunday-typeScriptType: DomainIdentifier
-      x-sunday-typeScriptModule: './domain.js'
+      x-sunday-typeScriptImport: './domain.js'
       x-sunday-pythonType: test_api.domain.Identifier
     Identifiers:
       type: array
@@ -51,7 +51,7 @@ components:
       minItems: 1
       maxItems: 2
       x-sunday-typeScriptType: DomainIdentifiers
-      x-sunday-typeScriptModule: './domain.js'
+      x-sunday-typeScriptImport: './domain.js'
     Record:
       type: object
       required: [id]

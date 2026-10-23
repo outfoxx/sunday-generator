@@ -49,21 +49,6 @@ abstract class KotlinGenerateCommand(
     val impliedRegistryOptions = setOf(AddGeneratedAnnotation)
   }
 
-  val packageName by option(
-    "-pkg",
-    help = "Default package",
-  )
-
-  val modelPackageName by option(
-    "-model-pkg",
-    help = "Default model package, if not specified '-pkg' is used",
-  )
-
-  val servicePackageName by option(
-    "-service-pkg",
-    help = "Default service package, if not specified '-pkg' is used",
-  )
-
   val registryOptions by flags<KotlinTypeRegistry.Option> {
     ImplementModel to "Generate classes for model types, instead of interfaces".default(true)
     JacksonAnnotations to "Add Jackson annotations to model classes".default(true)
@@ -136,7 +121,6 @@ abstract class KotlinGenerateCommand(
 
   val typeRegistry: KotlinTypeRegistry by lazy {
     KotlinTypeRegistry(
-      modelPackageName ?: packageName,
       generatedAnnotationName,
       mode,
       allRegistryOptions(),

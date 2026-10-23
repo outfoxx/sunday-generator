@@ -35,7 +35,7 @@ class TypeScriptServiceModulePathTest {
   }
 
   @Test
-  fun `resolveServiceModulePath strips ts extension when module annotation points to a file`() {
-    assertEquals("explicit/client", resolveServiceModulePath("FacadeAPI", "explicit/client.ts"))
+  fun `resolveServiceModulePath retains ts suffix as part of a directory`() {
+    assertEquals("explicit/client.ts/facade-api", resolveServiceModulePath("FacadeAPI", "explicit/client.ts"))
   }
 }

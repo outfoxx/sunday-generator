@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.patchableApi
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -126,7 +127,7 @@ class PythonPatchableTypesTest : PythonTest() {
     val modules =
       PythonSundayIrGenerator(
         GeneratedApiIrExporter().export(sources),
-        PythonGeneratorOptions(packageName = "test_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("test_api")),
       ).generateModules(
         GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
       )
@@ -192,7 +193,7 @@ class PythonPatchableTypesTest : PythonTest() {
     val modules =
       PythonLitestarIrGenerator(
         api.copy(services = listOf(service)),
-        PythonGeneratorOptions(packageName = "test_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("test_api")),
       ).generateModules(
         GeneratedOutputSelection(
           GeneratedTypeCategory.entries.toSet(),
@@ -269,10 +270,12 @@ class PythonPatchableTypesTest : PythonTest() {
   ) {
     val patchName = if (frontend == "composed-collisions") "SomeRequestPatch2" else "SomeRequestPatch"
     val modules =
-      PythonSundayIrGenerator(patchableApi(frontend, directory), PythonGeneratorOptions(packageName = "test_api"))
-        .generateModules(
-          GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
-        )
+      PythonSundayIrGenerator(
+        patchableApi(frontend, directory),
+        PythonGeneratorOptions(placement = pythonPlacement("test_api")),
+      ).generateModules(
+        GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
+      )
     assertTrue(
       compileModules(
         compiler,

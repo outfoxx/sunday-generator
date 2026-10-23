@@ -44,3 +44,15 @@ fun GeneratedModelProperty.target(
   preferred: String,
   fallback: String,
 ): GeneratedTarget? = targets[preferred] ?: targets[fallback]
+
+/** Returns resolved placement and external-type metadata for a service. */
+fun io.outfoxx.sunday.generator.ir.GeneratedService.target(
+  preferred: String,
+  fallback: String,
+): GeneratedTarget? = targets[preferred] ?: targets[fallback]
+
+/** Returns resolved placement and external-type metadata for a problem declaration. */
+fun io.outfoxx.sunday.generator.ir.GeneratedProblem.target(
+  preferred: String,
+  fallback: String,
+): GeneratedTarget? = targets[preferred] ?: targets[fallback]

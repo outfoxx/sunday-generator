@@ -175,6 +175,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("pending", "running", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -260,6 +261,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("started", "paused", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobProgress",
@@ -271,6 +273,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobStarted",
@@ -281,6 +284,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobPaused",
@@ -291,6 +295,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                   GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobEvent",
@@ -302,6 +307,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
                   "started" to GeneratedTypeRef.named("JobStarted"),
                   "paused" to GeneratedTypeRef.named("JobPaused"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -339,6 +345,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("created", "unknown"),
               unknownValue = "unknown",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
@@ -349,6 +356,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
                   GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
                 ),
               discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "CreatedData",
@@ -359,6 +367,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -387,6 +396,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
           ),
       )
@@ -480,6 +490,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
               kind = GeneratedModel.Kind.ENUM,
               values = listOf("wire"),
               enumValueNames = listOf("123"),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

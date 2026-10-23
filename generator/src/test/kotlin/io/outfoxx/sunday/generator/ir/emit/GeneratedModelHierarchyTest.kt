@@ -31,11 +31,29 @@ class GeneratedModelHierarchyTest {
         "Pet",
         GeneratedModel.Kind.OBJECT,
         discriminatorMappings = mapOf("cat" to GeneratedTypeRef.named("WrappedCat")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
-    val cat = GeneratedModel("Cat", GeneratedModel.Kind.OBJECT, inherits = listOf(GeneratedTypeRef.named("Pet")))
+    val cat =
+      GeneratedModel(
+        "Cat",
+        GeneratedModel.Kind.OBJECT,
+        inherits = listOf(GeneratedTypeRef.named("Pet")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val wrapped =
-      GeneratedModel("WrappedCat", GeneratedModel.Kind.OBJECT, inherits = listOf(GeneratedTypeRef.named("Cat")))
-    val other = GeneratedModel("OtherCat", GeneratedModel.Kind.OBJECT, inherits = listOf(GeneratedTypeRef.named("Cat")))
+      GeneratedModel(
+        "WrappedCat",
+        GeneratedModel.Kind.OBJECT,
+        inherits = listOf(GeneratedTypeRef.named("Cat")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
+    val other =
+      GeneratedModel(
+        "OtherCat",
+        GeneratedModel.Kind.OBJECT,
+        inherits = listOf(GeneratedTypeRef.named("Cat")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val models = listOf(root, cat, wrapped, other)
     val index =
       GeneratedApiIndex(

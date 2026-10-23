@@ -45,6 +45,7 @@ class GeneratedOutputReplacementTest {
     directory.resolve("api.yaml").writeText(
       """
       openapi: 3.1.0
+      x-sunday-placement: {kotlin: {package: com.example}}
       info: {title: Items, version: 1.0.0}
       paths: {}
       components:
@@ -97,6 +98,7 @@ class GeneratedOutputReplacementTest {
     source.writeText(
       """
       openapi: 3.1.0
+      x-sunday-placement: {kotlin: {package: com.example}}
       info: {title: Items, version: 1.0.0}
       paths: {}
       components:
@@ -173,7 +175,10 @@ class GeneratedOutputReplacementTest {
             source.set(files('api.yaml'))
             framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
             mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
-            pkgName.set(generation == 'changing' ? 'test.before' : 'test.independent')
+            placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+              text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': generation == 'changing' ? 'test.before' : 'test.independent']]])
+              it
+            })
             outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
             disableJacksonAnnotations.set(true)
             disableValidationConstraints.set(true)
@@ -202,7 +207,8 @@ class GeneratedOutputReplacementTest {
         .create()
         .withProjectDir(directory)
         .withPluginClasspath()
-        .withArguments("classes", "--max-workers=2", "--stacktrace")
+        // Each invocation must observe the build script rewritten immediately above it.
+        .withArguments("classes", "--max-workers=2", "--stacktrace", "--no-watch-fs")
     runner().build()
     build.writeText(build.readText().replace("test.before", "test.after"))
     runner().build()

@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Target Overrides API"
 source:
   kind: "RAML"
@@ -23,6 +23,9 @@ services:
       type:
         kind: "NAMED"
         name: "User"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     media:
@@ -30,15 +33,42 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1users~1%7BuserId%7D/get"
   media:
     request:
     - "application/json"
     response:
     - "application/json"
+  placementScopes:
+  - declarationUri: "SOURCE_LOCATION"
+    placement:
+      kotlin:
+        packageName: "io.example.api"
+        models:
+          packageName: "io.example.models"
+        client:
+          packageName: "io.example.client"
+          models:
+            packageName: "io.example.client.models"
+        server:
+          packageName: "io.example.server"
+          models:
+            packageName: "io.example.server.models"
+      swift:
+        module: "TargetAPI"
+        models:
+          module: "TargetModels"
+      typescript:
+        module: "services"
+        models:
+          module: "models"
 models:
 - name: "User"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fusers%2F%7BuserId%7D/supportedOperation/get/returns/resp/200/payload/default/shape/default/inherits/shape/User"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/User"
   properties:
   - name: "id"
     type:
@@ -95,31 +125,86 @@ models:
             value: "-display"
   targets:
     kotlin:
-      modelPackageName: "io.example.custom.models"
       typeName: "io.example.custom.UserValue"
     kotlinClient:
-      modelPackageName: "io.example.custom.models"
       typeName: "io.example.client.UserValue"
     kotlinServer:
-      modelPackageName: "io.example.custom.models"
       typeName: "io.example.server.UserValue"
     swift:
-      modelModuleName: "UserModels"
       typeName: "UserModels.UserValue"
     typescript:
-      modelModuleName: "user-models"
       typeName: "UserValue"
+  placementScopes:
+  - declarationUri: "SOURCE_LOCATION"
+    placement:
+      kotlin:
+        packageName: "io.example.api"
+        models:
+          packageName: "io.example.models"
+        client:
+          packageName: "io.example.client"
+          models:
+            packageName: "io.example.client.models"
+        server:
+          packageName: "io.example.server"
+          models:
+            packageName: "io.example.server.models"
+      swift:
+        module: "TargetAPI"
+        models:
+          module: "TargetModels"
+      typescript:
+        module: "services"
+        models:
+          module: "models"
+  - declarationUri: "SOURCE_LOCATION#/types/User"
+    placement:
+      kotlin:
+        packageName: "io.example.custom.models"
+      swift:
+        module: "UserModels"
+      typescript:
+        module: "user-models"
 - name: "UserPatch"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/declares/shape/UserPatch"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/UserPatch"
   properties:
   - name: "displayName"
     type:
       kind: "SCALAR"
       name: "string"
+  placementScopes:
+  - declarationUri: "SOURCE_LOCATION"
+    placement:
+      kotlin:
+        packageName: "io.example.api"
+        models:
+          packageName: "io.example.models"
+        client:
+          packageName: "io.example.client"
+          models:
+            packageName: "io.example.client.models"
+        server:
+          packageName: "io.example.server"
+          models:
+            packageName: "io.example.server.models"
+      swift:
+        module: "TargetAPI"
+        models:
+          module: "TargetModels"
+      typescript:
+        module: "services"
+        models:
+          module: "models"
 - name: "UserPreference"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/declares/shape/UserPreference"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/UserPreference"
   properties:
   - name: "theme"
     type:
@@ -131,9 +216,35 @@ models:
       kind: "NAMED"
       name: "User"
     name: "Preference"
+  placementScopes:
+  - declarationUri: "SOURCE_LOCATION"
+    placement:
+      kotlin:
+        packageName: "io.example.api"
+        models:
+          packageName: "io.example.models"
+        client:
+          packageName: "io.example.client"
+          models:
+            packageName: "io.example.client.models"
+        server:
+          packageName: "io.example.server"
+          models:
+            packageName: "io.example.server.models"
+      swift:
+        module: "TargetAPI"
+        models:
+          module: "TargetModels"
+      typescript:
+        module: "services"
+        models:
+          module: "models"
 - name: "UserPreference-Option"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/declares/shape/UserPreference-Option"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/UserPreference-Option"
   properties:
   - name: "value"
     type:
@@ -146,9 +257,35 @@ models:
       kind: "NAMED"
       name: "UserPreference"
     name: "Option"
+  placementScopes:
+  - declarationUri: "SOURCE_LOCATION"
+    placement:
+      kotlin:
+        packageName: "io.example.api"
+        models:
+          packageName: "io.example.models"
+        client:
+          packageName: "io.example.client"
+          models:
+            packageName: "io.example.client.models"
+        server:
+          packageName: "io.example.server"
+          models:
+            packageName: "io.example.server.models"
+      swift:
+        module: "TargetAPI"
+        models:
+          module: "TargetModels"
+      typescript:
+        module: "services"
+        models:
+          module: "models"
 - name: "UserPatchPatch"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/declares/shape/UserPatch"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/UserPatch"
   properties:
   - name: "displayName"
     type:
@@ -160,24 +297,56 @@ models:
   patchOf:
     kind: "NAMED"
     name: "UserPatch"
+  placementScopes:
+  - declarationUri: "SOURCE_LOCATION"
+    placement:
+      kotlin:
+        packageName: "io.example.api"
+        models:
+          packageName: "io.example.models"
+        client:
+          packageName: "io.example.client"
+          models:
+            packageName: "io.example.client.models"
+        server:
+          packageName: "io.example.server"
+          models:
+            packageName: "io.example.server.models"
+      swift:
+        module: "TargetAPI"
+        models:
+          module: "TargetModels"
+      typescript:
+        module: "services"
+        models:
+          module: "models"
 media:
   request:
   - "application/json"
   response:
   - "application/json"
-targets:
-  kotlin:
-    packageName: "io.example.api"
-    modelPackageName: "io.example.models"
-  kotlinClient:
-    packageName: "io.example.client"
-    modelPackageName: "io.example.client.models"
-  kotlinServer:
-    packageName: "io.example.server"
-    modelPackageName: "io.example.server.models"
-  swift:
-    moduleName: "TargetAPI"
-    modelModuleName: "TargetModels"
-  typescript:
-    moduleName: "services"
-    modelModuleName: "models"
+placementConfiguration:
+  defaults: {}
+placementScopes:
+- declarationUri: "SOURCE_LOCATION"
+  placement:
+    kotlin:
+      packageName: "io.example.api"
+      models:
+        packageName: "io.example.models"
+      client:
+        packageName: "io.example.client"
+        models:
+          packageName: "io.example.client.models"
+      server:
+        packageName: "io.example.server"
+        models:
+          packageName: "io.example.server.models"
+    swift:
+      module: "TargetAPI"
+      models:
+        module: "TargetModels"
+    typescript:
+      module: "services"
+      models:
+        module: "models"

@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.SwiftTest
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
@@ -49,6 +50,7 @@ class SwiftSundayIrNumericTest : SwiftSundayIrTestSupport() {
       name,
       GeneratedModel.Kind.OBJECT,
       properties = listOf(GeneratedModelProperty("value", type, validation = validation)),
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
     val base = model("WideBase", validation = emptyMap())
     val api =
@@ -59,13 +61,20 @@ class SwiftSundayIrNumericTest : SwiftSundayIrTestSupport() {
               "WideNumber",
               GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("number")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
-            GeneratedModel("WideNumbers", GeneratedModel.Kind.ARRAY, aliases = array.arguments),
+            GeneratedModel(
+              "WideNumbers",
+              GeneratedModel.Kind.ARRAY,
+              aliases = array.arguments,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
             GeneratedModel(
               "WideSet",
               GeneratedModel.Kind.ARRAY,
               aliases = listOf(number),
               collection = io.outfoxx.sunday.generator.ir.GeneratedCollectionKind.SET,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             base,
             model(
@@ -212,6 +221,7 @@ class SwiftSundayIrNumericTest : SwiftSundayIrTestSupport() {
               validation = mapOf("multipleOf" to "1e-128"),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     generateSwiftSundayFiles(compiler, fixture.copy(models = fixture.models + tiny))
     Files.createDirectories(compiler.testsDir)

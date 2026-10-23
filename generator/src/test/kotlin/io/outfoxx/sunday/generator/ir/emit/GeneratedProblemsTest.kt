@@ -104,7 +104,7 @@ class GeneratedProblemsTest {
     name: String,
     sourceName: String?,
     typeUri: String,
-    source: GeneratedSourceSpec? = null,
+    source: GeneratedSourceSpec = source("api.raml"),
   ) = GeneratedProblem(
     name = name,
     sourceName = sourceName,

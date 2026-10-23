@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Repo Path Parameters API"
 source:
   kind: "OPENAPI"
@@ -31,6 +31,7 @@ services:
       documentation:
         description: "Repository response."
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1repos~1%7BrepoId%7D/get"
   - id: "getBranch"
     method: "GET"
     path: "/repos/{repoId}/branches/{branchId}"
@@ -61,6 +62,7 @@ services:
       documentation:
         description: "Branch response."
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1repos~1%7BrepoId%7D~1branches~1%7BbranchId%7D/get"
   media: {}
   servers:
   - url: "https://api.example.com/v1"
@@ -94,3 +96,5 @@ media: {}
 servers:
 - url: "https://api.example.com/v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

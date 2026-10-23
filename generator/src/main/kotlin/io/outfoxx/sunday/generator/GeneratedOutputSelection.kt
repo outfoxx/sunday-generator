@@ -26,6 +26,10 @@ class GeneratedOutputSelection(
   /** Canonical absolute document identities; source fragments never identify owners. */
   val ownerUris: Set<URI> = ownerUris.map(GeneratedDocumentUri::canonical).toSet()
 
+  /** Selects a declaration only when all of its enclosing declarations are also selected. */
+  fun includes(origin: GeneratedOutputOrigin): Boolean =
+    (origin.enclosing?.let(::includes) != false) && includes(origin.category, origin.ownerUris)
+
   /** Tests the category before resolving ownership. */
   fun includes(
     category: GeneratedTypeCategory,

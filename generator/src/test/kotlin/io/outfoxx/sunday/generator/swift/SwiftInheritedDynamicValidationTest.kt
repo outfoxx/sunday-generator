@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -62,6 +63,7 @@ class SwiftInheritedDynamicValidationTest {
             GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), allowedValues = listOf("only")),
             GeneratedModelProperty("items", array, validation = mapOf("minItems" to "1")),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val solo =
       soloBase.copy(
@@ -76,6 +78,7 @@ class SwiftInheritedDynamicValidationTest {
         GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("label", GeneratedTypeRef.scalar("string"), required = false)),
         additionalProperties = GeneratedAdditionalProperties(type = GeneratedTypeRef.named(solo.name)),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val registry = SwiftTypeRegistry(setOf())
     val first =
@@ -86,6 +89,7 @@ class SwiftInheritedDynamicValidationTest {
           listOf(
             GeneratedModelProperty("items", array, required = true, validation = mapOf("minItems" to "1")),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val second =
       first.copy(
@@ -101,6 +105,7 @@ class SwiftInheritedDynamicValidationTest {
         GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("foo", GeneratedTypeRef.named(first.name), required = true)),
         patternProperties = listOf(GeneratedPatternProperty("^foo$", GeneratedTypeRef.named(second.name))),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     SwiftSundayIrGenerator(
       source.copy(

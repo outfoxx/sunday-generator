@@ -160,7 +160,7 @@ class AsyncApiCustomTypeMappingTest {
   @ValueSource(
     strings = [
       "kotlinType", "kotlinType:client", "kotlinType:server", "swiftType",
-      "typeScriptType", "pythonType", "typeScriptModule",
+      "typeScriptType", "pythonType", "typeScriptImport",
     ],
   )
   fun `rejects invalid mapping metadata`(

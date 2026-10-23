@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Security JAXRS Metadata API"
 source:
   kind: "RAML"
@@ -22,6 +22,9 @@ services:
       type:
         kind: "NAMED"
         name: "ProjectCreate"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     responses:
@@ -29,6 +32,9 @@ services:
       type:
         kind: "NAMED"
         name: "Project"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     auth:
@@ -83,6 +89,7 @@ services:
       context:
       - "uriInfo"
       - "securityContext"
+    declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/post"
   media:
     request:
     - "application/json"
@@ -91,7 +98,10 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/post/returns/resp/202/payload/application%2Fjson/shape/schema/inherits/shape/Project"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Project"
   properties:
   - name: "id"
     type:
@@ -100,7 +110,10 @@ models:
     required: true
 - name: "ProjectCreate"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/post/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectCreate"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectCreate"
   properties:
   - name: "name"
     type:
@@ -112,3 +125,5 @@ media:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

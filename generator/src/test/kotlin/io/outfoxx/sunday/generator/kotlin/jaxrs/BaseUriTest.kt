@@ -42,7 +42,7 @@ class BaseUriTest {
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, Client, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, Client, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
@@ -67,7 +67,7 @@ class BaseUriTest {
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, Server, setOf())
 
     val builtTypes =
       generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)

@@ -38,18 +38,40 @@ internal class PythonClientConfigurations(
   /** Emits shared configuration types once per API package. */
   fun configurations(plans: List<GeneratedClientConfiguration>): PythonModule {
     val module = PythonModuleBuilder("$packageName/config.py")
-    module.addCode(
-      PythonCodeBlock.of(
-        "%L",
-        "from dataclasses import dataclass, field\nfrom typing import Literal\nfrom sunday import ClientSettings",
-      ),
-    )
+    module.addImport(PythonSymbol("dataclasses", "dataclass"))
+    module.addImport(PythonSymbol("dataclasses", "field"))
+    module.addImport(PythonSymbol("typing", "Literal"))
+    module.addImport(PythonSymbol("sunday", "ClientSettings"))
     if (plans.any { it.variables.isNotEmpty() }) {
-      module.addCode(PythonCodeBlock.of("from pydantic import TypeAdapter"))
+      module.addImport(PythonSymbol("pydantic", "TypeAdapter"))
     }
-    if (plans.any { plan -> plan.variables.any { it.type.kind == GeneratedTypeRef.Kind.NAMED } }) {
-      module.addCode(PythonCodeBlock.of("from . import models as _models"))
-    }
+    val index =
+      io.outfoxx.sunday.generator.ir.emit
+        .GeneratedApiIndex(api)
+    val variables =
+      plans
+        .flatMap {
+          it.variables
+        }.map { it.type }
+        .filter { it.kind == GeneratedTypeRef.Kind.NAMED }
+        .distinct()
+    val variableTypes =
+      variables
+        .mapIndexed { position, reference ->
+          val owner =
+            requireNotNull(index.modelOrNull(reference)) { "Unknown server variable type '${reference.name}'" }
+          val alias =
+            if (owner.pythonModule(packageName) == "$packageName.config") {
+              reference.name.pythonTypeName
+            } else {
+              "_ServerVariable$position"
+            }
+          module.addImport(PythonSymbol(owner.pythonModule(packageName), reference.name.pythonTypeName, alias))
+          reference to alias
+        }.toMap()
+
+    fun type(reference: GeneratedTypeRef) = variableTypes[reference] ?: this@PythonClientConfigurations.type(reference)
+
     plans.forEach { plan ->
       module.addExport(plan.name)
       val code =
@@ -102,7 +124,7 @@ internal class PythonClientConfigurations(
             "        return ClientSettings.server_url(${plan.server.url.pythonStringLiteral()}, {$variables}, $document)",
           )
         }
-      module.addCode(PythonCodeBlock.of("%L", code))
+      module.addCode(PythonCodeBlock.of("%L", code.trim()))
     }
     return module.build()
   }
@@ -162,7 +184,17 @@ internal class PythonClientConfigurations(
             "from sunday import ${(credentialTypes + "ProviderCredentials").sorted().joinToString(", ")}",
           )
         }
-        appendLine("from .config import ${applicable.joinToString(", ") { it.name }}")
+        val configModule =
+          if (module.path.substringBeforeLast('/') ==
+            packageName.replace('.', '/')
+          ) {
+            ".config"
+          } else {
+            "$packageName.config"
+          }
+        if (module.path != "${packageName.replace('.', '/')}/config.py") {
+          appendLine("from $configModule import ${applicable.joinToString(", ") { it.name }}")
+        }
       }
     val code =
       buildString {
@@ -296,7 +328,16 @@ internal class PythonClientConfigurations(
         "from __future__ import annotations\n",
         "from __future__ import annotations\n\n$imports",
       )
-    return module.copy(source = source + code)
+    return module.copy(source = source + code).also { combined ->
+      combined.content =
+        module.content?.let { content ->
+          content.copy(
+            headers = content.headers + imports.trimEnd(),
+            blocks =
+              content.blocks + PythonCodeBlock.of("%L", code.trim()),
+          )
+        }
+    }
   }
 
   private fun credentialType(
@@ -361,7 +402,7 @@ internal class PythonClientConfigurations(
 
   private fun type(type: GeneratedTypeRef): String =
     when (type.kind) {
-      GeneratedTypeRef.Kind.NAMED -> "_models.${type.name.pythonTypeName}"
+      GeneratedTypeRef.Kind.NAMED -> error("Unbound server variable type: ${type.name}")
       else ->
         when (type.name) {
           "integer" -> "int"

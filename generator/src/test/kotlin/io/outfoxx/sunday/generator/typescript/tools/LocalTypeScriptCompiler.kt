@@ -67,6 +67,7 @@ class LocalTypeScriptCompiler(
       return compileResult to compileOutput
     }
 
+    copyJavaScriptDependencies()
     val (executionResult, executionOutput) =
       // Bundler-style fixtures emit CommonJS; select Sunday's ESM export under Node's require(ESM) support.
       executeCommand(listOf("node", "--conditions=import", outputDir.resolve("$modulePath.js").toString()))

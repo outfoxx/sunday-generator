@@ -44,7 +44,6 @@ class RequestMixedParamsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),
@@ -74,7 +73,6 @@ class RequestMixedParamsTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(),

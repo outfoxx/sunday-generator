@@ -4,26 +4,41 @@ uses:
   sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
 mediaType:
 - application/json
-(sunday.kotlinPackage): io.example.api
-(sunday.kotlinPackage:client): io.example.client
-(sunday.kotlinPackage:server): io.example.server
-(sunday.kotlinModelPackage): io.example.models
-(sunday.kotlinModelPackage:client): io.example.client.models
-(sunday.kotlinModelPackage:server): io.example.server.models
-(sunday.swiftModule): TargetAPI
-(sunday.swiftModelModule): TargetModels
-(sunday.typeScriptModule): services
-(sunday.typeScriptModelModule): models
+(sunday.placement):
+  kotlin:
+    package: io.example.api
+    client:
+      package: io.example.client
+      models:
+        package: io.example.client.models
+    server:
+      package: io.example.server
+      models:
+        package: io.example.server.models
+    models:
+      package: io.example.models
+  swift:
+    module: TargetAPI
+    models:
+      module: TargetModels
+  typescript:
+    module: services
+    models:
+      module: models
 
 types:
   User:
-    (sunday.kotlinModelPackage): io.example.custom.models
+    (sunday.placement):
+      kotlin:
+        package: io.example.custom.models
+      swift:
+        module: UserModels
+      typescript:
+        module: user-models
     (sunday.kotlinType): io.example.custom.UserValue
     (sunday.kotlinType:client): io.example.client.UserValue
     (sunday.kotlinType:server): io.example.server.UserValue
-    (sunday.swiftModelModule): UserModels
     (sunday.swiftType): UserModels.UserValue
-    (sunday.typeScriptModelModule): user-models
     (sunday.typeScriptType): UserValue
     type: object
     properties:

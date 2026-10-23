@@ -56,12 +56,14 @@ class GeneratedDiscriminatorFallbackTest {
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "JobStarted",
               kind = GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("JobProgress")),
               discriminatorValue = "started",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -96,12 +98,14 @@ class GeneratedDiscriminatorFallbackTest {
           ),
         discriminator = "phase",
         discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val started =
       GeneratedModel(
         name = "JobStarted",
         kind = GeneratedModel.Kind.OBJECT,
         inherits = listOf(GeneratedTypeRef.named("JobProgress")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val fallback = hierarchy.discriminatorFallbackOrNull(index(phase, hierarchy, started))!!
 
@@ -120,6 +124,7 @@ class GeneratedDiscriminatorFallbackTest {
         kind = GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true)),
         discriminator = "phase",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
 
     assertNull(hierarchy.discriminatorFallbackOrNull(index(phase, hierarchy)))
@@ -135,6 +140,7 @@ class GeneratedDiscriminatorFallbackTest {
         properties = listOf(GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true)),
         discriminator = "phase",
         discriminatorMappings = mapOf("unknown" to GeneratedTypeRef.named("JobProgressUnknown")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
 
     val error =
@@ -154,8 +160,14 @@ class GeneratedDiscriminatorFallbackTest {
         kind = GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true)),
         discriminator = "phase",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
-    val collidingModel = GeneratedModel(name = "JobProgressUnknown", kind = GeneratedModel.Kind.OBJECT)
+    val collidingModel =
+      GeneratedModel(
+        name = "JobProgressUnknown",
+        kind = GeneratedModel.Kind.OBJECT,
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
 
     val error =
       assertThrows(GenerationException::class.java) {
@@ -172,6 +184,7 @@ class GeneratedDiscriminatorFallbackTest {
       values = listOf("started", "unknown"),
       enumValueNames = listOf("Started", "Unknown"),
       unknownValue = "unknown",
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
     )
 
   private fun index(vararg models: GeneratedModel) =

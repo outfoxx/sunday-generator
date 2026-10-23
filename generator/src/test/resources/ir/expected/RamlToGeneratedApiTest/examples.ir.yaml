@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Examples API"
 source:
   kind: "RAML"
@@ -27,6 +27,9 @@ services:
       type:
         kind: "NAMED"
         name: "ProjectCreate"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
       examples:
@@ -40,6 +43,9 @@ services:
       type:
         kind: "NAMED"
         name: "Project"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
       examples:
@@ -54,6 +60,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects/post"
   media:
     request:
     - "application/json"
@@ -62,7 +69,10 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/returns/resp/201/payload/application%2Fjson/shape/schema/inherits/shape/Project"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Project"
   properties:
   - name: "id"
     type:
@@ -85,7 +95,10 @@ models:
     strict: true
 - name: "ProjectCreate"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects/supportedOperation/post/expects/request/payload/application%2Fjson/shape/schema/inherits/shape/ProjectCreate"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/ProjectCreate"
   properties:
   - name: "name"
     type:
@@ -97,3 +110,5 @@ media:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

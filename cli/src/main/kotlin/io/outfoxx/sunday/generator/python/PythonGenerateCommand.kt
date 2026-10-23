@@ -33,12 +33,6 @@ abstract class PythonGenerateCommand(
 
   protected abstract val generationMode: GenerationMode
 
-  val packageName by option(
-    "-package",
-    "-pkg",
-    help = "Python package directory name",
-  )
-
   val aggregateServices by option(
     "-aggregate-services",
     "-aggregate",
@@ -58,6 +52,7 @@ abstract class PythonGenerateCommand(
   protected fun exportApi(): GeneratedApiIrExport =
     GeneratedApiIrExporter(
       GeneratedApiIrOptions(
+        placement = placementConfiguration(),
         openApiReferences = openApiReferenceOptions(),
         deriveServicesFromTags = servicesFromTags,
         autoPatchable = autoPatchable,
@@ -65,9 +60,8 @@ abstract class PythonGenerateCommand(
       ),
     ).exportWithIdentity(files.map { file -> GeneratedApiIrSource(file.toURI()) })
 
-  protected fun pythonOptions(export: GeneratedApiIrExport): PythonGeneratorOptions =
+  protected fun pythonOptions(): PythonGeneratorOptions =
     PythonGeneratorOptions(
-      packageName = packageName ?: export.apiId.id,
       aggregateServices = aggregateServices,
       aggregateServiceName = aggregateServiceName,
       generateBrokerServices = generateBrokerServices,

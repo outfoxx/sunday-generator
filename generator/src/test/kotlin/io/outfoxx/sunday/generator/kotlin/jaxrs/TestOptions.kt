@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 
 val kotlinJAXRSTestOptions =
   KotlinJAXRSOptions(
@@ -26,7 +27,7 @@ val kotlinJAXRSTestOptions =
     false,
     null,
     false,
-    "io.test.service",
+    kotlinPlacement("io.test", "io.test.service"),
     "http://example.com/",
     listOf("application/json"),
     "API",

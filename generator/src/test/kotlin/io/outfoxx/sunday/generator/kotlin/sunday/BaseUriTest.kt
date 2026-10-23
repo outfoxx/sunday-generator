@@ -45,7 +45,6 @@ class BaseUriTest {
 
     val typeRegistry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         Client,
         setOf(),

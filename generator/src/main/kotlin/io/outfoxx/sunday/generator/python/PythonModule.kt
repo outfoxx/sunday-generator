@@ -20,4 +20,6 @@ package io.outfoxx.sunday.generator.python
 data class PythonModule(
   val path: String,
   val source: String,
-)
+) {
+  internal var content: PythonModuleBuilder.Content? = null
+}

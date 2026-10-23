@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -40,7 +41,7 @@ class ServiceTest {
     @ResourceUri("raml/service-gen/svc-default-media-types.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Client, setOf())
 
     val options =
       KotlinJAXRSOptions(
@@ -50,7 +51,7 @@ class ServiceTest {
         false,
         null,
         false,
-        "io.test.service",
+        kotlinPlacement("io.test", "io.test.service"),
         "http://example.com/",
         listOf("application/cbor", "application/yaml"),
         "API",
@@ -77,7 +78,7 @@ class ServiceTest {
     @ResourceUri("raml/service-gen/svc-default-media-types.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val options =
       KotlinJAXRSOptions(
@@ -87,7 +88,7 @@ class ServiceTest {
         false,
         null,
         false,
-        "io.test.service",
+        kotlinPlacement("io.test", "io.test.service"),
         "http://example.com/",
         listOf("application/cbor", "application/yaml"),
         "API",
@@ -114,7 +115,7 @@ class ServiceTest {
     @ResourceUri("raml/service-gen/svc-override-multiple-media-types.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry(null, GenerationMode.Server, setOf())
 
     val options =
       KotlinJAXRSOptions(
@@ -124,7 +125,7 @@ class ServiceTest {
         false,
         null,
         false,
-        "io.test.service",
+        kotlinPlacement("io.test", "io.test.service"),
         "http://example.com/",
         listOf("application/json", "application/yaml"),
         "API",

@@ -26,10 +26,12 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedNestedType
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.problemExtensionsApi
 import io.outfoxx.sunday.problems.SundayHttpProblem
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -57,7 +59,6 @@ class KotlinProblemExtensionsTest {
   ) {
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         if (target == "server") GenerationMode.Server else GenerationMode.Client,
         buildSet {
@@ -82,13 +83,19 @@ class KotlinProblemExtensionsTest {
                   enclosedIn = GeneratedTypeRef.named("Problem"),
                   name = "RuntimeExtensionStorage",
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
       )
     if (target == "sunday") {
       KotlinSundayIrGenerator(
         api,
         registry,
-        KotlinSundayOptions("io.test.service", "http://example.com/", listOf("application/json"), "API"),
+        KotlinSundayOptions(
+          kotlinPlacement("io.test", "io.test.service"),
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+        ),
       ).generateServiceTypes()
     } else {
       KotlinJAXRSIrGenerator(
@@ -101,7 +108,7 @@ class KotlinProblemExtensionsTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "http://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",

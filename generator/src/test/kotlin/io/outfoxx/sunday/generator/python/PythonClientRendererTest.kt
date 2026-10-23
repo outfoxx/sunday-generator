@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedPayloadOption
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -61,6 +62,7 @@ class PythonClientRendererTest : PythonTest() {
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ProjectQuery",
@@ -77,11 +79,13 @@ class PythonClientRendererTest : PythonTest() {
                     required = true,
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UniqueId",
               kind = GeneratedModel.Kind.SCALAR_ALIAS,
               aliases = listOf(GeneratedTypeRef.scalar("string")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "UpdateProjectRequest",
@@ -100,6 +104,7 @@ class PythonClientRendererTest : PythonTest() {
                     serializationName = "fromCommitId",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -114,11 +119,13 @@ class PythonClientRendererTest : PythonTest() {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
               kind = GeneratedModel.Kind.OBJECT,
               discriminatorMappings = mapOf("project.created" to GeneratedTypeRef.named("ProjectCreatedData")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
             GeneratedModel(
               name = "ProjectCreatedData",
@@ -129,6 +136,7 @@ class PythonClientRendererTest : PythonTest() {
                 listOf(
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         )
@@ -426,6 +434,7 @@ class PythonClientRendererTest : PythonTest() {
               name = "ProjectNotFoundProblem",
               typeUri = "https://turnpost.example/problems/project-not-found",
               status = 404,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         )
@@ -680,11 +689,13 @@ class PythonClientRendererTest : PythonTest() {
           name = "ProjectCreated",
           kind = GeneratedModel.Kind.OBJECT,
           discriminatorValue = "project.created",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           name = "ProjectDeleted",
           kind = GeneratedModel.Kind.OBJECT,
           discriminatorValue = "project.deleted",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val eventUnion =

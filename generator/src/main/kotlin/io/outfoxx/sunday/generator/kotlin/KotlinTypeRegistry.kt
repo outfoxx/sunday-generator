@@ -43,7 +43,6 @@ import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import javax.annotation.processing.Generated
 
 class KotlinTypeRegistry(
-  override val defaultModelPackageName: String?,
   generatedAnnotationName: String?,
   override val generationMode: GenerationMode,
   override val options: Set<Option>,
@@ -90,7 +89,7 @@ class KotlinTypeRegistry(
     outputDirectory: Path,
   ) {
 
-    val builtTypes = buildTypes()
+    val builtTypes = buildTypes(selection)
     val selectedProperties = linkedMapOf<String, MutableMap<String, String>>()
     propertyContributions.filter { outputOwnership.includes(selection, it.third) }.forEach { (path, values, _) ->
       GeneratedProperties.merge(selectedProperties.getOrPut(path) { linkedMapOf() }, values, path)
@@ -158,19 +157,18 @@ class KotlinTypeRegistry(
     serviceProviders.getOrPut(service) { linkedSetOf() }.add(implementation)
   }
 
-  fun buildTypes(): Map<ClassName, TypeSpec> {
-
-    // Add nested classes to parents
-    typeBuilders.entries
-      .toList()
-      .sortedByDescending { it.key.simpleNames.size }
-      .forEach { (className, typeBuilder) ->
-        // Is this a nested class?
-        val enclosingClassName = className.enclosingClassName() ?: return@forEach
-        typeBuilders[enclosingClassName]?.addType(typeBuilder.build())
-      }
-
-    return typeBuilders.mapValues { it.value.build() }
+  /** Builds selected declarations after excluding descendants of filtered containers. */
+  fun buildTypes(selection: GeneratedOutputSelection = GeneratedOutputSelection()): Map<ClassName, TypeSpec> {
+    // Assemble copies so another output selection cannot inherit previously attached members.
+    val selectedBuilders =
+      typeBuilders
+        .filter { outputOwnership.includes(selection, it.key) }
+        .mapValues { it.value.build().toBuilder() }
+    selectedBuilders.entries.sortedByDescending { it.key.simpleNames.size }.forEach { (name, builder) ->
+      val enclosing = name.enclosingClassName() ?: return@forEach
+      selectedBuilders[enclosing]?.addType(builder.build())
+    }
+    return selectedBuilders.mapValues { it.value.build() }
   }
 
   override fun addServiceType(
@@ -186,7 +184,7 @@ class KotlinTypeRegistry(
     serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
     if (typeBuilders.putIfAbsent(className, serviceType) != null) {
-      genError("Service type '$className' is already defined")
+      genError("Service type '$className' is already defined by ${outputOwnership.declarationDescription(className)}")
     }
   }
 
@@ -204,7 +202,7 @@ class KotlinTypeRegistry(
     modelType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(className, modelType) != null) {
-      genError("Model type '$className' is already defined")
+      genError("Model type '$className' is already defined by ${outputOwnership.declarationDescription(className)}")
     }
   }
 

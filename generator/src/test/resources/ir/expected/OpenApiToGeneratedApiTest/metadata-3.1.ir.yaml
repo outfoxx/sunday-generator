@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Metadata API"
 source:
   kind: "OPENAPI"
@@ -82,6 +82,7 @@ services:
     documentation:
       summary: "Create project"
       description: "Creates a project from metadata-rich input."
+    declarationUri: "SOURCE_LOCATION#/paths/~1projects/post"
   media: {}
   servers:
   - url: "https://api.example.com/v1"
@@ -154,3 +155,5 @@ documentation:
 servers:
 - url: "https://api.example.com/v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

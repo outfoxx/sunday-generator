@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.discriminatedPatchApi
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
@@ -42,7 +43,7 @@ class PythonDiscriminatedPatchTest : PythonTest() {
     val api = discriminatedPatchApi(frontend, directory)
     val tag = if (frontend == "renamed") "animal-kind" else "kind"
     val modules =
-      PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "test_api"))
+      PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api")))
         .generateModules(
           GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
         )

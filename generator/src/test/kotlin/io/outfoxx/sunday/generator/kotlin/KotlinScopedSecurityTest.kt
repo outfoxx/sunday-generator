@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.TokenConfiguration
@@ -63,7 +64,6 @@ class KotlinScopedSecurityTest {
     val api = source.copy(services = listOf(GeneratedService("SecurityService", operations = operations)))
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         emptySet(),
@@ -73,7 +73,7 @@ class KotlinScopedSecurityTest {
       api,
       registry,
       KotlinSundayOptions(
-        "io.test",
+        kotlinPlacement("io.test", "io.test"),
         "https://api.example/problems/",
         listOf("application/json"),
         "API",

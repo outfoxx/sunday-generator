@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -55,6 +56,7 @@ class SwiftDirectionalToleranceTest {
         GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("label", GeneratedTypeRef.scalar("string"), required = false)),
         additionalProperties = GeneratedAdditionalProperties(type = GeneratedTypeRef.named("Event")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(

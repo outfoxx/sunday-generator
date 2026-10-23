@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Inline Local Shapes API"
 source:
   kind: "RAML"
@@ -22,6 +22,9 @@ services:
           operation: "fetchProject"
           usage: "PARAMETER"
           name: "projectId"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       required: true
       documentation:
         description: "Project id family."
@@ -35,6 +38,9 @@ services:
           operation: "fetchProject"
           usage: "PARAMETER"
           name: "state"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       required: true
       documentation:
         description: "Project state."
@@ -48,6 +54,9 @@ services:
           operation: "fetchProject"
           usage: "PARAMETER"
           name: "xMode"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       required: true
       serializationName: "X-Mode"
       documentation:
@@ -60,6 +69,9 @@ services:
           service: "InlineLocalShapesService"
           operation: "fetchProject"
           usage: "REQUEST_BODY"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     responses:
@@ -72,6 +84,9 @@ services:
           operation: "fetchProject"
           usage: "RESPONSE_BODY"
           status: 200
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     media:
@@ -79,6 +94,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/put"
   media:
     request:
     - "application/json"
@@ -87,7 +103,10 @@ services:
 models:
 - name: "FetchProjectProjectIdUriParam"
   kind: "ENUM"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/parameter/parameter/path/projectId/scalar/schema"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/uriParameters/projectId"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -100,7 +119,10 @@ models:
     description: "Project id family."
 - name: "FetchProjectRequestBody"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/expects/request/payload/application%2Fjson/shape/schema"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/put/body/application~1json"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -122,7 +144,10 @@ models:
     description: "Project update body."
 - name: "FetchProjectResponseBody"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/returns/resp/200/payload/application%2Fjson/shape/schema"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/put/responses/200/body/application~1json"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -143,7 +168,10 @@ models:
     description: "Project response body."
 - name: "FetchProjectStateQueryParam"
   kind: "ENUM"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/expects/request/parameter/parameter/query/state/scalar/schema"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/put/queryParameters/state"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -156,7 +184,10 @@ models:
     description: "Project state."
 - name: "FetchProjectXModeHeaderParam"
   kind: "ENUM"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fprojects%2F%7BprojectId%7D/supportedOperation/put/expects/request/header/parameter/header/X-Mode/scalar/schema"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/~1projects~1%7BprojectId%7D/put/headers/X-Mode"
   scope:
     service: "InlineLocalShapesService"
     operation: "fetchProject"
@@ -173,3 +204,5 @@ media:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

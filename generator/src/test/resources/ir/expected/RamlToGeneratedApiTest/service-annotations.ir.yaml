@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Service Annotations API"
 source:
   kind: "RAML"
@@ -19,6 +19,9 @@ services:
         arguments:
         - kind: "NAMED"
           name: "Project"
+          source:
+            kind: "RAML"
+            location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     media:
@@ -26,6 +29,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1projects/get"
   media:
     request:
     - "application/json"
@@ -46,6 +50,9 @@ services:
         arguments:
         - kind: "NAMED"
           name: "Project"
+          source:
+            kind: "RAML"
+            location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     media:
@@ -53,6 +60,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1admin/~1projects/get"
   media:
     request:
     - "application/json"
@@ -61,7 +69,10 @@ services:
 models:
 - name: "Project"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Fadmin%2Fprojects/supportedOperation/get/returns/resp/200/payload/application%2Fjson/array/schema/shape/Project"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Project"
   properties:
   - name: "id"
     type:
@@ -78,3 +89,5 @@ media:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

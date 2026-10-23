@@ -70,7 +70,6 @@ class KotlinAsyncApiCustomTypeMappingTest {
     val api = AsyncApiToGeneratedApi().convertFragment(directory.resolve("api.yaml").toUri()).api
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         mode,
         setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
@@ -103,7 +102,7 @@ class KotlinAsyncApiCustomTypeMappingTest {
     val recordValue = mapper.readValue(json, record)
     assertEquals("id:abc", record.getMethod("getId").invoke(recordValue).toString())
     val encoded = mapper.readTree(mapper.writeValueAsString(recordValue))
-    mapper.readTree(json).fields().forEachRemaining { (key, value) -> assertEquals(value, encoded[key]) }
+    mapper.readTree(json).properties().forEach { (key, value) -> assertEquals(value, encoded[key]) }
     assertThrows(Exception::class.java) { mapper.readValue("""{"id":"invalid"}""", record) }
   }
 

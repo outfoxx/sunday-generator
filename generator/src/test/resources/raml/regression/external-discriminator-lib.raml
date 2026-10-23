@@ -3,7 +3,10 @@ usage: Regression library for external discriminator handling
 uses:
   sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
 
-(sunday.kotlinModelPackage): io.test
+(sunday.placement):
+  kotlin:
+    models:
+      package: io.test
 
 # Simplified from cloud-common TenantPushService.
 # Purpose: external discriminator on a nested type defined in a library

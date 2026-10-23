@@ -103,6 +103,7 @@ import io.outfoxx.sunday.generator.ir.emit.sseEnabled
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.ir.mergeWith
+import io.outfoxx.sunday.generator.ir.orInvocation
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
@@ -189,12 +190,21 @@ import java.util.concurrent.CompletionStage
  * Kotlin/JAX-RS service generator backed by Sunday IR.
  */
 class KotlinJAXRSIrGenerator(
-  api: GeneratedApi,
+  sourceApi: GeneratedApi,
   private val typeRegistry: KotlinTypeOutputRegistry,
   private val options: KotlinJAXRSOptions,
 ) {
 
-  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+  private val api =
+    io.outfoxx.sunday.generator.ir
+      .GeneratedPlacementResolver(
+        sourceApi.placementConfiguration.orInvocation(options.placement),
+        generationLanguage = "kotlin",
+        generationRole = typeRegistry.generationMode.name.lowercase(),
+      ).resolve(sourceApi)
+      .let {
+        it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
+      }
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(this.api)
@@ -462,14 +472,8 @@ class KotlinJAXRSIrGenerator(
     }
 
   private fun GeneratedModel.modelOutputOrigin() =
-    outputOrigin(api).let { origin ->
-      if (isProblemModel()) {
-        origin.copy(
-          category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem,
-        )
-      } else {
-        origin
-      }
+    outputOrigin(api) { model, category ->
+      if (model.isProblemModel()) io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem else category
     }
 
   /**
@@ -499,7 +503,7 @@ class KotlinJAXRSIrGenerator(
 
     generateModelTypes()
     generateProblemTypes(services)
-    generateZanzibarUserExtractorType()
+    generateZanzibarUserExtractorType(services)
 
     val serviceTypes =
       services.map { service ->
@@ -642,6 +646,7 @@ class KotlinJAXRSIrGenerator(
 
   private val nativePayloads by lazy {
     KotlinNativePayloads(
+      api.source,
       modelProperties,
       beanValidationTypes,
       { it.modelOrNull(apiIndex) },
@@ -656,7 +661,7 @@ class KotlinJAXRSIrGenerator(
     val owner =
       if (target(preferredTargetId, "kotlin")?.typeName != null) {
         ClassName(
-          typeRegistry.defaultModelPackageName ?: options.defaultServicePackageName
+          target(preferredTargetId, "kotlin")?.modelPackageName
             ?: genError("No payload validation package specified"),
           name.toUpperCamelCase(),
         )
@@ -678,11 +683,15 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun generateModelTypes() {
-    val models = api.models.filter { model -> model.scope == null }
+    val models =
+      api.models.filter { model ->
+        model.scope == null ||
+          (api.services.any { it.name == model.scope.service } && model.kotlinClassName().enclosingClassName() == null)
+      }
     if (typeRegistry.options.contains(ValidationConstraints)) {
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
         nativePayloads.register(
-          GeneratedTypeRef.named(model.name),
+          GeneratedTypeRef.named(model.name, scope = model.scope, source = model.source),
           model.nativeValidationName().also { typeRegistry.outputOwnership.bind(it, model.modelOutputOrigin()) },
           shapeType = { it.commonSchemaOwner() },
           commonRules =
@@ -694,22 +703,22 @@ class KotlinJAXRSIrGenerator(
           service.operations.flatMap { operation ->
             (listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type))
               .filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
-              .map { it to service.outputOrigin(api) }
+              .map { (it to serviceTypeName(service).packageName) to service.outputOrigin(api) }
           }
         }.groupBy({ it.first }, { it.second })
         .entries
-        .forEachIndexed { index, (reference, origins) ->
+        .forEachIndexed { index, (placedReference, origins) ->
+          val (reference, placement) = placedReference
           val name =
             ClassName(
-              typeRegistry.defaultModelPackageName ?: options.defaultServicePackageName
-                ?: genError("No payload validation package specified"),
+              placement,
               "Payload${index + 1}Validation",
             )
           typeRegistry.outputOwnership.bind(
             name,
             api.outputOrigin().copy(ownerUris = origins.flatMap { it.ownerUris }.toSet()),
           )
-          nativePayloads.register(reference, name)
+          nativePayloads.register(reference, name, placement = placement)
         }
     }
     val modelTypes =
@@ -846,14 +855,15 @@ class KotlinJAXRSIrGenerator(
     }
   }
 
-  private fun generateZanzibarUserExtractorType() {
+  private fun generateZanzibarUserExtractorType(services: List<GeneratedService>) {
     if (!options.quarkus || generationMode != Server) {
       return
     }
 
     val userSource = api.zanzibarUserSourceOrNull() ?: return
     userSource.jwt?.let { jwtUserSource ->
-      typeRegistry.addServiceType(zanzibarJwtUserExtractorTypeName(), jwtUserSource.zanzibarJwtUserExtractorType())
+      val typeName = zanzibarJwtUserExtractorTypeName(services)
+      typeRegistry.addServiceType(typeName, jwtUserSource.zanzibarJwtUserExtractorType(typeName))
     }
   }
 
@@ -886,7 +896,7 @@ class KotlinJAXRSIrGenerator(
   private fun GeneratedZanzibarJwtUserSource.diagnosticDescription(): String =
     "claims=${claims.distinct()}, principalFallback=$principalFallback"
 
-  private fun GeneratedZanzibarJwtUserSource.zanzibarJwtUserExtractorType(): TypeSpec.Builder {
+  private fun GeneratedZanzibarJwtUserSource.zanzibarJwtUserExtractorType(typeName: ClassName): TypeSpec.Builder {
     val principalParameterName = if (principalFallback) "principal" else "_principal"
     val claimExpressions =
       claims
@@ -942,7 +952,7 @@ class KotlinJAXRSIrGenerator(
         ).build()
 
     return TypeSpec
-      .classBuilder(zanzibarJwtUserExtractorTypeName())
+      .classBuilder(typeName)
       .addAnnotation(applicationScopedAnnotation)
       .primaryConstructor(
         FunSpec
@@ -958,11 +968,14 @@ class KotlinJAXRSIrGenerator(
       .addFunction(extractUser)
   }
 
-  private fun zanzibarJwtUserExtractorTypeName(): ClassName {
+  private fun zanzibarJwtUserExtractorTypeName(services: List<GeneratedService>): ClassName {
+    // This CDI bean is invocation-wide: duplicating it per package would make injection ambiguous.
     val servicePackageName =
       api.target(preferredTargetId, "kotlin")?.packageName
-        ?: options.defaultServicePackageName
-        ?: genError("No service package specified, one must be specified via options or in source IR")
+        ?: services.map { serviceTypeName(it).packageName }.distinct().singleOrNull()
+        ?: genError(
+          "Zanzibar user extraction spans multiple service packages; specify a document or invocation service package",
+        )
     return ClassName.bestGuess("$servicePackageName.ZanzibarJwtUserExtractor")
   }
 
@@ -1012,6 +1025,7 @@ class KotlinJAXRSIrGenerator(
 
     apiIndex
       .referencedScopedModels(this)
+      .filter { it.kotlinClassName().enclosingClassName() != null }
       .mapNotNull { model -> model.modelType() }
       .map { modelType -> modelType.build() }
       .forEach(typeBuilder::addType)
@@ -1022,7 +1036,7 @@ class KotlinJAXRSIrGenerator(
   private fun aggregateServiceTypeName(): ClassName {
     val servicePackageName =
       api.target(preferredTargetId, "kotlin")?.packageName
-        ?: options.defaultServicePackageName
+
         ?: genError("No service package specified, one must be specified via options or in source IR")
     val serviceName = (options.aggregateServiceName ?: options.serviceSuffix).ifBlank { "API" }
     return ClassName.bestGuess("$servicePackageName.$serviceName")
@@ -1328,7 +1342,12 @@ class KotlinJAXRSIrGenerator(
       if (requestBody.mediaTypes.isOverridingDefaultMediaTypes() && !operationParameters.hasClientContentTypeHeader()) {
         functionBuilder.addAnnotation(jaxRsTypes.consumes, requestBody.mediaTypes)
       }
-      val bodyParameter = requestBody.bodyParameterSpec(jaxrs?.jsonBodyEnabled(generationMode) == true).toBuilder()
+      val bodyParameter =
+        requestBody
+          .bodyParameterSpec(
+            jaxrs?.jsonBodyEnabled(generationMode) == true,
+            serviceTypeName(service).packageName,
+          ).toBuilder()
       if (requestBody.rejectsSuppliedNull()) {
         bodyParameter.addAnnotation(KotlinJAXRSOptionalBodyReader.binding(serviceTypeName(service)))
       }
@@ -1352,7 +1371,7 @@ class KotlinJAXRSIrGenerator(
             AnnotationSpec
               .builder(beanValidationTypes.entitySchema)
               .apply {
-                nativePayloads.name(type)?.let { addMember("%T::class", it) }
+                nativePayloads.name(type, serviceTypeName(service).packageName)?.let { addMember("%T::class", it) }
               }.build(),
           )
         }
@@ -1645,7 +1664,10 @@ class KotlinJAXRSIrGenerator(
       !modelProperties.acceptsNull(type) &&
       payloads.none { modelProperties.acceptsNull(it.type) }
 
-  private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
+  private fun GeneratedPayload.bodyParameterSpec(
+    jsonBodyEnabled: Boolean,
+    validationPackage: String,
+  ): ParameterSpec {
     val typeName = bodyTypeName(jsonBodyEnabled, includeValidationAnnotations = generationMode == Server)
     val builder = ParameterSpec.builder("body", typeName)
     if (!required && generationMode == Client) {
@@ -1664,7 +1686,7 @@ class KotlinJAXRSIrGenerator(
             objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.commonSchemaOwner() },
           )?.let(builder::addAnnotation)
       } else {
-        nativePayloads.name(type)?.let { schema ->
+        nativePayloads.name(type, validationPackage)?.let { schema ->
           builder.addAnnotation(
             AnnotationSpec.builder(beanValidationTypes.entitySchema).addMember("%T::class", schema).build(),
           )
@@ -3770,7 +3792,6 @@ class KotlinJAXRSIrGenerator(
 
     val packageName =
       api.target(preferredTargetId, "kotlin")?.modelPackageName
-        ?: typeRegistry.defaultModelPackageName
         ?: genError("No model package specified, one must be specified via options or in source IR")
 
     return ClassName(packageName, name.toUpperCamelCase())
@@ -3809,7 +3830,12 @@ class KotlinJAXRSIrGenerator(
       val owningService =
         api.services.firstOrNull { service -> service.name == owningServiceName }
           ?: genError("Unknown scoped model service '$owningServiceName'")
-      return serviceTypeName(owningService).nestedClass(name.toUpperCamelCase())
+      val ownerName = serviceTypeName(owningService)
+      val modelPackageName = target(preferredTargetId, "kotlin")?.modelPackageName
+      if (modelPackageName != null && modelPackageName != ownerName.packageName) {
+        return ClassName(modelPackageName, name.toUpperCamelCase())
+      }
+      return ownerName.nestedClass(name.toUpperCamelCase())
     }
 
     val target = target(preferredTargetId, "kotlin")
@@ -3820,8 +3846,6 @@ class KotlinJAXRSIrGenerator(
 
     val packageName =
       target?.modelPackageName
-        ?: api.target(preferredTargetId, "kotlin")?.modelPackageName
-        ?: typeRegistry.defaultModelPackageName
         ?: genError("No model package specified, one must be specified via options or in source IR")
     val simpleName = explicitTypeName ?: name.toUpperCamelCase()
     return ClassName(packageName, simpleName)
@@ -3829,8 +3853,8 @@ class KotlinJAXRSIrGenerator(
 
   private fun serviceTypeName(service: GeneratedService): ClassName {
     val servicePackageName =
-      api.target(preferredTargetId, "kotlin")?.packageName
-        ?: options.defaultServicePackageName
+      service.target(preferredTargetId, "kotlin")?.packageName
+
         ?: genError("No service package specified, one must be specified via options or in source IR")
 
     return ClassName.bestGuess("$servicePackageName.${service.typeSimpleName()}")
@@ -3844,8 +3868,7 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedProblem.typeName(): ClassName {
     val packageName =
-      api.target(preferredTargetId, "kotlin")?.modelPackageName
-        ?: typeRegistry.defaultModelPackageName
+      target(preferredTargetId, "kotlin")?.modelPackageName
         ?: genError("No model package specified, one must be specified via options or in source IR")
 
     return ClassName(packageName, name.toUpperCamelCase())

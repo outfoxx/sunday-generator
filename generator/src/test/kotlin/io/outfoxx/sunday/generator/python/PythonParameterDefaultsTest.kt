@@ -23,10 +23,12 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.parameterDefaultsApi
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.generator.tools.withOptionalParameterTemplates
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
@@ -45,12 +47,23 @@ class PythonParameterDefaultsTest : PythonTest() {
   fun `nested collection and model defaults are isolated without copying explicit values`(compiler: PythonCompiler) {
     val models =
       listOf(
-        GeneratedModel("Labels", GeneratedModel.Kind.ARRAY, aliases = listOf(GeneratedTypeRef.scalar("string"))),
-        GeneratedModel("Groups", GeneratedModel.Kind.MAP, aliases = listOf(GeneratedTypeRef.named("Labels"))),
+        GeneratedModel(
+          "Labels",
+          GeneratedModel.Kind.ARRAY,
+          aliases = listOf(GeneratedTypeRef.scalar("string")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
+        GeneratedModel(
+          "Groups",
+          GeneratedModel.Kind.MAP,
+          aliases = listOf(GeneratedTypeRef.named("Labels")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
         GeneratedModel(
           "Filter",
           GeneratedModel.Kind.OBJECT,
           properties = listOf(GeneratedModelProperty("labels", GeneratedTypeRef.named("Labels"), required = true)),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val service =
@@ -144,13 +157,13 @@ class PythonParameterDefaultsTest : PythonTest() {
     val modules =
       PythonSundayIrGenerator(
         api.withOptionalParameterTemplates(),
-        PythonGeneratorOptions(packageName = "client_api"),
+        PythonGeneratorOptions(placement = pythonPlacement("client_api")),
       ).generateModules(
         GeneratedOutputSelection(
           GeneratedTypeCategory.entries.toSet(),
         ),
       ) +
-        PythonLitestarIrGenerator(api, PythonGeneratorOptions(packageName = "server_api"))
+        PythonLitestarIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("server_api")))
           .generateModules(
             GeneratedOutputSelection(
               GeneratedTypeCategory.entries.toSet(),

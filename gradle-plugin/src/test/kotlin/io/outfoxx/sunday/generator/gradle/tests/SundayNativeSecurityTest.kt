@@ -91,7 +91,10 @@ class SundayNativeSecurityTest {
           enforceSecuritySchemes.set(true)
           useJakartaPackages.set(true)
           coroutines.set(true)
-          pkgName.set('example.nativeauth')
+          placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+            text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'example.nativeauth']]])
+            it
+          })
           outputDir.set(layout.buildDirectory.dir('generated/native'))
         }
       }

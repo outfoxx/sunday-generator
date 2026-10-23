@@ -61,6 +61,7 @@ class GeneratedPatchModelsTest {
         discriminator = "kind",
         properties = listOf(GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true)),
         discriminatorMappings = mapOf("car" to GeneratedTypeRef.named("Car")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val car =
       GeneratedModel(
@@ -68,6 +69,7 @@ class GeneratedPatchModelsTest {
         GeneratedModel.Kind.OBJECT,
         inherits = listOf(GeneratedTypeRef.named("Vehicle")),
         properties = listOf(GeneratedModelProperty("wheels", GeneratedTypeRef.scalar("integer"))),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val source =
       api.copy(
@@ -178,7 +180,13 @@ class GeneratedPatchModelsTest {
   @Test
   fun `inherited requiredness and allowed values survive patch projection`() {
     val required = GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true)
-    val base = GeneratedModel("Base", GeneratedModel.Kind.OBJECT, properties = listOf(required))
+    val base =
+      GeneratedModel(
+        "Base",
+        GeneratedModel.Kind.OBJECT,
+        properties = listOf(required),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val child =
       GeneratedModel(
         "Child",
@@ -196,6 +204,7 @@ class GeneratedPatchModelsTest {
               allowedValues = listOf(null),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val api =
       GeneratedPatchModels.materialize(
@@ -240,6 +249,7 @@ class GeneratedPatchModelsTest {
               allowedValues = listOf("fixed"),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val api =
       GeneratedPatchModels.materialize(
@@ -281,6 +291,7 @@ class GeneratedPatchModelsTest {
             GeneratedModelProperty("optional", GeneratedTypeRef.scalar("string")),
             GeneratedModelProperty("optionalNull", GeneratedTypeRef.scalar("string").copy(nullable = true)),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val api =
       GeneratedApi(
@@ -337,7 +348,17 @@ class GeneratedPatchModelsTest {
     assertFalse(models.getValue("SomeRequest").patchable)
     val patch = models.getValue("SomeRequestPatch")
     assertTrue(patch.patchable)
-    assertEquals(GeneratedTypeRef.named("SomeRequest"), patch.patchOf)
+    assertEquals(
+      GeneratedTypeRef.named(
+        "SomeRequest",
+        source =
+          models.getValue("SomeRequest").source.takeIf {
+            frontend ==
+              "composed"
+          },
+      ),
+      patch.patchOf,
+    )
     assertTrue(models.getValue("DetailsPatch").patchable)
     assertEquals(
       "DetailsPatch",
@@ -376,7 +397,14 @@ class GeneratedPatchModelsTest {
       GeneratedApi(
         name = "Automatic",
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-        models = listOf(GeneratedModel("Item", GeneratedModel.Kind.OBJECT)),
+        models =
+          listOf(
+            GeneratedModel(
+              "Item",
+              GeneratedModel.Kind.OBJECT,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
+          ),
         services =
           listOf(
             GeneratedService(
@@ -428,7 +456,15 @@ class GeneratedPatchModelsTest {
       GeneratedApi(
         name = "Ordinary",
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-        models = listOf(GeneratedModel("Item", GeneratedModel.Kind.OBJECT, patchable = true)),
+        models =
+          listOf(
+            GeneratedModel(
+              "Item",
+              GeneratedModel.Kind.OBJECT,
+              patchable = true,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
+          ),
         services =
           listOf(
             GeneratedService(
@@ -465,7 +501,14 @@ class GeneratedPatchModelsTest {
       GeneratedApi(
         name = "Alternatives",
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-        models = listOf(GeneratedModel("Item", GeneratedModel.Kind.OBJECT)),
+        models =
+          listOf(
+            GeneratedModel(
+              "Item",
+              GeneratedModel.Kind.OBJECT,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
+          ),
         services =
           listOf(
             GeneratedService(
@@ -523,13 +566,19 @@ class GeneratedPatchModelsTest {
               "Item",
               GeneratedModel.Kind.OBJECT,
               properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"))),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
-            GeneratedModel("ItemPatch", GeneratedModel.Kind.OBJECT),
+            GeneratedModel(
+              "ItemPatch",
+              GeneratedModel.Kind.OBJECT,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
             GeneratedModel(
               "ItemAlias",
               GeneratedModel.Kind.SCALAR_ALIAS,
               patchable = true,
               aliases = listOf(GeneratedTypeRef.named("Item")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )
@@ -550,12 +599,17 @@ class GeneratedPatchModelsTest {
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         models =
           listOf(
-            GeneratedModel("Base", GeneratedModel.Kind.OBJECT),
+            GeneratedModel(
+              "Base",
+              GeneratedModel.Kind.OBJECT,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
             GeneratedModel(
               "Child",
               GeneratedModel.Kind.OBJECT,
               inherits = listOf(GeneratedTypeRef.named("Base")),
               patchable = true,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
         services =
@@ -618,7 +672,13 @@ class GeneratedPatchModelsTest {
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         models =
           listOf(
-            GeneratedModel("State", GeneratedModel.Kind.ENUM, values = listOf("active"), patchable = true),
+            GeneratedModel(
+              "State",
+              GeneratedModel.Kind.ENUM,
+              values = listOf("active"),
+              patchable = true,
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
           ),
       )
     val error = assertThrows(Exception::class.java) { GeneratedPatchModels.materialize(source) }
@@ -627,7 +687,12 @@ class GeneratedPatchModelsTest {
       source.copy(
         models =
           listOf(
-            GeneratedModel("Map", GeneratedModel.Kind.MAP, aliases = listOf(GeneratedTypeRef.named("Map"))),
+            GeneratedModel(
+              "Map",
+              GeneratedModel.Kind.MAP,
+              aliases = listOf(GeneratedTypeRef.named("Map")),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+            ),
             GeneratedModel(
               "Item",
               GeneratedModel.Kind.OBJECT,
@@ -636,6 +701,7 @@ class GeneratedPatchModelsTest {
                 listOf(
                   GeneratedModelProperty("values", GeneratedTypeRef.named("Map")),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           ),
       )

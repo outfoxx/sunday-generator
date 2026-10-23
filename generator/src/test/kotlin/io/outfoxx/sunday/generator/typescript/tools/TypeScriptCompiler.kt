@@ -72,6 +72,17 @@ abstract class TypeScriptCompiler(
 
   protected val outputDir: Path = workDir.resolve("dist")
 
+  /** Copies already compiled owner modules alongside consumer output for runtime verification. */
+  protected fun copyJavaScriptDependencies() {
+    Files.walk(srcDir).use { files ->
+      files.filter { Files.isRegularFile(it) && it.toString().endsWith(".js") }.forEach { source ->
+        val target = outputDir.resolve(srcDir.relativize(source))
+        Files.createDirectories(target.parent)
+        Files.copy(source, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+      }
+    }
+  }
+
   abstract fun compile(): Pair<Int, String>
 
   /** Emits the compiled sources and executes the selected module. */

@@ -37,11 +37,17 @@ data class GeneratedApi(
   val servers: List<GeneratedServer> = emptyList(),
   /** Native application configuration, resolved only for Quarkus output. */
   val quarkusConfig: GeneratedEnvironment<GeneratedQuarkusConfig>? = null,
+  /** Invocation placement retained for generation from serialized IR. */
+  val placementConfiguration: GeneratedPlacementConfiguration = GeneratedPlacementConfiguration(),
+  /** Original lexical placement scopes; references do not add scopes. */
+  val placementScopes: List<GeneratedPlacementScope> = emptyList(),
+  /** Stable source API identity, retained for language-specific naming fallbacks. */
+  val id: String? = null,
 ) {
 
   companion object {
 
     /** Current durable IR schema version. */
-    const val CURRENT_IR_VERSION = "2"
+    const val CURRENT_IR_VERSION = "3"
   }
 }

@@ -32,9 +32,9 @@ All commands used `-aggregate-services -aggregate-service-name TurnPostAPI`
 with `spec/turnpost-api.yaml`. Additional production arguments were:
 
 - Swift: `swift/sunday -no-broker -no-add-generated-header`.
-- Kotlin: `kotlin/sunday -pkg cloud.turnpost.sdk -use-jakarta-packages`.
+- Kotlin: `kotlin/sunday --placement-config placement.yaml -use-jakarta-packages`.
 - TypeScript: `typescript/sunday -no-add-generation-header -import-style node-next`.
-- Python: `python/sunday -package turnpost_api`.
+- Python: `python/sunday --placement-config placement.yaml`.
 
 ## Corrected behavior and retained differences
 
@@ -521,3 +521,5 @@ disabled only for its temporary test commits.
 
 The SDK checks use the locally built candidate CLI, not a newly published beta.
 Release publication remains a separate step after verification.
+
+Package defaults and overrides are configured in [declaration placement](declaration-placement.md).

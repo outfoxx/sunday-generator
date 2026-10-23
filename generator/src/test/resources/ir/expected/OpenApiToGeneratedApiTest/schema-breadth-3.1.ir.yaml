@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Schema Breadth API"
 source:
   kind: "OPENAPI"
@@ -47,6 +47,7 @@ services:
       documentation:
         description: "Project page response."
     media: {}
+    declarationUri: "SOURCE_LOCATION#/paths/~1projects/get"
   media: {}
   servers:
   - url: "https://api.example.com/v1"
@@ -181,3 +182,5 @@ media: {}
 servers:
 - url: "https://api.example.com/v1"
   sourceUri: "SOURCE_LOCATION"
+placementConfiguration:
+  defaults: {}

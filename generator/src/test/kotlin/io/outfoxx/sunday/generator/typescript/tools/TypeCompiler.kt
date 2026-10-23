@@ -150,7 +150,41 @@ internal fun compileGeneratedFiles(compiler: TypeScriptCompiler): Boolean {
     if (result != 0) throw AssertionError(output)
     val files =
       Files.walk(compiler.srcDir).use { paths ->
-        paths.filter { it.toString().endsWith(".ts") }.toList().associateWith(Files::readString)
+        paths
+          .filter {
+            Files.isRegularFile(
+              it,
+            ) &&
+              it.toString().endsWith(".ts")
+          }.toList()
+          .associateWith(Files::readString)
+      }
+    CompiledGeneratedSources.recordAll(GeneratedCodeLanguage.TypeScript, compiler.srcDir, files)
+    return true
+  } finally {
+    compiler.srcDir.toFile().deleteRecursively()
+  }
+}
+
+/** Compiles on-disk generated modules and executes them with any separately built JavaScript owners. */
+internal fun compileAndRunGeneratedFiles(
+  compiler: TypeScriptCompiler,
+  modulePath: String,
+): Boolean {
+  try {
+    CompiledGeneratedSources.beginCompile()
+    val (result, output) = compiler.execute(modulePath)
+    if (result != 0) throw AssertionError(output)
+    val files =
+      Files.walk(compiler.srcDir).use { paths ->
+        paths
+          .filter {
+            Files.isRegularFile(
+              it,
+            ) &&
+              it.toString().endsWith(".ts")
+          }.toList()
+          .associateWith(Files::readString)
       }
     CompiledGeneratedSources.recordAll(GeneratedCodeLanguage.TypeScript, compiler.srcDir, files)
     return true

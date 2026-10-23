@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
@@ -39,6 +40,7 @@ fun arrayMultiplesFixture(): GeneratedApi {
     name,
     GeneratedModel.Kind.OBJECT,
     properties = listOf(GeneratedModelProperty("values", type, validation = validation)),
+    source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
   )
   val parent = model("ArrayParent", items, emptyMap())
   val child =
@@ -46,22 +48,30 @@ fun arrayMultiplesFixture(): GeneratedApi {
       .copy(inherits = listOf(GeneratedTypeRef.named(parent.name)))
   val aliases =
     listOf(
-      GeneratedModel("ItemAlias", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(integer)),
+      GeneratedModel(
+        "ItemAlias",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(integer),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      ),
       GeneratedModel(
         "SetItemsAlias",
         GeneratedModel.Kind.ARRAY,
         aliases = listOf(integer),
         collection = GeneratedCollectionKind.SET,
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       ),
       GeneratedModel(
         "ItemsAlias",
         GeneratedModel.Kind.ARRAY,
         aliases = listOf(GeneratedTypeRef.named("ItemAlias")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       ),
       GeneratedModel(
         "ItemsAliasChain",
         GeneratedModel.Kind.SCALAR_ALIAS,
         aliases = listOf(GeneratedTypeRef.named("ItemsAlias")),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       ),
     )
   return api.copy(

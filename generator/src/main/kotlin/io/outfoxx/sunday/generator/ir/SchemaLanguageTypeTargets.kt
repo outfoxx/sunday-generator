@@ -31,9 +31,9 @@ internal fun Map<*, *>.languageTypeTargets(context: String): Map<String, Generat
     require(value is String && value.isNotBlank()) {
       "$context $extension must be a non-empty language type name"
     }
-    val module = if (target == "typescript") this["x-sunday-typeScriptModule"] else null
+    val module = if (target == "typescript") this["x-sunday-typeScriptImport"] else null
     require(module == null || module is String && module.isNotBlank()) {
-      "$context x-sunday-typeScriptModule must be a non-empty module name"
+      "$context x-sunday-typeScriptImport must be a non-empty module name"
     }
     target to GeneratedTarget(typeName = value, moduleName = module)
   }.toMap()

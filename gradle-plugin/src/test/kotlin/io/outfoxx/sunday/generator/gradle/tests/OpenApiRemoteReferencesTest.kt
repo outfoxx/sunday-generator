@@ -127,7 +127,10 @@ class OpenApiRemoteReferencesTest {
               source.set(files('api.yaml'))
               framework.set(Sunday)
               mode.set(Client)
-              pkgName.set('io.test.' + project.name)
+              placementConfig.set(file("placement-${'$'}{name}.yaml").with {
+                text = groovy.json.JsonOutput.toJson([defaults: [kotlin: ['package': 'io.test.' + project.name]]])
+                it
+              })
               outputCategories.set([io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem])
               disableValidationConstraints.set(true)
               disableJacksonAnnotations.set(true)

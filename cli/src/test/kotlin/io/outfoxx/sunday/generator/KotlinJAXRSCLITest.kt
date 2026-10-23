@@ -35,8 +35,8 @@ class KotlinJAXRSCLITest {
     private val emptyFile = KotlinJAXRSCLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-pkg",
-        "io.test",
+        "--placement-config",
+        placementConfig("io.test"),
         "-out",
         emptyFile.resolve("..").path,
         emptyFile.path,
@@ -217,8 +217,8 @@ class KotlinJAXRSCLITest {
         add("-aggregate-services")
         add("-aggregate-service-name")
         add("TurnPostAPI")
-        add("-pkg")
-        add("io.test")
+        add("--placement-config")
+        add(placementConfig("io.test"))
         add("-out")
         add(tempDir.absolutePath)
         if (quarkus) {

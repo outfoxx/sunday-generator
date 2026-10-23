@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "Imported Declarations API"
 source:
   kind: "RAML"
@@ -23,6 +23,9 @@ services:
       type:
         kind: "NAMED"
         name: "Test"
+        source:
+          kind: "RAML"
+          location: "SOURCE_LOCATION"
       mediaTypes:
       - "application/json"
     media:
@@ -30,6 +33,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1tests~1%7Bid%7D/get"
   media:
     request:
     - "application/json"
@@ -38,7 +42,34 @@ services:
 models:
 - name: "Test"
   kind: "OBJECT"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Ftests%2F%7Bid%7D/supportedOperation/get/returns/resp/200/payload/default/shape/default/inherits/shape/Test"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION_REFERENCE"
+  declarationUri: "SOURCE_LOCATION_REFERENCE#/types/Test"
+  properties:
+  - name: "libraryValue"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  placementScopes:
+  - declarationUri: "SOURCE_LOCATION_REFERENCE"
+    placement:
+      kotlin:
+        models:
+          packageName: "io.example.library"
+      swift:
+        models:
+          module: "LibraryModels"
+      typescript:
+        models:
+          module: "library-models"
+- name: "Test"
+  kind: "OBJECT"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  declarationUri: "SOURCE_LOCATION#/types/Test"
   properties:
   - name: "localValue"
     type:
@@ -51,31 +82,10 @@ models:
     source:
       kind: "RAML"
       location: "SOURCE_LOCATION_REFERENCE"
-- name: "Test"
-  kind: "OBJECT"
-  source:
-    kind: "RAML"
-    location: "SOURCE_LOCATION_REFERENCE"
-  declarationUri: "SOURCE_LOCATION#/web-api/endpoint/%2Ftests%2F%7Bid%7D/supportedOperation/get/returns/resp/200/payload/default/shape/default/inherits/shape/Test/shape/Test"
-  properties:
-  - name: "libraryValue"
-    type:
-      kind: "SCALAR"
-      name: "string"
-    required: true
-  targets:
-    kotlin:
-      modelPackageName: "io.example.library"
-    kotlinClient:
-      modelPackageName: "io.example.library"
-    kotlinServer:
-      modelPackageName: "io.example.library"
-    swift:
-      modelModuleName: "LibraryModels"
-    typescript:
-      modelModuleName: "library-models"
 media:
   request:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

@@ -62,6 +62,7 @@ class OpenApiToGeneratedApi(
     val generatedApi =
       GeneratedApi(
         name = document.title,
+        placementScopes = document.source.placementScopes(document.location),
         quarkusConfig =
           GeneratedQuarkusConfig.read(
             document.source["x-sunday-quarkus-config"],
@@ -106,6 +107,12 @@ class OpenApiToGeneratedApi(
           .takeIf { it.isNotEmpty() }
           ?.let {
             val serviceName = serviceName(seed.serviceLabel)
+            require(
+              seed.serviceTag == null ||
+                listValue("tags").count { (it as? Map<*, *>)?.get("name") == seed.serviceTag } <= 1,
+            ) {
+              "Ambiguous service tag '${seed.serviceTag}' has multiple declarations"
+            }
             val serviceJaxrsValues =
               fragments
                 .mapNotNull { fragment -> fragment.serviceJaxrs }
@@ -123,6 +130,48 @@ class OpenApiToGeneratedApi(
               service =
                 GeneratedService(
                   name = serviceName,
+                  placementTags = setOfNotNull(seed.serviceTag),
+                  declarationUris =
+                    listValue("tags")
+                      .mapIndexedNotNull { index, tag ->
+                        (tag as? Map<*, *>)
+                          ?.takeIf {
+                            it["name"] == seed.serviceTag
+                          }?.let { location + "#/tags/$index" }
+                      }.toSet(),
+                  placementScopes =
+                    source.placementScopes(location) +
+                      listValue("tags").flatMapIndexed { index, tag ->
+                        (tag as? Map<*, *>)
+                          ?.takeIf { it["name"] == seed.serviceTag }
+                          ?.placementScopes(location + "#/tags/$index")
+                          .orEmpty()
+                      },
+                  placementDeclarations =
+                    operations
+                      .map { operation ->
+                        GeneratedService.PlacementContribution(
+                          operationUris = listOfNotNull(operation.declarationUri),
+                          placementScopes =
+                            operation.placementScopes.filter { it.declarationUri != operation.declarationUri } +
+                              listValue("tags").flatMapIndexed { index, tag ->
+                                (tag as? Map<*, *>)
+                                  ?.takeIf { it["name"] == seed.serviceTag }
+                                  ?.placementScopes(location + "#/tags/$index")
+                                  .orEmpty()
+                              },
+                        )
+                      }.takeIf {
+                        operations.any { operation ->
+                          operation.placementScopes.any { scope ->
+                            scope.declarationUri != operation.declarationUri &&
+                              (
+                                scope.declarationUri.substringBefore('#') != location ||
+                                  !URI(scope.declarationUri).fragment.isNullOrEmpty()
+                              )
+                          }
+                        }
+                      }.orEmpty(),
                   baseUri = selectedServers.firstOrNull()?.url,
                   baseUriParameters = selectedServers.firstOrNull()?.variables.orEmpty(),
                   servers = selectedServers,
@@ -160,6 +209,22 @@ class OpenApiToGeneratedApi(
           operation =
             GeneratedOperation(
               id = operationId,
+              declarationUri =
+                (operation as? OpenApiSourceObject)?.declarationUri ?: sourceDeclarationUri(
+                  location,
+                  "/paths/" + path.replace("~", "~0").replace("/", "~1") + "/" + method,
+                ),
+              placementScopes =
+                source.placementScopes(location) +
+                  (
+                    (pathItem as? OpenApiSourceObject)?.placementScopes
+                      ?: pathItem.placementScopes(location + "#/paths/" + path.replace("~", "~0").replace("/", "~1"))
+                  ) +
+                  (
+                    (operation as? OpenApiSourceObject)?.placementScopes ?: operation.placementScopes(
+                      location + "#/paths/" + path.replace("~", "~0").replace("/", "~1") + "/" + method,
+                    )
+                  ),
               method = method.uppercase(),
               path = path,
               parameters = pathParameters + operation.listValue("parameters").mapNotNull { value -> parameter(value) },
@@ -360,7 +425,7 @@ class OpenApiToGeneratedApi(
       val branches = (oneOf.ifEmpty { anyOf }).mapNotNull { branch -> branch as? Map<*, *> }
       if (nameHint != null && localModels != null) {
         val name = modelNames.allocate(schema, nameHint, scope)
-        emitInlineModel(name, localModels) { generatedUnionModel(name, effective, branches, scope, localModels) }
+        emitInlineModel(name, localModels) { generatedModel(name, schema, localModels, discriminatorValues(), scope) }
         return GeneratedTypeRef.named(name, scope = scope)
       }
       return GeneratedTypeRef(
@@ -474,6 +539,7 @@ class OpenApiToGeneratedApi(
             (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
           ),
         declarationUri = (schema as? OpenApiSchema)?.declarationUri,
+        placementScopes = (schema as? OpenApiSchema)?.placementScopes.orEmpty(),
         targets = declarationTypeSchema(schema).languageTypeTargets("OpenAPI model '$name'"),
         patchable =
           GeneratedPatchModels.annotation(
@@ -509,6 +575,11 @@ class OpenApiToGeneratedApi(
     val analyzed = analysis.analyze(schema)
     analyzed.collapsedAlias?.let { target ->
       return GeneratedModel(
+        source =
+          GeneratedSourceSpec(
+            GeneratedSourceSpec.Kind.OPENAPI,
+            (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+          ),
         name = name,
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
         nominal = schema["x-sunday-wrapper-type"] == true,
@@ -529,6 +600,11 @@ class OpenApiToGeneratedApi(
       val model =
         if (OpenApiSchemaReferences.canonicalName(payload) != null) {
           GeneratedModel(
+            source =
+              GeneratedSourceSpec(
+                GeneratedSourceSpec.Kind.OPENAPI,
+                (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+              ),
             name = name,
             kind = GeneratedModel.Kind.SCALAR_ALIAS,
             nominal = schema["x-sunday-wrapper-type"] == true,
@@ -564,6 +640,11 @@ class OpenApiToGeneratedApi(
       resolved["enum"] is List<*> -> {
         val values = resolved.listValue("enum").mapNotNull { it?.toString() }
         GeneratedModel(
+          source =
+            GeneratedSourceSpec(
+              GeneratedSourceSpec.Kind.OPENAPI,
+              (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+            ),
           name = name,
           kind = GeneratedModel.Kind.ENUM,
           scope = scope,
@@ -576,6 +657,11 @@ class OpenApiToGeneratedApi(
 
       resolved.isUnconstrainedSchema() ->
         GeneratedModel(
+          source =
+            GeneratedSourceSpec(
+              GeneratedSourceSpec.Kind.OPENAPI,
+              (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+            ),
           name = name,
           kind = GeneratedModel.Kind.SCALAR_ALIAS,
           nominal = schema["x-sunday-wrapper-type"] == true,
@@ -588,6 +674,11 @@ class OpenApiToGeneratedApi(
 
       resolved.schemaType() == "array" ->
         GeneratedModel(
+          source =
+            GeneratedSourceSpec(
+              GeneratedSourceSpec.Kind.OPENAPI,
+              (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+            ),
           name = name,
           kind = GeneratedModel.Kind.ARRAY,
           scope = scope,
@@ -602,6 +693,11 @@ class OpenApiToGeneratedApi(
 
       resolved.isScalarAliasModel() ->
         GeneratedModel(
+          source =
+            GeneratedSourceSpec(
+              GeneratedSourceSpec.Kind.OPENAPI,
+              (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+            ),
           name = name,
           kind = GeneratedModel.Kind.SCALAR_ALIAS,
           nominal = schema["x-sunday-wrapper-type"] == true,
@@ -615,6 +711,11 @@ class OpenApiToGeneratedApi(
 
       resolved.isMapModel() ->
         GeneratedModel(
+          source =
+            GeneratedSourceSpec(
+              GeneratedSourceSpec.Kind.OPENAPI,
+              (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+            ),
           name = name,
           kind = GeneratedModel.Kind.MAP,
           scope = scope,
@@ -637,6 +738,11 @@ class OpenApiToGeneratedApi(
       else -> {
         val required = resolved.listValue("required").filterIsInstance<String>().toSet()
         GeneratedModel(
+          source =
+            GeneratedSourceSpec(
+              GeneratedSourceSpec.Kind.OPENAPI,
+              (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+            ),
           name = name,
           kind = GeneratedModel.Kind.OBJECT,
           scope = scope,
@@ -709,6 +815,11 @@ class OpenApiToGeneratedApi(
         emptyMap()
       }
     return GeneratedModel(
+      source =
+        GeneratedSourceSpec(
+          GeneratedSourceSpec.Kind.OPENAPI,
+          (schema as? OpenApiSchema)?.declarationUri?.substringBefore('#') ?: location,
+        ),
       name = name,
       kind = GeneratedModel.Kind.UNION,
       unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
@@ -861,6 +972,16 @@ class OpenApiToGeneratedApi(
         GeneratedProblem(
           name = name,
           sourceName = sourceName,
+          declarationUri =
+            sourceDeclarationUri(
+              location,
+              "/x-sunday-problemTypes/" + sourceName.replace("~", "~0").replace("/", "~1"),
+            ),
+          placementScopes =
+            source.placementScopes(location) +
+              problem.placementScopes(
+                location + "#/x-sunday-problemTypes/" + sourceName.replace("~", "~0").replace("/", "~1"),
+              ),
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, location),
           typeUri = typeUri,
           status = status,

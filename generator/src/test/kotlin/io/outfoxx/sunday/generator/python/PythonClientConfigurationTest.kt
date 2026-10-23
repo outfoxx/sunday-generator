@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.aggregateClientConfigurationApi
 import io.outfoxx.sunday.generator.tools.aggregateFrontendConfigurationApi
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
+import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -46,7 +47,7 @@ class PythonClientConfigurationTest : PythonTest() {
       PythonSundayIrGenerator(
         aggregateClientConfigurationApi(directory),
         PythonGeneratorOptions(
-          packageName = "example_api",
+          placement = pythonPlacement("example_api"),
           aggregateServices = true,
           aggregateServiceName = "ExampleAPI",
         ),
@@ -68,7 +69,7 @@ class PythonClientConfigurationTest : PythonTest() {
     val api = clientConfigurationApi("credential-collision", directory)
     val error =
       assertThrows(IllegalArgumentException::class.java) {
-        PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
+        PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("example_api")))
           .generateModules(
             GeneratedOutputSelection(
               GeneratedTypeCategory.entries.toSet(),
@@ -124,7 +125,7 @@ class PythonClientConfigurationTest : PythonTest() {
     val original = OpenApiToGeneratedApi().convert(source.toUri())
     val api = original.copy(services = original.services.map { it.copy(name = "Service", group = null) })
     val modules =
-      PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
+      PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("example_api")))
         .generateModules(
           GeneratedOutputSelection(
             GeneratedTypeCategory.entries.toSet(),
@@ -184,7 +185,7 @@ class PythonClientConfigurationTest : PythonTest() {
     val service = api.services.single()
     val factory = "create_${service.pythonServiceBaseName.pythonIdentifierName}"
     val modules =
-      PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
+      PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("example_api")))
         .generateModules(
           GeneratedOutputSelection(
             GeneratedTypeCategory.entries.toSet(),
@@ -252,7 +253,7 @@ class PythonClientConfigurationTest : PythonTest() {
       PythonSundayIrGenerator(
         aggregateClientConfigurationApi(directory),
         PythonGeneratorOptions(
-          packageName = "example_api",
+          placement = pythonPlacement("example_api"),
           profile = "external",
           aggregateServices = true,
           aggregateServiceName = "ExampleAPI",
@@ -344,7 +345,7 @@ class PythonClientConfigurationTest : PythonTest() {
       PythonSundayIrGenerator(
         aggregateFrontendConfigurationApi(frontend, directory),
         PythonGeneratorOptions(
-          packageName = "example_api",
+          placement = pythonPlacement("example_api"),
           aggregateServices = true,
           aggregateServiceName = "ExampleAPI",
         ),

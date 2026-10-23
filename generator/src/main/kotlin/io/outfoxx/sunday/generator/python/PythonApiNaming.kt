@@ -19,10 +19,9 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 
-internal fun GeneratedApi.pythonPackageName(options: PythonGeneratorOptions): String =
-  options.packageName?.pythonIdentifierName
-    ?: targets["python"]?.packageName?.pythonIdentifierName
-    ?: targets["python"]?.moduleName?.pythonIdentifierName
+internal fun GeneratedApi.pythonPackageName(): String =
+  targets["python"]?.packageName
+    ?: id?.pythonIdentifierName
     ?: name.pythonIdentifierName
 
 internal val GeneratedApi.aggregateTypeName: String

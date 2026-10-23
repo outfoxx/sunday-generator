@@ -150,12 +150,20 @@ import io.outfoxx.typescriptpoet.tag
  * TypeScript/Sunday service generator that renders service declarations from Sunday IR.
  */
 class TypeScriptSundayIrGenerator(
-  api: GeneratedApi,
+  sourceApi: GeneratedApi,
   private val typeRegistry: TypeScriptTypeOutputRegistry,
   private val options: TypeScriptSundayOptions,
 ) {
 
-  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+  private val api =
+    io.outfoxx.sunday.generator.ir
+      .GeneratedPlacementResolver(
+        sourceApi.placementConfiguration,
+        generationLanguage = "typescript",
+      ).resolve(sourceApi)
+      .let {
+        it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
+      }
 
   private val patchSupportNames by lazy {
     val names = NameAllocator()
@@ -163,14 +171,14 @@ class TypeScriptSundayIrGenerator(
       .map { it.name.toUpperCamelCase() }
       .distinct()
       .forEach { names.newName(it) }
-    api.models.filter { model -> api.models.any { it.patchOf?.name == model.name } }.associate { model ->
-      model.name to names.newName(model.name.toUpperCamelCase() + "MergePatchSupport")
+    api.models.filter { model -> api.models.any { it.patchOf?.let(index::modelOrNull) == model } }.associate { model ->
+      model to names.newName(model.name.toUpperCamelCase() + "MergePatchSupport")
     }
   }
 
   private fun patchSupportName(model: GeneratedModel): TypeName.Standard {
-    val original = model.patchOf?.name?.let { name -> api.models.single { it.name == name } } ?: model
-    return original.typeName(patchSupportNames.getValue(original.name))
+    val original = model.patchOf?.let { requireNotNull(index.modelOrNull(it)) } ?: model
+    return original.typeName(patchSupportNames.getValue(original))
   }
 
   private val transportTypeVariable = typeVariable("Factory", bound(TypeName.implicit("SundayTransport")))
@@ -194,14 +202,8 @@ class TypeScriptSundayIrGenerator(
   private val typeScriptEnumEntriesByModel = mutableMapOf<GeneratedModel, List<TypeScriptEnumEntry>>()
 
   private fun GeneratedModel.modelOutputOrigin() =
-    outputOrigin(api).let { origin ->
-      if (isProblemModel()) {
-        origin.copy(
-          category = io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem,
-        )
-      } else {
-        origin
-      }
+    outputOrigin(api) { model, category ->
+      if (model.isProblemModel()) io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem else category
     }
 
   /** Generates TypeScript/Sunday service types from IR and registers them in the type registry. */
@@ -223,7 +225,11 @@ class TypeScriptSundayIrGenerator(
     val serviceTypes =
       services.map { service ->
         val serviceSimpleName = service.typeSimpleName()
-        val modulePath = resolveServiceModulePath(serviceSimpleName, api.targets["typescript"]?.moduleName)
+        val modulePath =
+          resolveServiceModulePath(
+            serviceSimpleName,
+            service.targets["typescript"]?.moduleName,
+          )
         val serviceTypeName = typeRegistry.generatedTypeName(serviceSimpleName, modulePath)
 
         securityByService[serviceTypeName] =
@@ -327,7 +333,7 @@ class TypeScriptSundayIrGenerator(
       val type = model.typeName(model.name.toUpperCamelCase())
       typeRegistry.addExternalType(type, type.sibling("Schema"))
     }
-    api.models.filter { model -> api.models.any { it.patchOf?.name == model.name } }.forEach { model ->
+    api.models.filter { model -> api.models.any { it.patchOf?.let(index::modelOrNull) == model } }.forEach { model ->
       val name = patchSupportName(model)
       val (type, code) = TypeScriptPatchHelpers.support(name)
       typeRegistry.outputOwnership.bind(name, model.modelOutputOrigin())
@@ -1800,12 +1806,13 @@ class TypeScriptSundayIrGenerator(
         }
       }
       if (!isDiscriminatorBase) {
-        constructorBuilder.addStatement(
-          "if (new.target === %T) %Q(this, %L, %T)",
-          typeName,
-          VALIDATE_MODEL_CONSTRUCTION,
-          typeRegistry.schemaInitializer(typeName),
-          typeName,
+        constructorBuilder.addCode(
+          CodeBlock
+            .builder()
+            .add("if (new.target === %T) %Q(this, ", typeName, VALIDATE_MODEL_CONSTRUCTION)
+            .add(typeRegistry.schemaInitializer(typeName))
+            .add(", %T);\n", typeName)
+            .build(),
         )
       }
       classBuilder.constructor(constructorBuilder.build())
@@ -1959,8 +1966,8 @@ class TypeScriptSundayIrGenerator(
         )
       }
 
-    val patch = api.models.singleOrNull { it.patchOf?.name == model.name }
-    val original = api.models.singleOrNull { it.name == model.patchOf?.name }
+    val patch = api.models.singleOrNull { it.patchOf?.let(index::modelOrNull) == model }
+    val original = model.patchOf?.let(index::modelOrNull)
     val helpers =
       when {
         patch != null ->
@@ -3889,7 +3896,9 @@ class TypeScriptSundayIrGenerator(
 
   private fun io.outfoxx.sunday.generator.ir.GeneratedProblem.typeName(): TypeName.Standard {
     val simpleName = name.toUpperCamelCase()
-    return typeRegistry.generatedTypeName(simpleName, simpleName.camelCaseToKebabCase())
+    val directory = target("typescript", "typescript")?.modelModuleName
+    val path = listOfNotNull(directory, simpleName.camelCaseToKebabCase()).joinToString("/")
+    return typeRegistry.generatedTypeName(simpleName, path)
   }
 
   private fun GeneratedOperation.typeScriptParameterViews() =
@@ -4583,23 +4592,18 @@ class TypeScriptSundayIrGenerator(
     val typeSimpleName = simpleName
     val moduleName =
       target?.modelModuleName
-        ?: api.target("typescript", "typescript")?.modelModuleName
         ?: target?.moduleName
-        ?: api.target("typescript", "typescript")?.moduleName
-    if (moduleName == null) {
-      nested
-        ?.enclosedIn
-        ?.modelOrNull(index)
-        ?.let { enclosingModel ->
-          val enclosingTypeName = enclosingModel.typeName(enclosingModel.name.toUpperCamelCase())
-          return enclosingTypeName.nested(nested.name?.toUpperCamelCase() ?: simpleName)
-        }
-    }
+    nested
+      ?.enclosedIn
+      ?.modelOrNull(index)
+      ?.let { enclosingModel ->
+        val enclosingTypeName = enclosingModel.typeName(enclosingModel.name.toUpperCamelCase())
+        return enclosingTypeName.nested(nested.name?.toUpperCamelCase() ?: simpleName)
+      }
 
     val modulePath =
       when {
         moduleName == null -> simpleName.camelCaseToKebabCase()
-        moduleName.endsWith(".ts") -> moduleName.removeSuffix(".ts")
         else -> "$moduleName/${simpleName.camelCaseToKebabCase()}"
       }
 

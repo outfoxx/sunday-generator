@@ -2,8 +2,13 @@
 uses:
   sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
 
-(sunday.kotlinModelPackage): io.test.client
-(sunday.typeScriptModelModule): test/client
+(sunday.placement):
+  kotlin:
+    models:
+      package: io.test.client
+  typescript:
+    models:
+      module: test/client
 
 types:
 

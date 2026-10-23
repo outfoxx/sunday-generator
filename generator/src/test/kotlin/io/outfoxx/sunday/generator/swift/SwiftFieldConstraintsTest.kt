@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
@@ -68,6 +69,7 @@ class SwiftFieldConstraintsTest {
               allowedValues = listOf("a"),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val numericChoice =
       GeneratedModel(
@@ -82,6 +84,7 @@ class SwiftFieldConstraintsTest {
               allowedValues = listOf(1.0),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val values =
       GeneratedModel(
@@ -89,12 +92,14 @@ class SwiftFieldConstraintsTest {
         kind = GeneratedModel.Kind.ARRAY,
         aliases = listOf(GeneratedTypeRef.scalar("string")),
         validation = mapOf("minItems" to "1"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val collection =
       GeneratedModel(
         name = "CollectionOwner",
         kind = GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("values", GeneratedTypeRef.named("Values"), required = true)),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val shortName =
       GeneratedModel(
@@ -102,6 +107,7 @@ class SwiftFieldConstraintsTest {
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
         aliases = listOf(GeneratedTypeRef.scalar("string")),
         validation = mapOf("minLength" to "3"),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val closed =
       GeneratedModel(
@@ -109,6 +115,7 @@ class SwiftFieldConstraintsTest {
         kind = GeneratedModel.Kind.OBJECT,
         properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.named("ShortName"), required = true)),
         additionalProperties = GeneratedAdditionalProperties(allowed = false),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val patch = choices.copy(name = "NullableChoicePatch", patchable = true)
     SwiftSundayIrGenerator(

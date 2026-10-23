@@ -17,10 +17,11 @@
 package io.outfoxx.sunday.generator.kotlin.sunday
 
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 
 val kotlinSundayTestOptions =
   KotlinSundayOptions(
-    "io.test.service",
+    kotlinPlacement("io.test", "io.test.service"),
     "http://example.com/",
     listOf("application/json"),
     "API",

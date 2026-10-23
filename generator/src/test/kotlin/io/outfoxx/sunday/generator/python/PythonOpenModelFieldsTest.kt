@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -110,6 +111,7 @@ class PythonOpenModelFieldsTest : PythonTest() {
             type = GeneratedTypeRef.scalar("integer"),
             validation = mapOf("minimum" to "1"),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     assertTrue(
       compileModules(

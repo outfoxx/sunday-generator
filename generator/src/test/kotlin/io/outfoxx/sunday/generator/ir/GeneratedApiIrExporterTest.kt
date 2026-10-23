@@ -171,6 +171,11 @@ class GeneratedApiIrExporterTest {
       equalTo(
         GeneratedOperation(
           id = "streamEvents",
+          declarationUri =
+            io.outfoxx.sunday.generator.GeneratedDocumentUri
+              .canonical(asyncApiUri)
+              .toString() +
+              "#/operations/streamEvents",
           method = "SUBSCRIBE",
           path = "/events",
           responses =

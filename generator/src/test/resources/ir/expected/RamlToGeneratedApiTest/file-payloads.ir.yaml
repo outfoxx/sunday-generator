@@ -1,4 +1,4 @@
-irVersion: "2"
+irVersion: "3"
 name: "File Payloads API"
 source:
   kind: "RAML"
@@ -32,6 +32,7 @@ services:
       - "application/json"
       response:
       - "application/json"
+    declarationUri: "SOURCE_LOCATION#/~1archives/post"
   media:
     request:
     - "application/json"
@@ -95,8 +96,11 @@ problems:
   documentation:
     summary: "Upload Failed"
     description: "The uploaded archive could not be processed."
+  declarationUri: "SOURCE_LOCATION#/(sunday.problemTypes)/upload_failed"
 media:
   request:
   - "application/json"
   response:
   - "application/json"
+placementConfiguration:
+  defaults: {}

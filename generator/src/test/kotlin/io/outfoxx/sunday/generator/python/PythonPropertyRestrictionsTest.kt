@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -41,11 +42,17 @@ class PythonPropertyRestrictionsTest : PythonTest() {
     val integer = GeneratedTypeRef.scalar("integer")
     val aliases =
       listOf(
-        GeneratedModel("Counter", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(integer)),
+        GeneratedModel(
+          "Counter",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(integer),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
         GeneratedModel(
           "CounterAlias",
           GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.named("Counter")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     val fields =
@@ -62,7 +69,13 @@ class PythonPropertyRestrictionsTest : PythonTest() {
         GeneratedModelProperty("fraction", GeneratedTypeRef.scalar("number"), defaultValue = "1.25"),
         GeneratedModelProperty("count", GeneratedTypeRef.named("CounterAlias")),
       )
-    val base = GeneratedModel("Base", GeneratedModel.Kind.OBJECT, properties = fields)
+    val base =
+      GeneratedModel(
+        "Base",
+        GeneratedModel.Kind.OBJECT,
+        properties = fields,
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+      )
     val child =
       GeneratedModel(
         "Child",
@@ -76,6 +89,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
               allowedValues = listOf(20),
             ),
           ),
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
       )
     val invalidDefault =
       child.copy(
@@ -128,6 +142,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
                 defaultValue = literal,
               ),
             ),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         )
       val error =
         assertThrows(GenerationException::class.java) {
@@ -402,35 +417,49 @@ class PythonPropertyRestrictionsTest : PythonTest() {
           "IntegerAlias",
           GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.scalar("integer")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "BooleanAlias",
           GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.scalar("boolean")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "State",
           GeneratedModel.Kind.ENUM,
           values = listOf("good", "bad", "unknown"),
           unknownValue = "unknown",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "StateAlias",
           GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.named("State")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
-        GeneratedModel("Base", GeneratedModel.Kind.OBJECT, properties = fields.map { it.copy(allowedValues = null) }),
+        GeneratedModel(
+          "Base",
+          GeneratedModel.Kind.OBJECT,
+          properties =
+            fields.map {
+              it.copy(allowedValues = null)
+            },
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        ),
         GeneratedModel(
           "Child",
           GeneratedModel.Kind.OBJECT,
           properties = fields,
           inherits = listOf(GeneratedTypeRef.named("Base")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
         GeneratedModel(
           "Grandchild",
           GeneratedModel.Kind.OBJECT,
           properties = listOf(fields.single { it.name == "zero" }),
           inherits = listOf(GeneratedTypeRef.named("Child")),
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
         ),
       )
     assertTrue(
@@ -511,6 +540,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
                   } else {
                     emptyList()
                   },
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           )
           for ((name, value) in listOf("Service" to "service", "User" to "user")) {
@@ -521,6 +551,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
                 properties = listOf(kind.copy(allowedValues = listOf(value))),
                 inherits = listOf(GeneratedTypeRef.named("${prefix}Base")),
                 discriminatorValue = value,
+                source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
               ),
             )
           }
@@ -534,6 +565,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
                   "service" to GeneratedTypeRef.named("${prefix}Service"),
                   "user" to GeneratedTypeRef.named("${prefix}User"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
             ),
           )
         }
@@ -544,6 +576,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
             properties = listOf(kind.copy(allowedValues = emptyList())),
             inherits = listOf(GeneratedTypeRef.named("OnlyService")),
             discriminatorValue = "service",
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
           ),
         )
       }

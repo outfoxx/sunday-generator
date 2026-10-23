@@ -18,10 +18,11 @@ package io.outfoxx.sunday.generator.ir
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -45,7 +46,19 @@ object GeneratedApiYaml {
 
   /** Deserializes a generated API IR value from YAML. */
   fun readString(yaml: String): GeneratedApi {
-    val api = mapper.readValue<GeneratedApi>(yaml)
+    val document = mapper.readTree(yaml)
+
+    // Compact IR may omit a declaration source only within its original containing document.
+    // Materialize it before composition; serialized declarations always retain their concrete source.
+    fun inheritSource(
+      node: JsonNode,
+      owner: JsonNode,
+    ) {
+      if (node is ObjectNode && !node.has("source")) node.set<JsonNode>("source", owner)
+      node.path("placementDeclarations").forEach { inheritSource(it, node.path("source")) }
+    }
+    (document.path("models") + document.path("problems")).forEach { inheritSource(it, document.path("source")) }
+    val api = mapper.treeToValue(document, GeneratedApi::class.java)
     require(api.irVersion == GeneratedApi.CURRENT_IR_VERSION) {
       "Unsupported Sunday IR version '${api.irVersion}'; expected '${GeneratedApi.CURRENT_IR_VERSION}'"
     }

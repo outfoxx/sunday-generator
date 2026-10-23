@@ -65,8 +65,8 @@ class SwiftTypeRegistryTest {
 
     assertThat(legacyFile.exists(), not(true))
     assertThat(userFile.exists(), not(false))
-    assertThat(outputDirectory.resolve("Repos/Models/BranchNotFoundProblem.swift").exists(), not(false))
-    assertThat(outputDirectory.resolve("Users/Responses/UserResponse.swift").exists(), not(false))
+    assertThat(outputDirectory.resolve("TurnPost/Repos/Models/BranchNotFoundProblem.swift").exists(), not(false))
+    assertThat(outputDirectory.resolve("TurnPost/Users/Responses/UserResponse.swift").exists(), not(false))
   }
 
   @Test
@@ -98,8 +98,8 @@ class SwiftTypeRegistryTest {
       outputDirectory,
     )
 
-    assertThat(outputDirectory.resolve("Models/OldModel.swift").exists(), not(true))
-    assertThat(outputDirectory.resolve("Models/NewModel.swift").exists(), not(false))
+    assertThat(outputDirectory.resolve("TurnPost/Models/OldModel.swift").exists(), not(true))
+    assertThat(outputDirectory.resolve("TurnPost/Models/NewModel.swift").exists(), not(false))
     assertThat(
       Files.readString(outputDirectory.resolve(".sunday-swift-generated-files")),
       containsString("Models/NewModel.swift"),

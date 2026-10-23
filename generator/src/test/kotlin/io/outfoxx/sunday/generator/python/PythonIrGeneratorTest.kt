@@ -293,6 +293,7 @@ class PythonIrGeneratorTest : PythonTest() {
               listOf(
                 GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "craft.yaml"),
           ),
           GeneratedModel(
             name = "UserView",
@@ -301,6 +302,7 @@ class PythonIrGeneratorTest : PythonTest() {
               listOf(
                 GeneratedModelProperty("userId", GeneratedTypeRef.scalar("string"), required = true),
               ),
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "craft.yaml"),
           ),
         ),
       services =

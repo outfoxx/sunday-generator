@@ -105,6 +105,19 @@ class PythonCompiler(
     check(result == 0) { "Python verification environment setup failed:\n$output" }
   }
 
+  /** Builds and installs a wheel so consumers can be checked without the owner's source checkout. */
+  fun installWheel(project: Path): Pair<Int, String> {
+    val artifacts = workDir.resolve("owner-artifacts")
+    val (built, output) = execute("build", "--wheel", "--out-dir", artifacts.toString(), project.toString())
+    if (built != 0) return built to output
+    val wheel =
+      Files.list(artifacts).use { files ->
+        files.filter { it.toString().endsWith(".whl") }.findFirst().orElseThrow()
+      }
+    val (installed, installOutput) = execute("pip", "install", wheel.toString())
+    return installed to (output + installOutput)
+  }
+
   fun verify(
     importModules: List<String> = listOf(),
     smokeCode: String? = null,

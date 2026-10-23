@@ -168,6 +168,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedTypeRef.named("ServiceIdentity"),
                 ),
               discriminator = "kind",
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "UserIdentity",
@@ -177,6 +178,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("userId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "ServiceIdentity",
@@ -186,6 +188,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
                   GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("serviceId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventData",
@@ -196,6 +199,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
                   "accounts.team.created" to GeneratedTypeRef.named("AccountsTeamCreatedData"),
                   "notification.created" to GeneratedTypeRef.named("NotificationCreatedData"),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "AccountsTeamCreatedData",
@@ -206,6 +210,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("teamId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "NotificationCreatedData",
@@ -216,6 +221,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
                 listOf(
                   GeneratedModelProperty("notificationId", GeneratedTypeRef.scalar("string"), required = true),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
             GeneratedModel(
               name = "EventEnvelope",
@@ -238,6 +244,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
                     externalDiscriminator = "type",
                   ),
                 ),
+              source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
             ),
           ),
       )

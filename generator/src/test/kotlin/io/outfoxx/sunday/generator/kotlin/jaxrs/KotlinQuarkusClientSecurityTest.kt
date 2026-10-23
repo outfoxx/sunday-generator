@@ -35,6 +35,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.smallrye.config.ConfigSourceFactory
 import io.smallrye.config.SmallRyeConfigBuilder
@@ -285,7 +286,7 @@ class KotlinQuarkusClientSecurityTest {
     assertTrue(error.message!!.contains("supports clientCredentials"))
   }
 
-  private fun registry() = KotlinTypeRegistry("io.test", null, GenerationMode.Client, emptySet())
+  private fun registry() = KotlinTypeRegistry(null, GenerationMode.Client, emptySet())
 
   private fun options(
     profile: String,
@@ -297,7 +298,7 @@ class KotlinQuarkusClientSecurityTest {
     explicitSecurityParameters = false,
     baseUriMode = null,
     alwaysUseResponseReturn = false,
-    defaultServicePackageName = "io.test",
+    placement = kotlinPlacement("io.test", "io.test"),
     defaultProblemBaseUri = "https://example.com/problems/",
     defaultMediaTypes = listOf("application/json"),
     serviceSuffix = "API",

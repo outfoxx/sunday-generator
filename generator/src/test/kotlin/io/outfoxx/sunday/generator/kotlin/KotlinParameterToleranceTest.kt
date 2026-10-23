@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.parameterNameCollisionApi
 import io.outfoxx.sunday.generator.tools.parameterToleranceApi
 import io.outfoxx.sunday.jdk.JdkTransport
@@ -56,7 +57,6 @@ class KotlinParameterToleranceTest {
   ) {
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         GenerationMode.Client,
         setOf(
@@ -69,7 +69,12 @@ class KotlinParameterToleranceTest {
     KotlinSundayIrGenerator(
       parameterNameCollisionApi(frontend, directory, listOf("it", "mode", "context")),
       registry,
-      KotlinSundayOptions("io.test.service", "http://example.com/", listOf("application/json"), "API"),
+      KotlinSundayOptions(
+        kotlinPlacement("io.test", "io.test.service"),
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+      ),
     ).generateServiceTypes()
     val result = compileTypesResult(registry.buildTypes())
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
@@ -126,7 +131,6 @@ class KotlinParameterToleranceTest {
     val tolerance = if (frontend.endsWith("-all")) Tolerance.All else Tolerance.Response
     val registry =
       KotlinTypeRegistry(
-        "io.test",
         null,
         role,
         buildSet {
@@ -143,7 +147,7 @@ class KotlinParameterToleranceTest {
         api,
         registry,
         KotlinSundayOptions(
-          "io.test.service",
+          kotlinPlacement("io.test", "io.test.service"),
           "http://example.com/",
           listOf("application/json"),
           "API",
@@ -161,7 +165,7 @@ class KotlinParameterToleranceTest {
           explicitSecurityParameters = false,
           baseUriMode = null,
           alwaysUseResponseReturn = false,
-          defaultServicePackageName = "io.test.service",
+          placement = kotlinPlacement("io.test", "io.test.service"),
           defaultProblemBaseUri = "http://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",

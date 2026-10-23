@@ -52,7 +52,9 @@ import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.ScalarShape
 import amf.shapes.client.platform.model.domain.UnionShape
 import com.damnhandy.uri.template.UriTemplate
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import io.outfoxx.sunday.generator.APIAnnotationName
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.common.APIAnnotations
 import io.outfoxx.sunday.generator.common.APIProcessor
@@ -170,7 +172,7 @@ class RamlToGeneratedApi(
     val api = document.api
     val shapeIndex = result.shapeIndex
     val rootLocation = document.location
-    val localModels = LocalModelRegistry(shapeIndex, rootLocation)
+    val localModels = LocalModelRegistry(shapeIndex, rootLocation, document)
     val resolvedEndpointParameters = resolvedEndpointParameters(result.serviceDocument)
     val resolvedOperationRequests = resolvedOperationRequests(result.serviceDocument)
     val apiMedia = media(api.contentType, api.accepts)
@@ -216,6 +218,7 @@ class RamlToGeneratedApi(
             kind = sourceKind,
             location = document.location,
           ),
+        placementScopes = api.placementScopes(document.location),
         services = services.map { it.copy(ownerUris = setOf(document.location)) },
         servers =
           api.servers.map { server ->
@@ -317,6 +320,26 @@ class RamlToGeneratedApi(
       ?.let {
         GeneratedService(
           name = name,
+          placementScopes = api.placementScopes(rootLocation),
+          placementDeclarations =
+            endPoints
+              .filter { endpoint -> endpoint.operations().any { !it.excluded() } }
+              .map { endpoint ->
+                val location = sourceDeclarationUri(rootLocation, endpoint.sourcePointer().substringAfter('#'))
+                GeneratedService.PlacementContribution(
+                  operationUris =
+                    operations.mapNotNull { it.declarationUri }.filter {
+                      it.substringBeforeLast('/') == location
+                    },
+                  placementScopes =
+                    api.placementScopes(rootLocation) +
+                      generateSequence(endpoint) { it.parent }.toList().asReversed().flatMap {
+                        it.placementScopes(rootLocation + it.sourcePointer())
+                      },
+                )
+              }.takeIf { contributions ->
+                contributions.any { it.placementScopes != api.placementScopes(rootLocation) }
+              }.orEmpty(),
           baseUri = baseUri,
           baseUriParameters = baseUriParameters,
           servers =
@@ -368,6 +391,8 @@ class RamlToGeneratedApi(
       ) ?: inheritedAuth
 
     val operationId = operation.generatedOperationId(endPoint.path)
+    localModels.operationLocations[serviceName to operationId] =
+      rootLocation + endPoint.sourcePointer() + "/" + operation.method
     val requestParameters =
       request.mergedParameters(
         resolvedRequest = resolvedOperationRequests[ResolvedOperationKey(endPoint.path, operation.method.uppercase())],
@@ -379,6 +404,18 @@ class RamlToGeneratedApi(
 
     return GeneratedOperation(
       id = operationId,
+      declarationUri =
+        sourceDeclarationUri(
+          rootLocation,
+          endPoint.sourcePointer().removePrefix("#") + "/" + operation.method,
+        ),
+      placementScopes =
+        generateSequence(endPoint) { it.parent }.toList().asReversed().flatMap {
+          it.placementScopes(rootLocation + it.sourcePointer())
+        } +
+          operation.placementScopes(
+            rootLocation + endPoint.sourcePointer() + "/" + operation.method,
+          ),
       method = operation.method.uppercase(),
       path = endPoint.path,
       parameters =
@@ -690,7 +727,7 @@ class RamlToGeneratedApi(
     forEach { payload ->
       val schema = payload.schema()?.let(shapeIndex::resolve) ?: return@forEach
       val type =
-        localModels.payloadRef(schema, serviceName, operationName, usage, status)
+        localModels.payloadRef(schema, serviceName, operationName, usage, status, payload.mediaType().value())
           ?: typeRef(schema, rootLocation = rootLocation, localModels = localModels)
       payloadsByType
         .getOrPut(type) { mutableListOf() }
@@ -812,6 +849,16 @@ class RamlToGeneratedApi(
     (
       reachableDeclaredShapes(document, api, shapeIndex)
         .mapNotNull { declaration ->
+          val declarationUri =
+            declaration.unit.location + "#/types/" +
+              (declaration.sourceShape.name ?: declaration.shape.name.orEmpty()).replace("~", "~0").replace("/", "~1")
+          localModels.placementLocations[declarationUri] =
+            declaration.unit.placementScopes() + declaration.sourceShape.placementScopes(declarationUri)
+          localModels.modelLocations[
+            (declaration.sourceShape.name ?: declaration.shape.name.orEmpty()) to
+              declaration.unit.location,
+          ] =
+            declarationUri
           model(
             shape = declaration.shape,
             shapeIndex = shapeIndex,
@@ -820,14 +867,24 @@ class RamlToGeneratedApi(
             rootLocation = rootLocation,
             localModels = localModels,
           )?.copy(
-            declarationUri = declaration.sourceShape.id,
+            declarationUri = sourceDeclarationUri(declaration.unit.location, declarationUri.substringAfter('#')),
+            placementScopes =
+              declaration.unit.placementScopes() +
+                declaration.sourceShape.placementScopes(
+                  declaration.unit.location + "#/types/" +
+                    (declaration.sourceShape.name ?: declaration.shape.name.orEmpty())
+                      .replace(
+                        "~",
+                        "~0",
+                      ).replace("/", "~1"),
+                ),
           )
-        }.distinctBy { model -> model.name to model.source?.location } + localModels.models
-    ).distinctBy { model -> model.name to model.source?.location to model.scope }
+        }.distinctBy { model -> model.name to model.source.location } + localModels.models
+    ).distinctBy { model -> model.name to model.source.location to model.scope }
       .sortedWith(
         compareBy(
           { model -> model.name },
-          { model -> model.source?.location ?: "" },
+          { model -> model.source.location },
           { model -> model.scope?.service ?: "" },
           { model -> model.scope?.operation ?: "" },
           { model -> model.scope?.usage?.name ?: "" },
@@ -839,10 +896,39 @@ class RamlToGeneratedApi(
   private inner class LocalModelRegistry(
     private val shapeIndex: ShapeIndex,
     private val rootLocation: String,
+    document: Document,
   ) {
+
+    // AMF normalizes optional keys (detail? -> detail). Selectors address the original YAML,
+    // so retain keys from the already loaded documents, including referenced libraries.
+    private val sourceMapper = YAMLMapper()
+    private val sourceDocuments =
+      document.allUnits
+        .mapNotNull { unit ->
+          unit.raw().orElse(null)?.let { raw ->
+            GeneratedDocumentUri.canonical(java.net.URI(unit.location())) to
+              sourceMapper.readTree(raw)
+          }
+        }.toMap()
+
+    private fun sourceMember(
+      container: String,
+      name: String,
+    ): String {
+      // Registry locations still carry raw JSON Pointers (including RAML URI-template braces).
+      // sourceDeclarationUri performs URI encoding once, when a declaration enters the IR.
+      val document = java.net.URI(container.substringBefore('#'))
+      val pointer = container.substringAfter('#', "")
+      val members = sourceDocuments[GeneratedDocumentUri.canonical(document)]?.at(pointer)
+      val key = if (members?.has(name) != true && members?.has("$name?") == true) "$name?" else name
+      return "$document#$pointer/" + key.replace("~", "~0").replace("/", "~1")
+    }
 
     private val modelsByKey = linkedMapOf<String, GeneratedModel>()
     private val refsByShapeId = linkedMapOf<String, GeneratedTypeRef>()
+    val operationLocations = mutableMapOf<Pair<String, String>, String>()
+    val modelLocations = mutableMapOf<Pair<String, String>, String>()
+    val placementLocations = mutableMapOf<String, List<GeneratedPlacementScope>>()
 
     val models: List<GeneratedModel>
       get() = modelsByKey.values.toList()
@@ -870,7 +956,27 @@ class RamlToGeneratedApi(
         )
       val modelName =
         "${operationName.toUpperCamelCase()}${parameterName.toUpperCamelCase()}${location.localTypeSuffix()}"
-      return register(resolved, modelName, scope, wireName.takeUnless { it == parameterName })
+      val operationUri = operationLocations[serviceName to operationName]
+      val declarationUri =
+        operationUri?.let { uri ->
+          val container =
+            when (location) {
+              GeneratedParameter.Location.PATH -> uri.substringBeforeLast('/') + "/uriParameters"
+              GeneratedParameter.Location.QUERY -> "$uri/queryParameters"
+              GeneratedParameter.Location.HEADER -> "$uri/headers"
+              else -> null
+            }
+          container?.let { sourceMember(it, wireName) }
+        }
+      return register(
+        resolved,
+        modelName,
+        scope,
+        wireName.takeUnless {
+          it == parameterName
+        },
+        declarationUri = declarationUri,
+      )
     }
 
     fun payloadRef(
@@ -879,6 +985,7 @@ class RamlToGeneratedApi(
       operationName: String,
       usage: GeneratedModelScope.Usage,
       status: Int?,
+      mediaType: String?,
     ): GeneratedTypeRef? {
       val resolved = shapeIndex.resolve(schema)
       val scope =
@@ -897,13 +1004,18 @@ class RamlToGeneratedApi(
           GeneratedModelScope.Usage.SECURITY_QUERY_STRING -> return null
         }
 
+      val declarationUri =
+        operationLocations[serviceName to operationName]?.let {
+          it + (if (status == null) "" else "/responses/$status") + "/body" +
+            (mediaType?.let { media -> "/" + media.replace("~", "~0").replace("/", "~1") } ?: "")
+        }
       if (resolved.nonNullableType is ArrayShape) {
         val item = (resolved.nonNullableType as ArrayShape).items()?.let(shapeIndex::resolve) ?: return null
-        register(item, modelName, scope)
+        register(item, modelName, scope, declarationUri = declarationUri?.plus("/items"))
         return typeRef(resolved, rootLocation = rootLocation, localModels = this)
       }
 
-      return register(resolved, modelName, scope)
+      return register(resolved, modelName, scope, declarationUri = declarationUri)
     }
 
     fun queryStringRef(
@@ -919,7 +1031,12 @@ class RamlToGeneratedApi(
           usage = GeneratedModelScope.Usage.QUERY_STRING,
         )
       val modelName = "${operationName.toUpperCamelCase()}QueryString"
-      return register(resolved, modelName, scope)
+      return register(
+        resolved,
+        modelName,
+        scope,
+        declarationUri = operationLocations[serviceName to operationName]?.plus("/queryString"),
+      )
         ?: typeRef(resolved, rootLocation = rootLocation, localModels = this)
     }
 
@@ -934,7 +1051,14 @@ class RamlToGeneratedApi(
           usage = GeneratedModelScope.Usage.SECURITY_QUERY_STRING,
         )
       val modelName = "${securitySchemeName.toUpperCamelCase()}QueryString"
-      return register(resolved, modelName, scope)
+      return register(
+        resolved,
+        modelName,
+        scope,
+        declarationUri =
+          rootLocation + "#/securitySchemes/" + securitySchemeName.replace("~", "~0").replace("/", "~1") +
+            "/describedBy/queryString",
+      )
         ?: typeRef(resolved, rootLocation = rootLocation, localModels = this)
     }
 
@@ -951,7 +1075,14 @@ class RamlToGeneratedApi(
       }
 
       val modelName = "${parentModelName.toUpperCamelCase()}${propertyName.toUpperCamelCase()}"
-      return register(resolved, modelName, scope = null, source = source)
+      val owner = modelLocations[parentModelName to (source?.location ?: rootLocation)]
+      return register(
+        resolved,
+        modelName,
+        scope = null,
+        source = source,
+        declarationUri = owner?.let { sourceMember("$it/properties", propertyName) },
+      )
     }
 
     private fun register(
@@ -960,8 +1091,25 @@ class RamlToGeneratedApi(
       scope: GeneratedModelScope?,
       serializationName: String? = null,
       source: GeneratedSourceSpec? = null,
+      declarationUri: String? = null,
     ): GeneratedTypeRef? {
       val localShape = localDeclarationShape(shape) ?: return null
+      val inheritedPlacement =
+        declarationUri
+          ?.let { uri ->
+            placementLocations.keys
+              .filter {
+                uri.startsWith(
+                  "$it/",
+                )
+              }.maxByOrNull { it.length }
+              ?.let(placementLocations::get)
+          }.orEmpty()
+      val placementScopes = inheritedPlacement + localShape.placementScopes(declarationUri ?: localShape.id)
+      if (declarationUri != null) {
+        modelLocations[modelName to (source?.location ?: rootLocation)] = declarationUri
+        placementLocations[declarationUri] = placementScopes
+      }
       val key =
         listOf(
           localShape.id,
@@ -975,8 +1123,9 @@ class RamlToGeneratedApi(
         ).joinToString("|")
       val model =
         modelsByKey.getOrPut(key) {
-          localShape.localModel(modelName, scope, serializationName, source).copy(
-            declarationUri = localShape.id,
+          localShape.localModel(modelName, scope, serializationName, source ?: rootSourceSpec(rootLocation)).copy(
+            declarationUri = declarationUri?.let { sourceDeclarationUri(it, it.substringAfter('#')) } ?: localShape.id,
+            placementScopes = placementScopes,
             tolerance =
               GeneratedTolerance.parse(
                 localShape.findStringAnnotation(APIAnnotationName.Tolerance, null),
@@ -1006,7 +1155,7 @@ class RamlToGeneratedApi(
       modelName: String,
       scope: GeneratedModelScope?,
       serializationName: String?,
-      source: GeneratedSourceSpec? = null,
+      source: GeneratedSourceSpec,
     ): GeneratedModel =
       when (this) {
         is ScalarShape ->
@@ -1041,13 +1190,14 @@ class RamlToGeneratedApi(
                 GeneratedModelProperty(
                   name = generatedName,
                   type =
-                    typeRef(
-                      shapeIndex.resolve(property.range),
-                      inlineShapeName = wireName,
-                      rootLocation = rootLocation,
-                      localModels = this@LocalModelRegistry,
-                      shapeIndex = shapeIndex,
-                    ),
+                    declaredPropertyRef(property.range, modelName, wireName, source)
+                      ?: typeRef(
+                        shapeIndex.resolve(property.range),
+                        inlineShapeName = wireName,
+                        rootLocation = rootLocation,
+                        localModels = this@LocalModelRegistry,
+                        shapeIndex = shapeIndex,
+                      ),
                   required = property.required,
                   targets = property.range.targets(),
                   serializationName = wireName.takeUnless { it == generatedName },
@@ -1232,7 +1382,7 @@ class RamlToGeneratedApi(
             return GeneratedModel(
               name = name,
               kind = GeneratedModel.Kind.UNION,
-              source = declaringUnit.sourceSpec(rootLocation),
+              source = declaringUnit.declarationSource(),
               aliases =
                 unionBranches.map { branch ->
                   typeRef(shapeIndex.resolve(branch), rootLocation = rootLocation)
@@ -1273,7 +1423,7 @@ class RamlToGeneratedApi(
                 shapeIndex = shapeIndex,
                 rootLocation = rootLocation,
                 localModels = localModels,
-                source = declaringUnit.sourceSpec(rootLocation),
+                source = declaringUnit.declarationSource(),
               )
             }
           val externallyDiscriminated =
@@ -1281,7 +1431,7 @@ class RamlToGeneratedApi(
           GeneratedModel(
             name = name,
             kind = shape.modelKind(shapeIndex),
-            source = declaringUnit.sourceSpec(rootLocation),
+            source = declaringUnit.declarationSource(),
             properties =
               inheritedProperties +
                 shape.modelProperties(
@@ -1290,7 +1440,7 @@ class RamlToGeneratedApi(
                   shapeIndex = shapeIndex,
                   rootLocation = rootLocation,
                   localModels = localModels,
-                  source = declaringUnit.sourceSpec(rootLocation),
+                  source = declaringUnit.declarationSource(),
                 ),
             aliases = shape.mapAliases(shapeIndex, rootLocation),
             closed = shape.closed?.takeIf { it },
@@ -1323,7 +1473,7 @@ class RamlToGeneratedApi(
           GeneratedModel(
             name = name,
             kind = GeneratedModel.Kind.ARRAY,
-            source = declaringUnit.sourceSpec(rootLocation),
+            source = declaringUnit.declarationSource(),
             aliases =
               listOf(
                 shape.items()?.let { typeRef(it, rootLocation = rootLocation) } ?: GeneratedTypeRef.scalar("any"),
@@ -1362,7 +1512,7 @@ class RamlToGeneratedApi(
                   emptyList()
                 },
               validation = if (shape.values.isEmpty()) validation(shape) else emptyMap(),
-              source = declaringUnit.sourceSpec(rootLocation),
+              source = declaringUnit.declarationSource(),
               values = shape.values.mapNotNull { value -> value.rawScalarValue },
               unknownValue = shape.unknownEnumValue(name),
               targets = declaringUnit.targetDefaults().mergeWith(shape.targets()),
@@ -1384,7 +1534,7 @@ class RamlToGeneratedApi(
           GeneratedModel(
             name = name,
             kind = GeneratedModel.Kind.UNION,
-            source = declaringUnit.sourceSpec(rootLocation),
+            source = declaringUnit.declarationSource(),
             aliases = shape.anyOf().filterNot(::isNilShape).map { typeRef(it, rootLocation = rootLocation) },
             targets = declaringUnit.targetDefaults().mergeWith(shape.targets()),
             nested = shape.nested(),
@@ -1433,7 +1583,7 @@ class RamlToGeneratedApi(
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.OBJECT,
-        source = declaringUnit.sourceSpec(rootLocation),
+        source = declaringUnit.declarationSource(),
         properties = localProperties,
         targets = declaringUnit.targetDefaults().mergeWith(targets()),
         inherits = inheritedRefs,
@@ -1453,7 +1603,7 @@ class RamlToGeneratedApi(
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.UNION,
-        source = declaringUnit.sourceSpec(rootLocation),
+        source = declaringUnit.declarationSource(),
         unionMode = if (xone.isNotEmpty()) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
         aliases = unionBranches.map { branch -> typeRef(shapeIndex.resolve(branch), rootLocation = rootLocation) },
         targets = declaringUnit.targetDefaults().mergeWith(targets()),
@@ -1525,7 +1675,7 @@ class RamlToGeneratedApi(
           localModels?.declaredPropertyRef(
             property.range,
             parentModelName,
-            generatedName,
+            wireName,
             source,
           )
             ?: typeRef(
@@ -1663,6 +1813,21 @@ class RamlToGeneratedApi(
     return GeneratedProblem(
       name = problemName(problemCode),
       sourceName = problemCode,
+      declarationUri =
+        definedIn.location + "#/(sunday.problemTypes)/" + problemCode.replace("~", "~0").replace("/", "~1"),
+      placementScopes =
+        definedIn.placementScopes() +
+          problem
+            .getProperty("(sunday.placement)")
+            .orElse(null)
+            ?.let {
+              listOf(
+                GeneratedPlacementScope(
+                  definedIn.location + "#/(sunday.problemTypes)/" + problemCode,
+                  GeneratedPlacement.read(it.anyValue, "problem $problemCode placement"),
+                ),
+              )
+            }.orEmpty(),
       source =
         GeneratedSourceSpec(
           kind = sourceKind,
@@ -2074,11 +2239,11 @@ class RamlToGeneratedApi(
       null
     }
 
-  private fun BaseUnit.sourceSpec(rootLocation: String): GeneratedSourceSpec? =
+  private fun BaseUnit.declarationSource(): GeneratedSourceSpec =
     GeneratedSourceSpec(
       kind = sourceKind,
       location = location,
-    ).takeUnless { source -> source.location == rootLocation }
+    )
 
   private fun GeneratedApi.withRootProblemReferenceSources(rootLocation: String): GeneratedApi {
     val rootSource = rootSourceSpec(rootLocation)
@@ -2123,7 +2288,7 @@ class RamlToGeneratedApi(
       candidates.firstOrNull { problem -> problem.source == rootSource }
         ?: candidates.singleOrNull()
         ?: return this
-    return copy(source = problem.source ?: rootSource)
+    return copy(source = problem.source)
   }
 
   private fun rootSourceSpec(rootLocation: String): GeneratedSourceSpec =
@@ -2138,10 +2303,40 @@ class RamlToGeneratedApi(
         GeneratedSourceSpec(
           kind = sourceKind,
           location = annotations.location,
-        ).takeUnless { source -> source.location == rootLocation }
+        )
       }
 
   private fun Shape.hasDurableModelName(): Boolean = name != null && isNameExplicit && name !in syntheticShapeNames
+
+  private fun EndPoint.sourcePointer(): String =
+    generateSequence(this) { it.parent }.toList().asReversed().joinToString("/", prefix = "#/") {
+      it.path
+        .removePrefix(it.parent?.path.orEmpty())
+        .replace("~", "~0")
+        .replace("/", "~1")
+    }
+
+  private fun BaseUnit.placementScopes(): List<GeneratedPlacementScope> =
+    ((this as? EncodesModel)?.encodes as? CustomizableElement ?: this as? CustomizableElement)
+      ?.placementScopes(location)
+      .orEmpty()
+
+  private fun CustomizableElement.placementScopes(location: String): List<GeneratedPlacementScope> =
+    findAnnotation(APIAnnotationName.Placement, null)
+      ?.let {
+        listOf(
+          GeneratedPlacementScope(
+            if ('#' in
+              location
+            ) {
+              sourceDeclarationUri(location, location.substringAfter('#'))
+            } else {
+              location
+            },
+            GeneratedPlacement.read(it.anyValue, location),
+          ),
+        )
+      }.orEmpty()
 
   private fun BaseUnit.targetDefaults(): Map<String, GeneratedTarget> =
     (this as? CustomizableElement)?.targets().orEmpty()
@@ -2167,36 +2362,27 @@ class RamlToGeneratedApi(
     linkedMapOf(
       TARGET_KOTLIN to
         GeneratedTarget(
-          packageName = findStringAnnotation(APIAnnotationName.KotlinPkg, null),
-          modelPackageName = findStringAnnotation(APIAnnotationName.KotlinModelPkg, null),
           typeName = findStringAnnotation(APIAnnotationName.KotlinType, null),
           implementation = implementation(APIAnnotationName.KotlinImpl, null),
         ),
       TARGET_KOTLIN_CLIENT to
         GeneratedTarget(
-          packageName = findStringAnnotation(APIAnnotationName.KotlinPkg, GenerationMode.Client),
-          modelPackageName = findStringAnnotation(APIAnnotationName.KotlinModelPkg, GenerationMode.Client),
           typeName = findStringAnnotation(APIAnnotationName.KotlinType, GenerationMode.Client),
           implementation = implementation(APIAnnotationName.KotlinImpl, GenerationMode.Client),
         ),
       TARGET_KOTLIN_SERVER to
         GeneratedTarget(
-          packageName = findStringAnnotation(APIAnnotationName.KotlinPkg, GenerationMode.Server),
-          modelPackageName = findStringAnnotation(APIAnnotationName.KotlinModelPkg, GenerationMode.Server),
           typeName = findStringAnnotation(APIAnnotationName.KotlinType, GenerationMode.Server),
           implementation = implementation(APIAnnotationName.KotlinImpl, GenerationMode.Server),
         ),
       TARGET_SWIFT to
         GeneratedTarget(
-          moduleName = findStringAnnotation(APIAnnotationName.SwiftModule, null),
-          modelModuleName = findStringAnnotation(APIAnnotationName.SwiftModelModule, null),
           typeName = findStringAnnotation(APIAnnotationName.SwiftType, null),
           implementation = implementation(APIAnnotationName.SwiftImpl, null),
         ),
       TARGET_TYPESCRIPT to
         GeneratedTarget(
-          moduleName = findStringAnnotation(APIAnnotationName.TypeScriptModule, null),
-          modelModuleName = findStringAnnotation(APIAnnotationName.TypeScriptModelModule, null),
+          moduleName = findStringAnnotation(APIAnnotationName.TypeScriptImport, null),
           typeName = findStringAnnotation(APIAnnotationName.TypeScriptType, null),
           implementation = implementation(APIAnnotationName.TypeScriptImpl, null),
         ),
@@ -2588,7 +2774,7 @@ class RamlToGeneratedApi(
     GeneratedIdentity.native(
       normalizedCompositionId(
         listOfNotNull(
-          source?.location,
+          source.location,
           sourceName ?: name,
         ).joinToString(":"),
       ),
