@@ -32,6 +32,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -44,16 +45,25 @@ import java.net.URI
 class KotlinAboutBlankProblemTest {
   @ParameterizedTest
   @ValueSource(
-    strings = ["sunday", "jaxrs-client", "jaxrs-server", "quarkus", "quarkus-models", "quarkus-custom-models"],
+    strings = [
+      "sunday", "jaxrs-client", "jaxrs-server", "quarkus", "quarkus-models",
+      "sunday-custom", "jaxrs-client-custom", "jaxrs-server-custom", "quarkus-custom", "quarkus-custom-models",
+    ],
   )
-  fun `standard status models compile across frameworks and use generic client errors`(
+  fun `standard status models compile across frameworks while custom URI conflicts fail`(
     target: String,
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
   ) {
     val registry =
       KotlinTypeRegistry(
         null,
-        if (target in listOf("sunday", "jaxrs-client")) GenerationMode.Client else GenerationMode.Server,
+        if (target.startsWith("sunday") ||
+          target.startsWith("jaxrs-client")
+        ) {
+          GenerationMode.Client
+        } else {
+          GenerationMode.Server
+        },
         setOf(
           KotlinTypeRegistry.Option.ImplementModel,
           KotlinTypeRegistry.Option.JacksonAnnotations,
@@ -80,36 +90,46 @@ class KotlinAboutBlankProblemTest {
           },
       )
     val placement = kotlinPlacement("io.test.blank", "io.test.blank")
-    if (target == "sunday") {
-      KotlinSundayIrGenerator(
-        api,
-        registry,
-        KotlinSundayOptions(
-          placement,
-          "https://example.test/",
-          listOf("application/json"),
-          "API",
-        ),
-      ).generateServiceTypes()
-    } else {
-      KotlinJAXRSIrGenerator(
-        api,
-        registry,
-        KotlinJAXRSOptions(
-          coroutineFlowMethods = false,
-          coroutineServiceMethods = false,
-          reactiveResponseType = null,
-          explicitSecurityParameters = false,
-          baseUriMode = null,
-          alwaysUseResponseReturn = false,
-          placement = placement,
-          defaultProblemBaseUri = "https://example.test/",
-          defaultMediaTypes = listOf("application/json"),
-          serviceSuffix = "API",
-          quarkus = target.startsWith("quarkus"),
-        ),
-      ).generateServiceTypes()
+    val generate = {
+      if (target.startsWith("sunday")) {
+        KotlinSundayIrGenerator(
+          api,
+          registry,
+          KotlinSundayOptions(
+            placement,
+            "https://example.test/",
+            listOf("application/json"),
+            "API",
+          ),
+        ).generateServiceTypes()
+      } else {
+        KotlinJAXRSIrGenerator(
+          api,
+          registry,
+          KotlinJAXRSOptions(
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
+            reactiveResponseType = null,
+            explicitSecurityParameters = false,
+            baseUriMode = null,
+            alwaysUseResponseReturn = false,
+            placement = placement,
+            defaultProblemBaseUri = "https://example.test/",
+            defaultMediaTypes = listOf("application/json"),
+            serviceSuffix = "API",
+            quarkus = target.startsWith("quarkus"),
+          ),
+        ).generateServiceTypes()
+      }
     }
+    if (target.contains("custom")) {
+      val error = assertThrows(IllegalArgumentException::class.java) { generate() }
+      for (part in listOf("urn:example:shared", "BadRequestProblem", "NotFoundProblem", "distinct fixed type URIs")) {
+        assertTrue(error.message.orEmpty().contains(part), error.message)
+      }
+      return
+    }
+    generate()
     val selection =
       if (target.endsWith("models")) {
         GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem))

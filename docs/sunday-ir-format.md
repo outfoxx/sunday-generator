@@ -308,8 +308,9 @@ come from the HTTP status. Clients use the runtime's generic Problem for both an
 explicit `about:blank` and an omitted `type`, preserving the received status, title,
 detail, and extensions. Status-specific schema models remain available for explicit
 construction and validation, including server and model/problem-only output.
-Conflicting custom URI registrations still fail when generating client registrations;
-server generation does not require an unambiguous client registry.
+Distinct response problems sharing a fixed custom URI fail validation in every
+generation mode, including server and model/problem-only output, regardless of
+output selection. `about:blank` is the sole exception to this custom URI conflict check.
 
 Problems whose URI is selected at runtime require explicit transport registration. Constructors fill
 fixed fields; decoders still reject conflicting wire values. HTTP Problem constructors

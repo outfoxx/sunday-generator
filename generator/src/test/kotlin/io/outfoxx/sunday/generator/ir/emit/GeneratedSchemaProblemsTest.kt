@@ -67,14 +67,11 @@ class GeneratedSchemaProblemsTest {
         ordered.mapIndexed { index, response -> operation.copy(id = "read$index", responses = listOf(response)) },
       )) {
         val index = GeneratedApiIndex(api.copy(services = listOf(service.copy(operations = operations))))
-        index.validateSchemaProblemResponses()
         val error =
           assertThrows(
             IllegalArgumentException::class.java,
           ) {
-            index.api.services
-              .single()
-              .referencedSchemaProblems(index)
+            index.validateSchemaProblemResponses()
           }
         messages.add(error.message)
         for (part in listOf(service.name, "QueuedProblem", "RebuildingProblem", "distinct fixed type URIs")) {

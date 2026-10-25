@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -27,14 +29,18 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 
 @RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
 @Tag("models")
 @Tag("responses")
 class PythonAboutBlankProblemTest : PythonTest() {
-  @Test
-  fun `custom URI conflicts still fail for client registrations`(
+  @ParameterizedTest
+  @ValueSource(strings = ["sunday", "sunday-models", "sunday-owner", "litestar", "litestar-models", "litestar-owner"])
+  fun `custom URI conflicts fail regardless of generation mode or output selection`(
+    target: String,
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
   ) {
     val original = GeneratedApiIrExporter().export(source)
@@ -54,11 +60,26 @@ class PythonAboutBlankProblemTest : PythonTest() {
             )
           },
       )
+    val options = PythonGeneratorOptions(placement = pythonPlacement("test_api"))
+    val selection =
+      when {
+        target.endsWith(
+          "models",
+        ) -> GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem))
+        target.endsWith("owner") -> GeneratedOutputSelection(ownerUris = setOf(URI("file:///other.yaml")))
+        else -> GeneratedOutputSelection()
+      }
     val error =
       assertThrows(IllegalArgumentException::class.java) {
-        PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api"))).generateModules()
+        if (target.startsWith("litestar")) {
+          PythonLitestarIrGenerator(api, options).generateModules(selection)
+        } else {
+          PythonSundayIrGenerator(api, options).generateModules(selection)
+        }
       }
-    assertTrue(error.message.orEmpty().contains("distinct fixed type URIs"), error.message)
+    for (part in listOf("urn:example:shared", "BadRequestProblem", "NotFoundProblem", "distinct fixed type URIs")) {
+      assertTrue(error.message.orEmpty().contains(part), error.message)
+    }
   }
 
   @Test

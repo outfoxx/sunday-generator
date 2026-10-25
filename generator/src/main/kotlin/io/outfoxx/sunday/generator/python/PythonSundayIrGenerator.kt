@@ -27,7 +27,6 @@ import io.outfoxx.sunday.generator.ir.emit.clientConfigurations
 import io.outfoxx.sunday.generator.ir.emit.clientConstructorSecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
-import io.outfoxx.sunday.generator.ir.emit.referencedSchemaProblems
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
@@ -120,7 +119,6 @@ class PythonSundayIrGenerator(
     if (services.isNotEmpty() &&
       (selection.categories.isEmpty() || GeneratedTypeCategory.Service in selection.categories)
     ) {
-      services.filter(::selected).forEach { it.referencedSchemaProblems(apiIndex) }
       services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Python/Sunday")
       val clientRenderer =
         PythonClientRenderer(

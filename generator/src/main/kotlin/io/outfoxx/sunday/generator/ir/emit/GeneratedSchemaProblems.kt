@@ -37,7 +37,7 @@ fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<Str
       distinct.single()
     }
 
-// Response shape validation also applies to servers, which do not need a URI-keyed client registry.
+// Keep response shape extraction shared by validation and client registration.
 private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): List<Pair<String, GeneratedModel>> {
   val properties = GeneratedModelProperties(index::modelOrNull)
 
@@ -126,7 +126,7 @@ private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): L
     .mapNotNull { model -> typeUri(model)?.let { it to model } }
 }
 
-/** Validates the supported HTTP Problem response union shape consistently for every emitter. */
+/** Validates HTTP Problem response shapes and custom URI uniqueness for every emitter and output selection. */
 fun GeneratedApiIndex.validateSchemaProblemResponses() {
-  api.services.forEach { it.schemaProblemResponses(this) }
+  api.services.forEach { it.referencedSchemaProblems(this) }
 }
