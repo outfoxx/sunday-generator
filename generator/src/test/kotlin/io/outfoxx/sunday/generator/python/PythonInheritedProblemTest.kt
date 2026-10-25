@@ -17,6 +17,8 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
@@ -28,6 +30,7 @@ import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -39,6 +42,71 @@ import kotlin.io.path.writeText
 @Tag("models")
 @Tag("responses")
 class PythonInheritedProblemTest : PythonTest() {
+  @Test
+  fun `problem extensions cannot shadow wrapper payload members`(
+    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+    compiler: PythonCompiler,
+  ) {
+    val original = GeneratedApiIrExporter().export(source)
+    val api =
+      original.copy(
+        models =
+          original.models.map { model ->
+            val extension =
+              when (model.name) {
+                "RebuildingProblem" -> "payload"
+                "QueuedProblem" -> "payloadType"
+                else -> null
+              }
+            if (extension == null) {
+              model
+            } else {
+              model.copy(
+                properties =
+                  model.properties +
+                    GeneratedModelProperty(extension, GeneratedTypeRef.scalar("string"), required = true),
+              )
+            }
+          },
+      )
+    assertTrue(
+      compileModules(
+        compiler,
+        PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api"))).generateModules(),
+        smokeCode =
+          """
+          import json
+          from sunday import ProblemRegistry
+          from test_api.models import QueuedProblem as QueuedPayload
+          from test_api.models_problems import QueuedProblem, RebuildingProblem, register_problems
+          raw = dict(json.loads('''$INHERITED_PROBLEM_JSON'''), payload='parent extension', payloadType='child extension')
+          payload = QueuedPayload.model_validate(raw)
+          value = QueuedProblem(payload=payload)
+          assert value.payload is payload
+          assert value.payload_ == 'parent extension'
+          assert value.payload_type_ == 'child extension'
+          assert value.payload_type is QueuedPayload
+          assert value.resource_key == 'A'
+          assert value.model_dump(mode='json', by_alias=True) == raw
+          assert QueuedProblem.model_validate(raw).payload_ == 'parent extension'
+          parent = RebuildingProblem.model_validate(raw)
+          assert parent.payload_ == 'parent extension'
+          registry = ProblemRegistry()
+          register_problems(registry)
+          try:
+              raise registry.decode(raw)
+          except RebuildingProblem as caught:
+              assert isinstance(caught, QueuedProblem)
+              assert caught.payload_ == 'parent extension'
+              assert caught.payload_type_ == 'child extension'
+              assert caught.model_dump(mode='json', by_alias=True) == raw
+          else:
+              raise AssertionError('Problem was not raised')
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "asyncapi", "composed"])
   fun `source-schema exceptions compile for every supported frontend`(

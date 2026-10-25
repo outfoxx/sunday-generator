@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
@@ -50,8 +51,14 @@ internal class PythonSchemaProblemRenderer(
             } ?: PythonSymbol("sunday", "Problem", "_RuntimeProblem")
           val fields =
             problems.properties.fields(model).filter {
-              !it.inherited && it.wireName !in setOf("type", "title", "status", "detail", "instance")
+              it.wireName !in setOf("type", "title", "status", "detail", "instance")
             }
+          val accessorNames = NameAllocator(preallocateKeywords = false)
+          listOf("payload", "payload_type", "type", "title", "status", "detail", "instance").forEach {
+            accessorNames.newName(it)
+          }
+          // Allocate inherited declarations first so descendants retain their ancestor's accessor names.
+          fields.forEach { accessorNames.newName(it.declaration.name.pythonIdentifierName, it.wireName) }
           val bindings = PythonDeclarationBindings(problems.models, packageName, model.pythonModule(packageName))
 
           fun bindType(reference: GeneratedTypeRef): GeneratedTypeRef {
@@ -63,7 +70,7 @@ internal class PythonSchemaProblemRenderer(
             return nested.copy(name = requireNotNull(imported.alias))
           }
           val accessors =
-            fields.map { field ->
+            fields.filterNot { it.inherited }.map { field ->
               val property = field.effective
               val propertyType = property.type
               val type = bindType(propertyType).renderPythonType(nullable = false)
@@ -74,7 +81,7 @@ internal class PythonSchemaProblemRenderer(
                     ${"\"\"\"Return the declared problem extension.\"\"\""}
                     return self.payload.%L
                 """.trimIndent().prependIndent("    "),
-                property.name.pythonIdentifierName,
+                accessorNames[field.wireName],
                 if (!property.required || propertyType.nullable) PythonCodeBlock.of("%C | None", type) else type,
                 property.name.pythonIdentifierName,
               )
@@ -103,11 +110,11 @@ internal class PythonSchemaProblemRenderer(
               PythonCodeBlock.of("")
             } else {
               PythonCodeBlock.of(
-                "        if payload is None:\n%C\n",
+                "%C\n",
                 PythonCodeBlock.join(
                   defaults.map { property ->
                     PythonCodeBlock.of(
-                      "            if %S not in values and %S not in values:\n                values[%S] = %C",
+                      "        if payload is None and %S not in values and %S not in values:\n            values[%S] = %C",
                       property.name.pythonIdentifierName,
                       property.serializationName ?: property.name,
                       property.serializationName ?: property.name,

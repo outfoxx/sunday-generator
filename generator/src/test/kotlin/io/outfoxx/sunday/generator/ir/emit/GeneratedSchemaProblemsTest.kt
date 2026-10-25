@@ -17,6 +17,8 @@
 package io.outfoxx.sunday.generator.ir.emit
 
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedPayloadOption
+import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -29,6 +31,51 @@ import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
 class GeneratedSchemaProblemsTest {
+  @Test
+  fun `conflicting response problem URIs fail regardless of response or operation order`(
+    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(source)
+    val service = api.services.single()
+    val operation = service.operations.first()
+    val responses =
+      listOf("QueuedProblem", "RebuildingProblem").mapIndexed { index, name ->
+        GeneratedResponse(status = 409 + index, type = GeneratedTypeRef.named(name))
+      }
+    val messages = mutableSetOf<String?>()
+    for (ordered in listOf(responses, responses.reversed())) {
+      for (operations in listOf(
+        listOf(operation.copy(responses = ordered)),
+        ordered.mapIndexed { index, response -> operation.copy(id = "read$index", responses = listOf(response)) },
+      )) {
+        val index = GeneratedApiIndex(api.copy(services = listOf(service.copy(operations = operations))))
+        val error = assertThrows(IllegalArgumentException::class.java) { index.validateSchemaProblemResponses() }
+        messages.add(error.message)
+        for (part in listOf(service.name, "QueuedProblem", "RebuildingProblem", "distinct fixed type URIs")) {
+          assertTrue(error.message.orEmpty().contains(part), error.message)
+        }
+        assertTrue(error.message.orEmpty().contains("https://example.com/problems/rebuilding"), error.message)
+      }
+    }
+    assertEquals(1, messages.size)
+  }
+
+  @Test
+  fun `repeated references to the same response problem share one registration`(
+    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(source)
+    val service = api.services.single()
+    val type = GeneratedTypeRef.named("QueuedProblem")
+    val response = GeneratedResponse(status = 409, type = type, payloads = listOf(GeneratedPayloadOption(type)))
+    val repeated =
+      service.copy(
+        operations = service.operations.map { it.copy(responses = listOf(response, response.copy(status = 503))) },
+      )
+    val registered = repeated.referencedSchemaProblems(GeneratedApiIndex(api))
+    assertEquals(listOf("QueuedProblem"), registered.values.map { it.name })
+  }
+
   @Test
   fun `inline and named anyOf retain original inherited problem references`(
     @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,

@@ -111,7 +111,15 @@ fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<Str
     .mapNotNull(index::modelOrNull)
     .flatMap(::problems)
     .mapNotNull { model -> typeUri(model)?.let { it to model } }
-    .toMap()
+    .groupBy({ it.first }, { it.second })
+    .mapValues { (uri, models) ->
+      val distinct = models.distinct()
+      require(distinct.size == 1) {
+        "HTTP Problem responses in service '$name' map type URI '$uri' to multiple problems: " +
+          distinct.map { it.name }.sorted().joinToString() + "; declare distinct fixed type URIs"
+      }
+      distinct.single()
+    }
 }
 
 /** Validates the supported HTTP Problem response union shape consistently for every emitter. */
