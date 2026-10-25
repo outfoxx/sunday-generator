@@ -59,7 +59,16 @@ class PythonModelRenderer(
   fun renderModels(
     models: List<GeneratedModel>,
     include: (GeneratedModel) -> Boolean = { true },
-  ): PythonModule = renderNormalizedModels(GeneratedPatchModels.normalizeFields(models), include)
+  ): PythonModule {
+    val normalized = PythonProblemModels(GeneratedPatchModels.normalizeFields(models)).normalizedModels()
+    val selected =
+      models
+        .zip(normalized)
+        .filter { include(it.first) }
+        .map { it.second }
+        .toSet()
+    return renderNormalizedModels(normalized) { it in selected }
+  }
 
   private fun renderNormalizedModels(
     declarations: List<GeneratedModel>,
@@ -503,7 +512,19 @@ class PythonModelRenderer(
           inherited.kind == GeneratedTypeRef.Kind.NAMED && modelIndex[inherited.name]?.isObjectClass() == true
         }.map { inherited -> inherited.renderPythonType(nullable = false) }
         .ifEmpty {
-          listOf(PythonCodeBlock.of("%T", PythonSymbol("sunday", if (patchable) "SundayPatchModel" else "SundayModel")))
+          listOf(
+            PythonCodeBlock.of(
+              "%T",
+              PythonSymbol(
+                "sunday",
+                when {
+                  patchable -> "SundayPatchModel"
+                  PythonProblemModels(modelIndex.values.toList()).isProblem(this) -> "ProblemPayload"
+                  else -> "SundayModel"
+                },
+              ),
+            ),
+          )
         }
 
     return PythonCodeBlock.of(
@@ -1747,8 +1768,16 @@ class PythonModelRenderer(
         )
     }
 
+    // Pydantic schemas may refine runtime fields, including a nullable RFC type URI.
+    // The exception companion normalizes its public type accessor without changing the payload.
+    val nullableProblemType =
+      model.inherits.isEmpty() &&
+        name == "type" &&
+        (type.nullable || !required && constant == null && defaultValue == null) &&
+        PythonProblemModels(modelIndex.values.toList()).isProblem(model)
     val overrideSuffix =
-      if (model.inheritedPropertyNames().contains(name) &&
+      if (nullableProblemType ||
+        model.inheritedPropertyNames().contains(name) &&
         modelProperties
           .fields(model)
           .single { it.wireName == (serializationName ?: name) }

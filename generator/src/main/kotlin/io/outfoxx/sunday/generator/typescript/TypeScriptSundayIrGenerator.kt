@@ -64,10 +64,12 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.referencedSchemaProblems
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
@@ -234,6 +236,7 @@ class TypeScriptSundayIrGenerator(
 
   /** Generates TypeScript/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
+    index.validateSchemaProblemResponses()
     typeRegistry.outputOwnership.current = api.outputOrigin()
     api.models.forEach { model ->
       typeRegistry.outputOwnership.bind(model.typeName(model.name.toUpperCamelCase()), model.modelOutputOrigin())
@@ -698,6 +701,17 @@ class TypeScriptSundayIrGenerator(
             .builder()
             .add("transport.registerProblem(%S, ", problem.resolvedTypeUri(options.defaultProblemBaseUri))
             .add(typeRegistry.schemaInitializer(problem.typeName()))
+            .add(");\n")
+            .build(),
+        )
+      }
+
+      service.referencedSchemaProblems(index).forEach { (uri, model) ->
+        constructorBuilder.addCode(
+          CodeBlock
+            .builder()
+            .add("transport.registerProblem(%S, ", uri)
+            .add(typeRegistry.schemaInitializer(model.typeName(model.name.toUpperCamelCase())))
             .add(");\n")
             .build(),
         )
@@ -1748,6 +1762,7 @@ class TypeScriptSundayIrGenerator(
         PropertySpec
           .builder(propertyName, propertyType.nonUndefinable)
           .optional(propertyType.isUndefinable)
+          .apply { if (property.allowedValues?.size == 1) addModifiers(Modifier.READONLY) }
           .build(),
       )
       if (
@@ -1758,6 +1773,7 @@ class TypeScriptSundayIrGenerator(
           PropertySpec
             .builder(propertyName, propertyType.nonUndefinable)
             .optional(propertyType.isUndefinable)
+            .apply { if (property.allowedValues?.size == 1) addModifiers(Modifier.READONLY) }
             .build(),
         )
       }
@@ -1793,25 +1809,55 @@ class TypeScriptSundayIrGenerator(
     }
 
     if (allSerializableProperties.isNotEmpty() || options.preserveUnknownFields) {
+      val constants = allSerializableProperties.filter { it.allowedValues?.size == 1 }
+      val defaulted = allSerializableProperties.filter { it.defaultValue != null && it !in constants }
+      val initialized = constants + defaulted
+      val constructorType =
+        if (initialized.isEmpty()) {
+          specName
+        } else {
+          val keys = initialized.joinToString(" | ") { literal(it.name.typeScriptIdentifierName).toString() }
+          TypeName.implicit(
+            CodeBlock.of("Omit<%T, %L> & Partial<Pick<%T, %L>>", specName, keys, specName, keys).toString(),
+          )
+        }
       val constructorBuilder =
         FunctionSpec
           .constructorBuilder()
           .addParameter(
             ParameterSpec
-              .builder("init", specName)
+              .builder("init", constructorType)
               .apply {
-                if (allSerializableProperties.isEmpty()) defaultValue("{}")
+                if (allSerializableProperties.all { !it.required || it in initialized }) defaultValue("{}")
               }.build(),
           )
 
+      val inputName = if (initialized.isEmpty()) "init" else "values"
+      if (initialized.isNotEmpty()) {
+        constructorBuilder.addStatement(
+          "const values: %T = {...init, %L}",
+          specName,
+          initialized
+            .map {
+              val value = if (it in constants) it.allowedValues!!.single() else modelProperties.scalarDefault(it)
+              CodeBlock.of(
+                "%N: init.%N === undefined ? %L : init.%N",
+                it.name.typeScriptIdentifierName,
+                it.name.typeScriptIdentifierName,
+                it.type.defaultValueCode(ownerTypeName, value),
+                it.name.typeScriptIdentifierName,
+              )
+            }.joinToCode(", "),
+        )
+      }
       if (superTypeName != null) {
         if (inheritedProperties.isNotEmpty() || options.preserveUnknownFields) {
-          constructorBuilder.addStatement("super(init)")
+          constructorBuilder.addStatement("super(%N)", inputName)
         } else {
           constructorBuilder.addStatement("super()")
         }
       } else if (isRootProblemModel) {
-        constructorBuilder.addCode(problemModelSuperCode())
+        constructorBuilder.addCode(problemModelSuperCode(inputName))
       }
 
       declaredProperties.forEach { property ->
@@ -1820,7 +1866,7 @@ class TypeScriptSundayIrGenerator(
           !(isRootProblemModel && property.isSatisfiedByBaseProblemClass()) &&
           !(isProblemModel && superTypeName != null && property.name in inheritedPropertyNames)
         ) {
-          constructorBuilder.addStatement("this.%N = init.%N", propertyName, propertyName)
+          constructorBuilder.addStatement("this.%N = %N.%N", propertyName, inputName, propertyName)
         }
       }
       if (options.preserveUnknownFields) {
@@ -1836,9 +1882,22 @@ class TypeScriptSundayIrGenerator(
         constructorBuilder.addCode(
           CodeBlock
             .builder()
-            .add("if (new.target === %T) %Q(this, ", typeName, VALIDATE_MODEL_CONSTRUCTION)
+            .add("if (new.target === %T) {\n", typeName)
+            .indent()
+            .add("%Q(this, ", VALIDATE_MODEL_CONSTRUCTION)
             .add(typeRegistry.schemaInitializer(typeName))
             .add(", %T);\n", typeName)
+            .apply {
+              // Lock after the complete descendant has initialized and validated its effective constants.
+              constants.forEach { property ->
+                addStatement(
+                  "Object.defineProperty(this, %S, {enumerable: true, configurable: false, get: () => %L})",
+                  property.name.typeScriptIdentifierName,
+                  property.type.defaultValueCode(ownerTypeName, property.allowedValues!!.single()),
+                )
+              }
+            }.unindent()
+            .add("}\n")
             .build(),
         )
       }
@@ -2133,18 +2192,18 @@ class TypeScriptSundayIrGenerator(
     serializationName == null &&
       (name in requiredBaseProblemProperties || (name in optionalBaseProblemProperties && !required))
 
-  private fun problemModelSuperCode(): CodeBlock =
+  private fun problemModelSuperCode(inputName: String): CodeBlock =
     CodeBlock
       .builder()
       .add(
         """
         |super({
-        |  ...init,
-        |  type: init.type ?? %T.BLANK_URL,
-        |  title: init.title ?? '',
-        |  status: init.status ?? 0,
-        |  detail: init.detail ?? undefined,
-        |  instance: init.instance ?? undefined
+        |  ...$inputName,
+        |  type: $inputName.type ?? %T.BLANK_URL,
+        |  title: $inputName.title ?? '',
+        |  status: $inputName.status ?? 0,
+        |  detail: $inputName.detail ?? undefined,
+        |  instance: $inputName.instance ?? undefined
         |});
         |
         """.trimMargin(),

@@ -1,0 +1,35 @@
+#%RAML 1.0
+title: Inherited problems
+version: '1'
+types:
+  Problem:
+    type: object
+    additionalProperties: true
+    properties:
+      type: string
+      title: string
+      status: integer
+      detail?: string
+      instance?: string
+      traceId?: string
+      nullableParent?: string | nil
+  RebuildingProblem:
+    type: Problem
+    properties:
+      type: {type: string}
+      title: {type: string}
+      status: {type: integer}
+      resourceKey: {type: string, minLength: 1}
+      retryAfterSeconds: {type: integer, minimum: 1}
+      optionalChild?: string
+      nullableChild: string | nil
+      metadata: Metadata
+  QueuedProblem:
+    type: RebuildingProblem
+    properties:
+      queuePosition: {type: integer, minimum: 1}
+      queue-name: {type: string}
+  Metadata:
+    type: object
+    properties:
+      region: {type: string, minLength: 1}

@@ -403,12 +403,39 @@ val generateSseApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val inheritedProblemSources = layout.buildDirectory.dir("generated/inherited-problems")
+val inheritedProblemContract =
+  rootProject.layout.projectDirectory.file("generator/src/test/resources/openapi/ir/inherited-problem.yaml")
+val generateInheritedProblems by tasks.registering(JavaExec::class) {
+  inputs.file(inheritedProblemContract)
+  outputs.dir(inheritedProblemSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-quarkus",
+    "-use-jakarta-packages",
+    "-problem-library",
+    "quarkus",
+    "-category",
+    "models",
+    "-category",
+    "problems",
+    "-out",
+    inheritedProblemSources.get().asFile.absolutePath,
+    inheritedProblemContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
   freeCompilerArgs.addAll("-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateInheritedProblems)
   kotlin.srcDir(generateSseApi)
   optionalBodyGenerators.forEach { kotlin.srcDir(it) }
   nativePayloadGenerators.forEach { kotlin.srcDir(it) }
@@ -426,6 +453,7 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(generateInheritedProblems)
   dependsOn(generateSseApi)
   dependsOn(optionalBodyGenerators)
   dependsOn(nativePayloadGenerators)

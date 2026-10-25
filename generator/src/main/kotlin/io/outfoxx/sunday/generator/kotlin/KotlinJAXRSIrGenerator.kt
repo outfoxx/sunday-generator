@@ -102,6 +102,7 @@ import io.outfoxx.sunday.generator.ir.emit.referencedProblems
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.sseEnabled
 import io.outfoxx.sunday.generator.ir.emit.target
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.ir.mergeWith
 import io.outfoxx.sunday.generator.ir.orInvocation
@@ -165,6 +166,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
+import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusProblemExtensions
+import io.outfoxx.sunday.generator.kotlin.utils.addZalandoProblemExtensions
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
@@ -485,6 +488,7 @@ class KotlinJAXRSIrGenerator(
    * Generates Kotlin/JAX-RS service types from IR and registers them in the type registry.
    */
   fun generateServiceTypes() {
+    apiIndex.validateSchemaProblemResponses()
     typeRegistry.outputOwnership.current = api.outputOrigin()
     api.models
       .filter { model ->
@@ -783,6 +787,7 @@ class KotlinJAXRSIrGenerator(
       typeRegistry.options,
       modelProperties,
       kotlinEnumEntries,
+      constructorDefaults = { it.isProblemModel() },
     ) { it.kotlinTypeName() }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       addNativeModelGraphs(modelTypes, modelProperties, beanValidationTypes) { it.commonSchemaOwner() }
@@ -797,6 +802,12 @@ class KotlinJAXRSIrGenerator(
           )
         }
       }
+    }
+    if (typeRegistry.problemLibrary == KotlinProblemLibrary.QUARKUS) {
+      addQuarkusProblemExtensions(modelTypes, modelProperties, typeRegistry.options)
+    }
+    if (typeRegistry.problemLibrary == KotlinProblemLibrary.ZALANDO) {
+      addZalandoProblemExtensions(modelTypes, modelProperties)
     }
     addKotlinPatchHelpers(
       modelTypes,
@@ -2666,8 +2677,9 @@ class KotlinJAXRSIrGenerator(
     val inheritedProperties = inheritedModelProperties()
     val directUnionSupertypes = directUnionSupertypes()
     val inheritedMappingUnionSupertypes = inheritedDiscriminatorMappingUnionSupertypes
+    // Throwable subclasses retain parent storage and constructor arguments even when they also implement a union.
     val flattensInheritedProperties =
-      directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty()
+      !isProblemModel() && (directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty())
     val localProperties = localModelProperties(inheritedProperties, allowOverrides = flattensInheritedProperties)
     val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
     val hasClassParent =
@@ -2794,6 +2806,7 @@ class KotlinJAXRSIrGenerator(
           inheritedProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
+                problemDefaults = isProblemModel(),
                 patchable = patchableProperty(property.wireName) && !property.patchDiscriminator,
                 effective =
                   modelProperties
@@ -2808,6 +2821,7 @@ class KotlinJAXRSIrGenerator(
           localProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
+                problemDefaults = isProblemModel(),
                 patchable = patchable && !property.patchDiscriminator,
                 declaresProperty =
                   typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
@@ -2836,16 +2850,62 @@ class KotlinJAXRSIrGenerator(
             .initializer(
               modelProperties.fields(this@classTypeSpec),
               modelProperties,
+              nonNullableParameters =
+                if (isProblemModel()) {
+                  val defaults =
+                    modelProperties
+                      .fields(this@classTypeSpec)
+                      .filter {
+                        it.effective.defaultValue != null && it.effective.allowedValues?.size != 1
+                      }.mapTo(mutableSetOf()) { it.storage.name.kotlinIdentifierName }
+                  constructor.parameters
+                    .filter { !it.type.isNullable && it.name in defaults }
+                    .mapTo(mutableSetOf()) { it.name }
+                } else {
+                  emptySet()
+                },
               patchParameters =
                 constructor.parameters
                   .filter {
                     (it.type as? ParameterizedTypeName)?.rawType in
                       setOf(PATCH_OP, UPDATE_OP)
                   }.mapTo(mutableSetOf()) { it.name },
+              // Constant parameters are removed later; use the runtime's integer status accessor then.
+              propertyNames =
+                if (isProblemModel() &&
+                  typeRegistry.problemLibrary == KotlinProblemLibrary.QUARKUS &&
+                  modelProperties.fields(this@classTypeSpec).any {
+                    it.wireName == "status" && it.effective.allowedValues?.size == 1
+                  }
+                ) {
+                  mapOf("status" to "statusCode")
+                } else {
+                  emptyMap()
+                },
             ) { it.kotlinTypeName() }
             .takeUnless {
               it.isEmpty()
-            }?.let(::addInitializerBlock)
+            }?.let { checks ->
+              val numericStatus =
+                isProblemModel() &&
+                  typeRegistry.problemLibrary == KotlinProblemLibrary.ZALANDO &&
+                  modelProperties.fields(this@classTypeSpec).any {
+                    it.wireName == "status" &&
+                      it.effective.allowedValues?.size == 1
+                  }
+              addInitializerBlock(
+                if (numericStatus) {
+                  CodeBlock
+                    .builder()
+                    .addStatement(
+                      "val status = this.status?.statusCode",
+                    ).add(checks)
+                    .build()
+                } else {
+                  checks
+                },
+              )
+            }
         }
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {
@@ -2971,7 +3031,7 @@ class KotlinJAXRSIrGenerator(
       properties.firstOrNull { candidate -> candidate.name == "status" }
         ?: return CodeBlock.of("null")
     val name = property.name.kotlinIdentifierName
-    return if (property.modelPropertyTypeName().isNullable) {
+    return if (property.problemConstructorTypeName().isNullable) {
       CodeBlock.of("%N?.let { %T.valueOf(it) }", name, ZALANDO_STATUS)
     } else {
       CodeBlock.of("%T.valueOf(%N)", ZALANDO_STATUS, name)
@@ -2991,7 +3051,7 @@ class KotlinJAXRSIrGenerator(
     if (defaultFormat == "%L" && defaultArguments.singleOrNull() == "null") {
       return CodeBlock.of("%N", name)
     }
-    return if (property.modelPropertyTypeName().isNullable) {
+    return if (property.problemConstructorTypeName().isNullable) {
       CodeBlock.of("%N ?: %L", name, CodeBlock.of(defaultFormat, *defaultArguments))
     } else {
       CodeBlock.of("%N", name)
@@ -3002,7 +3062,7 @@ class KotlinJAXRSIrGenerator(
     val builder = CodeBlock.builder()
     val propertiesByName = properties.associateBy { property -> property.name }
 
-    builder.add("run {\n").indent()
+    builder.add("kotlin.run {\n").indent()
     builder.addStatement("val builder = %T.builder()", QUARKUS_HTTP_PROBLEM)
     propertiesByName["type"]?.let { property -> builder.addQuarkusProblemBuilderCall(property, "withType") }
     propertiesByName["title"]?.let { property -> builder.addQuarkusProblemBuilderCall(property, "withTitle") }
@@ -3014,7 +3074,7 @@ class KotlinJAXRSIrGenerator(
       .forEach { property ->
         val name = property.name.kotlinIdentifierName
         val wireName = property.serializationName ?: property.name
-        if (property.modelPropertyTypeName().isNullable) {
+        if (property.problemConstructorTypeName().isNullable && !modelProperties.acceptsNull(property.type)) {
           builder.beginControlFlow("if (%N != null)", name)
           builder.addStatement("builder.with(%S, %N)", wireName, name)
           builder.endControlFlow()
@@ -3033,7 +3093,7 @@ class KotlinJAXRSIrGenerator(
     methodName: String,
   ) {
     val name = property.name.kotlinIdentifierName
-    if (property.modelPropertyTypeName().isNullable) {
+    if (property.problemConstructorTypeName().isNullable) {
       beginControlFlow("if (%N != null)", name)
       addStatement("builder.%L(%N)", methodName, name)
       endControlFlow()
@@ -3042,14 +3102,37 @@ class KotlinJAXRSIrGenerator(
     }
   }
 
+  private fun GeneratedModelProperty.problemConstructorTypeName(): TypeName =
+    modelPropertyTypeName().let {
+      if (defaultValue != null) it.copy(nullable = modelProperties.acceptsNull(type)) else it
+    }
+
   private fun GeneratedModelProperty.constructorParameterSpec(
     effective: GeneratedModelProperty = this,
     declaresProperty: Boolean = false,
+    problemDefaults: Boolean = false,
     patchable: Boolean = false,
   ): ParameterSpec =
     ParameterSpec
-      .builder(name.kotlinIdentifierName, modelPropertyTypeName(patchable))
-      .apply {
+      .builder(
+        name.kotlinIdentifierName,
+        modelPropertyTypeName(patchable).let {
+          if (problemDefaults && effective.defaultValue != null && !patchable) {
+            it.copy(nullable = modelProperties.acceptsNull(effective.type))
+          } else {
+            it
+          }
+        },
+      ).apply {
+        val parameterProperty =
+          declaresProperty &&
+            !(
+              problemDefaults &&
+                !patchable &&
+                effective.defaultValue != null &&
+                modelPropertyTypeName().isNullable &&
+                !modelProperties.acceptsNull(effective.type)
+            )
         // A nullable value still needs a creator argument when the wire property is required.
         val requiresPresence =
           !patchable &&
@@ -3062,7 +3145,7 @@ class KotlinJAXRSIrGenerator(
               if (patchable) effective.copy(required = true) else effective,
               modelProperties,
               beanValidationTypes,
-              AnnotationSpec.UseSiteTarget.PARAM.takeIf { declaresProperty },
+              AnnotationSpec.UseSiteTarget.PARAM.takeIf { parameterProperty },
               objectSchema =
                 KotlinNativeSchema.commonSchema(
                   effective.type,
@@ -3074,7 +3157,7 @@ class KotlinJAXRSIrGenerator(
               AnnotationSpec
                 .builder(
                   beanValidationTypes.valid,
-                ).apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+                ).apply { if (parameterProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
                 .build(),
             )
           }
@@ -3105,13 +3188,24 @@ class KotlinJAXRSIrGenerator(
           addAnnotation(
             AnnotationSpec
               .builder(ClassName("com.fasterxml.jackson.annotation", "JsonSetter"))
-              .apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+              .apply { if (parameterProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
               .addMember("nulls = %T.FAIL", ClassName("com.fasterxml.jackson.annotation", "Nulls"))
               .build(),
           )
         }
         if (patchable) {
           defaultValue("%T.none()", PATCH_OP)
+        } else if (problemDefaults && effective.defaultValue != null) {
+          defaultValue(
+            requireNotNull(
+              KotlinModelDefaults.code(
+                effective.defaultValue,
+                modelPropertyTypeName(),
+                modelProperties.declarationModel(type),
+                kotlinEnumEntries,
+              ),
+            ) { "Unsupported problem default for '$name'" },
+          )
         } else if ((!required || type.nullable) && !requiresPresence) {
           defaultValue(
             KotlinModelDefaults.code(
@@ -3928,6 +4022,10 @@ class KotlinJAXRSIrGenerator(
       val modelPackageName = target(preferredTargetId, "kotlin")?.modelPackageName
       if (modelPackageName != null && modelPackageName != ownerName.packageName) {
         return ClassName(modelPackageName, name.toUpperCamelCase())
+      }
+      // Problem classes belong to the model artifact, which must not depend on a service-owned union.
+      if (kind == GeneratedModel.Kind.UNION && aliases.any { it.modelOrNull(apiIndex)?.isProblemModel() == true }) {
+        return ClassName(modelPackageName ?: ownerName.packageName, ownerName.simpleName + name.toUpperCamelCase())
       }
       return ownerName.nestedClass(name.toUpperCamelCase())
     }

@@ -22,10 +22,12 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
 import io.outfoxx.sunday.generator.ir.emit.endpointSecurityPolicy
 import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.orInvocation
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
@@ -46,6 +48,7 @@ class PythonLitestarIrGenerator(
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<PythonModule> {
+    GeneratedApiIndex(api).validateSchemaProblemResponses()
     options.requireBrokerServicesSupported("Python/Litestar")
     val packageName = api.pythonPackageName()
     val services = api.pythonHttpServices()
@@ -84,6 +87,15 @@ class PythonLitestarIrGenerator(
         } else {
           renderPlacedModels(api.models, selectedModels, packageName, options)
         }
+    }
+    if (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories) {
+      modules +=
+        PythonSchemaProblemRenderer(packageName, api.models).render(
+          api.models
+            .filter {
+              selection.includes(it.outputOrigin(api).copy(category = GeneratedTypeCategory.Problem))
+            }.toSet(),
+        )
     }
     val problems =
       api.problems.filter { problem ->

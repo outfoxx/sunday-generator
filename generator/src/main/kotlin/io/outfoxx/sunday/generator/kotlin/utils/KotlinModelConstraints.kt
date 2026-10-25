@@ -40,6 +40,8 @@ internal object KotlinModelConstraints {
     fields: List<GeneratedModelProperties.Field>,
     properties: GeneratedModelProperties,
     patchParameters: Set<String> = emptySet(),
+    propertyNames: Map<String, String> = emptyMap(),
+    nonNullableParameters: Set<String> = emptySet(),
     typeName: (GeneratedTypeRef) -> TypeName,
   ): CodeBlock =
     CodeBlock
@@ -47,7 +49,7 @@ internal object KotlinModelConstraints {
       .apply {
         fields.forEach { field ->
           val property = field.effective
-          val name = field.storage.name.kotlinIdentifierName
+          val name = propertyNames[field.wireName] ?: field.storage.name.kotlinIdentifierName
           val patch = name in patchParameters
           val value = CodeBlock.of(if (patch) "%N.value" else "%N", name)
           val storageType = typeName(field.storage.type).copy(nullable = false)
@@ -163,7 +165,11 @@ internal object KotlinModelConstraints {
           } else {
             checks += numericChecks
           }
-          val optionalStorage = !patch && (!field.storage.required || field.storage.type.nullable)
+          // A problem constructor default can guarantee a value while its inherited accessor remains optional.
+          val optionalStorage =
+            !patch &&
+              name !in nonNullableParameters &&
+              (!field.storage.required || field.storage.type.nullable)
           val requiresValue =
             property.required && (!property.type.nullable || property.allowedValues?.contains(null) == false)
           if (optionalStorage && requiresValue) {

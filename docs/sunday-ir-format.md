@@ -288,6 +288,70 @@ The `detail` property in `sunday.problemTypes` and `x-sunday-problemTypes` is op
 
 The OpenAPI reader maps `x-sunday-problemBaseUri`, `x-sunday-problemUriParams`, `x-sunday-problemTypes`, `x-sunday-problems`, and `x-sunday-nullify` into the same IR fields used by RAML Sunday annotations.
 
+### Problems declared as schemas
+
+A source object hierarchy whose root name ends in `Problem` and declares `type`,
+`title`, and `status` remains a normal `GeneratedModel` inheritance graph. Its
+properties, including `allOf` refinements and constant values, retain their schema
+validation rules. Kotlin, Swift, and TypeScript generate runtime problem types.
+Python keeps the Pydantic payloads in their model module and adds catchable exception
+companions in a module with `_problems` appended (for example,
+`api.models_problems.QueuedProblem` wraps `api.models.QueuedProblem`). Python
+exception companions inherit from their parent exceptions and expose typed extension
+properties through `payload` and read-only accessors. A nullable or absent payload
+`type` is preserved in Python; the exception's `type` accessor returns `about:blank`
+when no URI is present.
+
+A fixed `type` URI enables automatic Sunday client registration. Problems whose URI
+is selected at runtime require explicit transport registration. Constructors fill
+fixed fields; decoders still reject conflicting wire values. HTTP Problem constructors
+also expose inherited scalar schema defaults as overridable arguments, including
+`detail` and extension properties. A descendant's default takes precedence over its
+ancestor's default. Constants are initialized implicitly and remain read-only at
+runtime. Constructor defaults do not relax required wire fields or replace explicit
+null values; ordinary model constructor behavior is unchanged. Nullable extension
+values remain JSON null, while absent optional non-nullable fields are omitted.
+Kotlin/JAX-RS preserves these rules with Sunday, Zalando, and Quarkus problem
+libraries, including the runtime parameter maps used by framework serializers.
+
+#### Multiple problems for one response status
+
+An error response can use an inline `anyOf`, or reference a named `anyOf` component,
+whose alternatives reference concrete leaf problem schemas. Every alternative retains
+its original `allOf` hierarchy, constructor defaults, constants, and wire validation.
+Sunday clients register every alternative and dispatch using the body's fixed `type`
+URI, independently of the shared HTTP status. Python raises the corresponding exception
+companion; Kotlin and TypeScript preserve class inheritance, and Swift preserves the
+problem protocols. Kotlin emits inline problem union interfaces as top-level models,
+prefixed with their service name when sharing the service package, so model/problem
+artifacts can compile independently of generated services.
+
+```yaml
+'404':
+  description: Team or user not found
+  content:
+    application/problem+json:
+      schema:
+        anyOf:
+          - $ref: '#/components/schemas/TeamNotFoundProblem'
+          - $ref: '#/components/schemas/UserNotFoundProblem'
+```
+
+The supported shape is deliberately bounded:
+
+- Use a flat list of non-null references to concrete leaf problem objects. Their
+  ancestors can provide shared fields, defaults, and constants through `allOf`.
+- Give each alternative a distinct fixed `type` URI (`const`, or a singleton enum).
+  A shared base can fix `status: 404`; each leaf fixes its own `type` and `title`.
+- Put validation constraints on the problem schemas, not on the union wrapper.
+  Nested unions, mixed problem/non-problem alternatives, and non-leaf alternatives
+  are outside this supported response shape.
+- A discriminator is unnecessary. If supplied, use `propertyName: type` with an
+  explicit mapping from each fixed URI to its corresponding alternative.
+
+Recognized problem response unions that violate these rules fail generation with a
+shape-specific diagnostic. Ordinary non-problem unions retain their existing behavior.
+
 ## Model Metadata
 
 Object models may carry inheritance and discriminator metadata. `inherits` lists direct parent model references. Root discriminator models carry `discriminator`, and concrete child models carry `discriminatorValue` when RAML defines one. Child models declare only local properties; inherited parent properties remain on the parent model.

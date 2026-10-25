@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.clientConfigurations
 import io.outfoxx.sunday.generator.ir.emit.clientConstructorSecurity
@@ -28,6 +29,7 @@ import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.orInvocation
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
@@ -50,6 +52,7 @@ class PythonSundayIrGenerator(
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<PythonModule> {
+    GeneratedApiIndex(api).validateSchemaProblemResponses()
     options.requireBrokerServicesSupported("Python/Sunday")
     val packageName = api.pythonPackageName()
     val services = api.pythonHttpServices()
@@ -89,6 +92,15 @@ class PythonSundayIrGenerator(
           renderPlacedModels(api.models, selectedModels, packageName, options)
         }
     }
+    if (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories) {
+      modules +=
+        PythonSchemaProblemRenderer(packageName, api.models).render(
+          api.models
+            .filter {
+              selection.includes(it.outputOrigin(api).copy(category = GeneratedTypeCategory.Problem))
+            }.toSet(),
+        )
+    }
     val problems =
       api.problems.filter { problem ->
         val origin = problem.outputOrigin(api)
@@ -110,7 +122,7 @@ class PythonSundayIrGenerator(
       val clientRenderer =
         PythonClientRenderer(
           packageName,
-          registerProblems = api.problems.isNotEmpty(),
+          registerProblems = api.problems.isNotEmpty() || api.models.any(PythonProblemModels(api.models)::isProblem),
           problems = api.problems,
           models = api.models,
           defaultMediaTypes = defaultMediaTypes,
