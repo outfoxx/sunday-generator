@@ -16,6 +16,7 @@
 
 package io.test.quarkus
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.common.http.TestHTTPResource
 import io.quarkus.test.junit.QuarkusTest
@@ -27,6 +28,7 @@ import org.eclipse.microprofile.config.ConfigProvider
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -41,6 +43,9 @@ class ScopedPolicyTest {
   lateinit var baseUri: URI
 
   @Inject
+  lateinit var mapper: ObjectMapper
+
+  @Inject
   lateinit var endpoint: PolicyEndpoint
 
   @Inject
@@ -50,9 +55,13 @@ class ScopedPolicyTest {
   @Test
   fun `resource retries typed 401 twice and never retries 403`() {
     val before = endpoint.count("server-retry")
-    assertEquals(401, request(baseUri.resolve("/fault/server-retry/401")).statusCode())
+    val unauthorized = request(baseUri.resolve("/fault/server-retry/401"))
+    assertEquals(401, unauthorized.statusCode())
+    assertEquals("Authentication failed for server-retry", mapper.readTree(unauthorized.body())["detail"].asText())
     assertEquals(before + 3, endpoint.count("server-retry"))
-    assertEquals(403, request(baseUri.resolve("/fault/server-retry/403")).statusCode())
+    val forbidden = request(baseUri.resolve("/fault/server-retry/403"))
+    assertEquals(403, forbidden.statusCode())
+    assertFalse(mapper.readTree(forbidden.body()).hasNonNull("detail"))
     assertEquals(before + 4, endpoint.count("server-retry"))
   }
 

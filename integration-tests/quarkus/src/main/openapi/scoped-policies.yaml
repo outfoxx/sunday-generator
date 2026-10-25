@@ -7,7 +7,7 @@ x-sunday-jaxrs:
 x-sunday-problemBaseUri: https://example.test/problems/
 x-sunday-problemTypes:
   unauthorized: {status: 401, title: Unauthorized, detail: Authentication required}
-  forbidden: {status: 403, title: Forbidden, detail: Access denied}
+  forbidden: {status: 403, title: Forbidden}
 paths:
   /fault/server-retry/{status}:
     get:

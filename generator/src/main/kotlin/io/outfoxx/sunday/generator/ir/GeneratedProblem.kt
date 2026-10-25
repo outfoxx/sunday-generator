@@ -27,6 +27,7 @@ data class GeneratedProblem(
   val typeUri: String,
   val status: Int? = null,
   val title: String? = null,
+  /** Default detail used when a caller omits the optional problem detail. */
   val detail: String? = null,
   val model: GeneratedTypeRef? = null,
   val statusBindings: List<GeneratedProblemStatusBinding> = listOf(),

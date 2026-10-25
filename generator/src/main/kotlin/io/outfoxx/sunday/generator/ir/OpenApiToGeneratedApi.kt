@@ -1001,7 +1001,7 @@ class OpenApiToGeneratedApi(
                   GeneratedModelProperty("type", scalar("string"), required = true),
                   GeneratedModelProperty("title", scalar("string"), required = true),
                   GeneratedModelProperty("status", scalar("integer"), required = true),
-                  GeneratedModelProperty("detail", scalar("string"), required = true),
+                  GeneratedModelProperty("detail", scalar("string")),
                   GeneratedModelProperty("instance", scalar("string")),
                 ) + customFields,
             ),

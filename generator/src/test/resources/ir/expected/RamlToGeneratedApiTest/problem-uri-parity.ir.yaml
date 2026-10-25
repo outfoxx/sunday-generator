@@ -102,7 +102,6 @@ problems:
       type:
         kind: "SCALAR"
         name: "string"
-      required: true
     - name: "instance"
       type:
         kind: "SCALAR"
@@ -160,7 +159,6 @@ problems:
       type:
         kind: "SCALAR"
         name: "string"
-      required: true
     - name: "instance"
       type:
         kind: "SCALAR"

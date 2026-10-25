@@ -2629,11 +2629,11 @@ class KotlinSundayIrGenerator(
 
     typeBuilder
       .superclass(SUNDAY_HTTP_PROBLEM)
-      .primaryConstructor(constructorBuilder.build())
+      .primaryConstructor(constructorBuilder.addParameter(detailParameter()).build())
       .addSuperclassConstructorParameter("TYPE_URI")
       .addSuperclassConstructorParameter("%S", requiredTitle())
       .addSuperclassConstructorParameter("%L", requiredStatus())
-      .addSuperclassConstructorParameter("%S", requiredDetail())
+      .addSuperclassConstructorParameter("detail")
       .addSuperclassConstructorParameter("instance")
   }
 
@@ -2656,11 +2656,11 @@ class KotlinSundayIrGenerator(
 
     typeBuilder
       .superclass(ZALANDO_ABSTRACT_THROWABLE_PROBLEM)
-      .primaryConstructor(constructorBuilder.build())
+      .primaryConstructor(constructorBuilder.addParameter(detailParameter()).build())
       .addSuperclassConstructorParameter("TYPE_URI")
       .addSuperclassConstructorParameter("%S", requiredTitle())
       .addSuperclassConstructorParameter("%T.%L", ZALANDO_STATUS, HttpStatus.valueOf(requiredStatus()).name)
-      .addSuperclassConstructorParameter("%S", requiredDetail())
+      .addSuperclassConstructorParameter("detail")
       .addSuperclassConstructorParameter("instance")
       .addSuperclassConstructorParameter("cause")
       .addFunction(
@@ -2694,7 +2694,11 @@ class KotlinSundayIrGenerator(
 
   private fun GeneratedProblem.requiredTitle(): String = title ?: genError("Problem '$name' is missing title")
 
-  private fun GeneratedProblem.requiredDetail(): String = detail ?: genError("Problem '$name' is missing detail")
+  private fun GeneratedProblem.detailParameter(): ParameterSpec =
+    ParameterSpec
+      .builder("detail", STRING.copy(nullable = true))
+      .defaultValue("%S", detail)
+      .build()
 
   private fun GeneratedService.baseURLCompanionType(): TypeSpec? {
     val baseUri = baseUri ?: return null

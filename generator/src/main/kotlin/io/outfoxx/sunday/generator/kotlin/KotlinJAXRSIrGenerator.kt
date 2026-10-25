@@ -3690,7 +3690,7 @@ class KotlinJAXRSIrGenerator(
     typeBuilder
       .superclass(QUARKUS_HTTP_PROBLEM)
       .addQuarkusHttpProblemAlias()
-      .primaryConstructor(constructorBuilder.build())
+      .primaryConstructor(constructorBuilder.addParameter(detailParameter()).build())
       .addSuperclassConstructorParameter("%L", quarkusProblemBuilderCode())
       .addInitializerBlock(
         CodeBlock
@@ -3709,7 +3709,7 @@ class KotlinJAXRSIrGenerator(
     builder.addStatement("builder.withType(TYPE_URI)")
     builder.addStatement("builder.withTitle(%S)", requiredTitle())
     builder.addStatement("builder.withStatus(%L)", requiredStatus())
-    builder.addStatement("builder.withDetail(%S)", requiredDetail())
+    builder.addStatement("builder.withDetail(detail)")
     builder.beginControlFlow("if (instance != null)")
     builder.addStatement("builder.withInstance(instance)")
     builder.endControlFlow()
@@ -3741,11 +3741,11 @@ class KotlinJAXRSIrGenerator(
 
     typeBuilder
       .superclass(SUNDAY_HTTP_PROBLEM)
-      .primaryConstructor(constructorBuilder.build())
+      .primaryConstructor(constructorBuilder.addParameter(detailParameter()).build())
       .addSuperclassConstructorParameter("TYPE_URI")
       .addSuperclassConstructorParameter("%S", requiredTitle())
       .addSuperclassConstructorParameter("%L", requiredStatus())
-      .addSuperclassConstructorParameter("%S", requiredDetail())
+      .addSuperclassConstructorParameter("detail")
       .addSuperclassConstructorParameter("instance")
   }
 
@@ -3768,11 +3768,11 @@ class KotlinJAXRSIrGenerator(
 
     typeBuilder
       .superclass(ZALANDO_ABSTRACT_THROWABLE_PROBLEM)
-      .primaryConstructor(constructorBuilder.build())
+      .primaryConstructor(constructorBuilder.addParameter(detailParameter()).build())
       .addSuperclassConstructorParameter("TYPE_URI")
       .addSuperclassConstructorParameter("%S", requiredTitle())
       .addSuperclassConstructorParameter("%T.%L", ZALANDO_STATUS, HttpStatus.valueOf(requiredStatus()).name)
-      .addSuperclassConstructorParameter("%S", requiredDetail())
+      .addSuperclassConstructorParameter("detail")
       .addSuperclassConstructorParameter("instance")
       .addSuperclassConstructorParameter("cause")
       .addFunction(
@@ -3806,7 +3806,11 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedProblem.requiredTitle(): String = title ?: genError("Problem '$name' is missing title")
 
-  private fun GeneratedProblem.requiredDetail(): String = detail ?: genError("Problem '$name' is missing detail")
+  private fun GeneratedProblem.detailParameter(): ParameterSpec =
+    ParameterSpec
+      .builder("detail", STRING.copy(nullable = true))
+      .defaultValue("%S", detail)
+      .build()
 
   private fun GeneratedTypeRef.kotlinTypeName(): TypeName {
     val typeName =

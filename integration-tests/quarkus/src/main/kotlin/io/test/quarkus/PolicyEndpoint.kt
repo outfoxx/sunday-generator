@@ -48,7 +48,7 @@ class PolicyEndpoint : GuardedAPI {
     calls.computeIfAbsent(operation) { AtomicInteger() }.incrementAndGet()
     return when (status) {
       200 -> RestResponse.ok("ok")
-      401 -> throw UnauthorizedProblem()
+      401 -> throw UnauthorizedProblem(detail = "Authentication failed for $operation")
       403 -> throw ForbiddenProblem()
       else -> throw WebApplicationException(status)
     }

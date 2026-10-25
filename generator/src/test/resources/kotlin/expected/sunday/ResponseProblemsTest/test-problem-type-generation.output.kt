@@ -14,8 +14,8 @@ public class InvalidIdProblem(
   public val offendingId: String,
   instance: URI? = null,
   cause: ThrowableProblem? = null,
-) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
-    "The id contains one or more invalid characters.", instance, cause) {
+  detail: String? = "The id contains one or more invalid characters.",
+) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST, detail, instance, cause) {
   @JsonIgnore
   override fun getCause(): Exceptional? = super.cause
 
