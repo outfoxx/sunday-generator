@@ -28,11 +28,15 @@ public struct InvalidIdProblem : Problem {
         .build()
   }
 
-  public init(offendingId: String, instance: URL? = nil) {
+  public init(
+    offendingId: String,
+    instance: URL? = nil,
+    detail: String? = "The id contains one or more invalid characters."
+  ) {
     self.type = Self.type
     self.title = "Invalid Id"
     self.status = 400
-    self.detail = "The id contains one or more invalid characters."
+    self.detail = detail
     self.instance = instance
     self.parameters = nil
     self.offendingId = offendingId

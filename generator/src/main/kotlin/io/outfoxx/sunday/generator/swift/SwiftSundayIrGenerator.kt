@@ -3457,13 +3457,16 @@ class SwiftSundayIrGenerator(
             .defaultValue("nil")
             .build(),
         )
+        addParameter(
+          ParameterSpec
+            .builder("detail", STRING.makeOptional())
+            .defaultValue("%L", detail?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil"))
+            .build(),
+        )
         addStatement("self.type = %T.type", SelfTypeName.INSTANCE)
         addStatement("self.title = %S", title ?: "")
         addStatement("self.status = %L", status ?: 0)
-        addStatement(
-          "self.detail = %L",
-          detail?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil"),
-        )
+        addStatement("self.detail = detail")
         addStatement("self.instance = instance")
         addStatement("self.parameters = nil")
         customFields.forEach { field ->

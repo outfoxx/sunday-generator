@@ -13,7 +13,7 @@ export class InvalidIdProblem extends Problem {
       type: InvalidIdProblem.TYPE,
       title: 'Invalid Id',
       status: 400,
-      detail: 'The id contains one or more invalid characters.',
+      detail: spec.detail ?? 'The id contains one or more invalid characters.',
       instance: spec.instance,
       offendingId: spec.offendingId
     });
@@ -29,6 +29,7 @@ export type InvalidIdProblemSpec = SchemaOutput<typeof InvalidIdProblemSpecSchem
 export const InvalidIdProblemSpecSchema = defineModelSchema((runtime: SchemaRuntime) => {
   return z.looseObject({
     'offendingId': z.string(),
+    'detail': z.string().optional(),
     'instance': z.union([z.string(), z.instanceof(URL)]).optional()
   });
 });

@@ -16,8 +16,9 @@ types:
         maximum: 599
       title:
         type: string
-      detail:
+      detail?:
         type: string
+        description: Default detail for this problem; callers may override it.
       custom?: object
       "(sunday.placement)":
         type: object

@@ -581,7 +581,7 @@ class RamlToGeneratedApiTest {
                   GeneratedModelProperty("type", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer"), required = true),
-                  GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string")),
                   GeneratedModelProperty("instance", GeneratedTypeRef.scalar("string")),
                   GeneratedModelProperty("offending_id", GeneratedTypeRef.scalar("string")),
                 ),
@@ -1378,7 +1378,7 @@ class RamlToGeneratedApiTest {
       GeneratedModelProperty("type", GeneratedTypeRef.scalar("string"), required = true),
       GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = true),
       GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer"), required = true),
-      GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = true),
+      GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string")),
       GeneratedModelProperty("instance", GeneratedTypeRef.scalar("string")),
     ) + customFields
 }

@@ -1195,7 +1195,8 @@ class TypeScriptSundayIrGenerator(
           add(field.type.zodSchema(typeName, field.required, field.validation))
           add(",\n")
         }
-      }.add(
+      }.add("    'detail': %T.string().optional(),\n", Z)
+      .add(
         "    'instance': %T.union([%T.string(), %T.instanceof(%T)]).optional()\n",
         Z,
         Z,
@@ -1218,13 +1219,13 @@ class TypeScriptSundayIrGenerator(
         |  type: %T.TYPE,
         |  title: %S,
         |  status: %L,
-        |  detail: %S,
+        |  detail: spec.detail ?? %L,
         |  instance: spec.instance
         """.trimMargin(),
         typeName,
         problem.title,
         problem.status,
-        problem.detail,
+        problem.detail?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"),
       ).apply {
         if (fields.isNotEmpty()) {
           add(",\n")

@@ -284,6 +284,8 @@ Parameters, request payloads, responses, models, and model properties may carry 
 
 Problem declarations carry the source problem key as `sourceName`, optional source metadata, the problem `typeUri`, status/title/detail metadata, and `statusBindings`. For RAML and OpenAPI `x-sunday-problem*` extensions, `typeUri` is resolved from `problemBaseUri`, `problemUriParams`, and the API server URL when the source provides enough information; `sourceName` remains the original source problem code for operation references and naming. Library-defined problems keep the defining source unit in `source.location` so later emitters can preserve package/module placement rules. Their `payload` describes the generated problem payload type, `application/problem+json` media type, and concrete payload fields. The payload field list includes the standard problem fields `type`, `title`, `status`, `detail`, `instance`, followed by source-defined custom fields. The legacy `fields` list remains the custom field subset for generators that only need extension fields.
 
+The `detail` property in `sunday.problemTypes` and `x-sunday-problemTypes` is optional. When present, it supplies the default detail for a generated problem. Callers can omit the constructor/initializer argument to use that default, or supply a detail for a particular occurrence. Without a declared default, omitting the argument leaves the problem without a detail. The standard payload `detail` field is optional in either case.
+
 The OpenAPI reader maps `x-sunday-problemBaseUri`, `x-sunday-problemUriParams`, `x-sunday-problemTypes`, `x-sunday-problems`, and `x-sunday-nullify` into the same IR fields used by RAML Sunday annotations.
 
 ## Model Metadata
