@@ -69,6 +69,7 @@ import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
@@ -235,6 +236,7 @@ class TypeScriptSundayIrGenerator(
 
   /** Generates TypeScript/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
+    index.validateSchemaProblemResponses()
     typeRegistry.outputOwnership.current = api.outputOrigin()
     api.models.forEach { model ->
       typeRegistry.outputOwnership.bind(model.typeName(model.name.toUpperCamelCase()), model.modelOutputOrigin())

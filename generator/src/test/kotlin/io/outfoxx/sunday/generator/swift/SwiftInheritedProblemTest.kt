@@ -23,6 +23,8 @@ import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
+import io.outfoxx.sunday.generator.tools.TEAM_NOT_FOUND_JSON
+import io.outfoxx.sunday.generator.tools.USER_NOT_FOUND_JSON
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
@@ -72,6 +74,43 @@ class SwiftInheritedProblemTest {
             XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(problem)) as? NSDictionary, expected)
           }
         }
+        func testMissingProblems() async throws {
+          let config = URLSessionConfiguration.ephemeral
+          config.protocolClasses = [ProblemProtocol.self]
+          let session = URLSession(configuration: config)
+          let transport = URLSessionTransport(baseURL: "https://example.test", session: session, eventSession: session)
+          defer { transport.close() }
+          let client = API(transport: transport)
+          let team = try TeamNotFoundProblem()
+          let user = try UserNotFoundProblem()
+          let overridden = try TeamNotFoundProblem(detail: "Override", resourceId: "123")
+          XCTAssertEqual(overridden.detail, "Override")
+          XCTAssertEqual(overridden.resourceId, "123")
+          for (kind, raw, value) in [("team", #"$TEAM_NOT_FOUND_JSON"#, team as any NotFoundProblem),
+                                      ("user", #"$USER_NOT_FOUND_JSON"#, user as any NotFoundProblem)] {
+            XCTAssertEqual(value.resourceId, "unknown")
+            XCTAssertEqual(value.errorCode, "missing")
+            let data = Data(raw.utf8)
+            let expected = try JSONSerialization.jsonObject(with: data) as? NSDictionary
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as? NSDictionary, expected)
+            let decoded = try JSONDecoder().decode(NotFoundProblems.self, from: data)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? NSDictionary, expected)
+            for (field, invalid) in [("status", 400 as Any), ("error-code", "wrong"), ("resourceId", "missing")] {
+              var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+              if invalid as? String == "missing" { object.removeValue(forKey: field) } else { object[field] = invalid }
+              XCTAssertThrowsError(try JSONDecoder().decode(NotFoundProblems.self, from: JSONSerialization.data(withJSONObject: object)))
+            }
+            for request in [try client.readMissing(kind: kind), try client.readMissingNamed(kind: kind)] {
+              do {
+                try await request.execute()
+                XCTFail("Expected 404 problem")
+              } catch let problem as any NotFoundProblem {
+                XCTAssertTrue(kind == "team" ? problem is TeamNotFoundProblem : problem is UserNotFoundProblem)
+                XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(problem)) as? NSDictionary, expected)
+              }
+            }
+          }
+        }
         func testWireParity() throws {
           let raw = Data(#"$INHERITED_PROBLEM_JSON"#.utf8)
           let expected = try XCTUnwrap(JSONSerialization.jsonObject(with: raw) as? NSDictionary)
@@ -116,10 +155,13 @@ class SwiftInheritedProblemTest {
         override class func canInit(with request: URLRequest) -> Bool { true }
         override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
         override func startLoading() {
-          let response = HTTPURLResponse(url: request.url!, statusCode: 409, httpVersion: "HTTP/1.1",
+          let missing = request.url!.path.hasPrefix("/missing")
+          let raw = missing ? (request.url!.path.hasSuffix("/team") ? #"$TEAM_NOT_FOUND_JSON"# : #"$USER_NOT_FOUND_JSON"#)
+            : #"$INHERITED_PROBLEM_JSON"#
+          let response = HTTPURLResponse(url: request.url!, statusCode: missing ? 404 : 409, httpVersion: "HTTP/1.1",
             headerFields: ["Content-Type": "application/problem+json"])!
           client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-          client?.urlProtocol(self, didLoad: Data(#"$INHERITED_PROBLEM_JSON"#.utf8))
+          client?.urlProtocol(self, didLoad: Data(raw.utf8))
           client?.urlProtocolDidFinishLoading(self)
         }
         override func stopLoading() {}

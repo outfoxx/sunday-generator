@@ -99,6 +99,7 @@ import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.ir.orInvocation
 import io.outfoxx.sunday.generator.kotlin.utils.AssociatedFunctions
@@ -292,6 +293,7 @@ class KotlinSundayIrGenerator(
    * Generates Kotlin/Sunday service types from IR and registers them in the type registry.
    */
   fun generateServiceTypes() {
+    apiIndex.validateSchemaProblemResponses()
     typeRegistry.outputOwnership.current = api.outputOrigin()
     api.models
       .filter { model ->
@@ -1578,8 +1580,9 @@ class KotlinSundayIrGenerator(
     val inheritedProperties = inheritedModelProperties()
     val directUnionSupertypes = directUnionSupertypes()
     val inheritedMappingUnionSupertypes = inheritedDiscriminatorMappingUnionSupertypes
+    // Throwable subclasses retain parent storage and constructor arguments even when they also implement a union.
     val flattensInheritedProperties =
-      directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty()
+      !isProblemModel() && (directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty())
     val localProperties = localModelProperties(inheritedProperties, allowOverrides = flattensInheritedProperties)
     val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
     val hasClassParent =
@@ -3492,6 +3495,10 @@ class KotlinSundayIrGenerator(
       val modelPackageName = target("kotlinClient", "kotlin")?.modelPackageName
       if (modelPackageName != null && modelPackageName != servicePackageName) {
         return ClassName(modelPackageName, scopedSimpleName())
+      }
+      // Problem classes belong to the model artifact, which must not depend on a service-owned union.
+      if (kind == GeneratedModel.Kind.UNION && aliases.any { it.modelOrNull(apiIndex)?.isProblemModel() == true }) {
+        return ClassName(modelPackageName ?: servicePackageName, service.typeSimpleName() + scopedSimpleName())
       }
       return ClassName(servicePackageName, service.typeSimpleName(), scopedSimpleName())
     }

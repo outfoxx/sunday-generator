@@ -19,3 +19,10 @@ package io.outfoxx.sunday.generator.tools
 /** Expected wire body shared by every target's inherited HTTP Problem regression. */
 internal const val INHERITED_PROBLEM_JSON =
   """{"type":"https://example.com/problems/rebuilding","title":"Resource Rebuilding","status":409,"detail":"Resource A is rebuilding","traceId":"trace-A","resourceKey":"A","retryAfterSeconds":1,"nullableParent":null,"nullableChild":null,"metadata":{"region":"west"},"queuePosition":2,"queue-name":"rebuilds"}"""
+
+/** Wire bodies for distinct inherited problems sharing the same 404 response. */
+internal const val TEAM_NOT_FOUND_JSON =
+  """{"type":"https://example.com/problems/team-not-found","title":"Team Not Found","status":404,"detail":"Team not found","traceId":"trace-A","nullableParent":null,"resourceId":"unknown","error-code":"missing"}"""
+
+internal const val USER_NOT_FOUND_JSON =
+  """{"type":"https://example.com/problems/user-not-found","title":"User Not Found","status":404,"detail":"Resource not found","traceId":"trace-A","nullableParent":null,"resourceId":"unknown","error-code":"missing"}"""

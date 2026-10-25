@@ -18,6 +18,8 @@ package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
+import io.outfoxx.sunday.generator.tools.TEAM_NOT_FOUND_JSON
+import io.outfoxx.sunday.generator.tools.USER_NOT_FOUND_JSON
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
@@ -53,6 +55,10 @@ class TypeScriptInheritedProblemTest {
             import {QueuedProblem, QueuedProblemSchema} from './queued-problem';
             import {RebuildingProblem} from './rebuilding-problem';
             import {DefaultedProblem} from './defaulted-problem';
+            import {TeamNotFoundProblem} from './team-not-found-problem';
+            import {UserNotFoundProblem} from './user-not-found-problem';
+            import {NotFoundProblem} from './not-found-problem';
+            import {NotFoundProblemsSchema} from './not-found-problems';
             function ok(value: boolean, message = 'assertion failed'): void { if (!value) throw new Error(message); }
             function deepStrictEqual(value: unknown, expected: unknown): void {
               const sorted = (v: unknown): unknown => v && typeof v === 'object' && !Array.isArray(v)
@@ -114,7 +120,37 @@ class TypeScriptInheritedProblemTest {
               }
               throw new Error('HTTP problem was not raised');
             }
-            void httpProblem();
+            async function missingProblems(): Promise<void> {
+              const union = runtime.resolveSchema(NotFoundProblemsSchema);
+              for (const [raw, value] of [[$TEAM_NOT_FOUND_JSON, new TeamNotFoundProblem({nullableParent: null})],
+                [$USER_NOT_FOUND_JSON, new UserNotFoundProblem({nullableParent: null})]] as const) {
+                ok(value instanceof NotFoundProblem && value instanceof Problem);
+                deepStrictEqual(union.encode(value), raw);
+                deepStrictEqual(union.encode(union.parse(raw)), raw);
+                ok(!Reflect.set(value, 'errorCode', 'changed'));
+                const overridden = new TeamNotFoundProblem({detail: 'Override', resourceId: '123'});
+                ok(overridden.detail === 'Override' && overridden.resourceId === '123');
+                for (const field of ['type', 'status', 'error-code']) {
+                  ok(!union.safeParse({...raw, [field]: 'wrong'}).success, field);
+                }
+                const {resourceId: _id, ...missingRequired} = raw;
+                ok(!union.safeParse(missingRequired).success);
+                globalThis.fetch = async () => new Response(JSON.stringify(raw), {
+                  status: 404, headers: {'Content-Type': 'application/problem+json'}
+                });
+                const client = createAPI(new FetchTransport('https://example.test'));
+                for (const request of [client.readMissing('test'), client.readMissingNamed('test')]) {
+                  try { await request.execute(); } catch (error) {
+                    ok(error instanceof value.constructor, String(error));
+                    ok(error instanceof NotFoundProblem);
+                    deepStrictEqual(union.encode(error as TeamNotFoundProblem | UserNotFoundProblem), raw);
+                    continue;
+                  }
+                  throw new Error('404 problem was not raised');
+                }
+              }
+            }
+            void httpProblem().then(missingProblems);
             """.trimIndent(),
           ),
         ).build()

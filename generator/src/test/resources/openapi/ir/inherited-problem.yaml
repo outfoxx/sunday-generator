@@ -12,6 +12,37 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/QueuedProblem'}
+  /missing/{kind}:
+    get:
+      operationId: readMissing
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '404':
+          description: Team or user not found
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - {$ref: '#/components/schemas/TeamNotFoundProblem'}
+                  - {$ref: '#/components/schemas/UserNotFoundProblem'}
+  /missing-named/{kind}:
+    get:
+      operationId: readMissingNamed
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '404':
+          description: Team or user not found
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/NotFoundProblems'}
 components:
   schemas:
     Problem:
@@ -68,3 +99,38 @@ components:
       required: [region]
       properties:
         region: {type: string, minLength: 1}
+    NotFoundProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          required: [resourceId, error-code]
+          properties:
+            status: {type: integer, const: 404}
+            detail: {type: string, default: Resource not found}
+            resourceId: {type: string, minLength: 1, default: unknown}
+            error-code: {type: string, const: missing}
+    TeamNotFoundProblem:
+      allOf:
+        - {$ref: '#/components/schemas/NotFoundProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.com/problems/team-not-found'}
+            title: {type: string, const: Team Not Found}
+            detail: {type: string, default: Team not found}
+    UserNotFoundProblem:
+      allOf:
+        - {$ref: '#/components/schemas/NotFoundProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.com/problems/user-not-found'}
+            title: {type: string, const: User Not Found}
+            detail: {type: string, maxLength: 200}
+    NotFoundProblems:
+      discriminator:
+        propertyName: type
+        mapping:
+          'https://example.com/problems/team-not-found': '#/components/schemas/TeamNotFoundProblem'
+          'https://example.com/problems/user-not-found': '#/components/schemas/UserNotFoundProblem'
+      anyOf:
+        - {$ref: '#/components/schemas/TeamNotFoundProblem'}
+        - {$ref: '#/components/schemas/UserNotFoundProblem'}

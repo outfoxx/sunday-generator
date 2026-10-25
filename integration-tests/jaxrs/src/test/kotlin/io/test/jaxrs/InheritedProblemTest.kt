@@ -19,8 +19,11 @@ package io.test.jaxrs
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.test.inherited.Metadata
 import io.test.inherited.QueuedProblem
+import io.test.inherited.TeamNotFoundProblem
+import io.test.inherited.UserNotFoundProblem
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Application
 import jakarta.ws.rs.core.Response
 import org.glassfish.jersey.jackson.JacksonFeature
@@ -39,7 +42,7 @@ class InheritedProblemTest : JerseyTest() {
   override fun getTestContainerFactory(): TestContainerFactory = InMemoryTestContainerFactory()
 
   override fun configure(): Application =
-    ResourceConfig(Endpoint::class.java)
+    ResourceConfig(Endpoint::class.java, MissingEndpoint::class.java)
       .property(ServerProperties.WADL_FEATURE_DISABLE, true)
       .register(JacksonFeature::class.java)
 
@@ -67,6 +70,52 @@ class InheritedProblemTest : JerseyTest() {
         mapper.readTree(response.readEntity(String::class.java)),
       )
     }
+  }
+
+  @Test
+  fun `Jersey serializes both alternatives of the same 404 response`() {
+    val mapper = jacksonObjectMapper()
+    for (path in listOf("missing", "missing-named")) {
+      for ((kind, title, detail) in listOf(
+        Triple("team", "Team Not Found", "Team not found"),
+        Triple("user", "User Not Found", "Resource not found"),
+      )) {
+        target("$path/$kind").request().get().use { response ->
+          assertEquals(404, response.status)
+          assertEquals("application/problem+json", response.mediaType.toString())
+          assertEquals(
+            mapper.readTree(
+              """{"type":"https://example.com/problems/$kind-not-found","title":"$title","status":404,
+            "detail":"$detail","traceId":"trace-A","nullableParent":null,"resourceId":"unknown","error-code":"missing"}""",
+            ),
+            mapper.readTree(response.readEntity(String::class.java)),
+          )
+        }
+      }
+    }
+  }
+
+  /** Emits either concrete alternative through Jersey's entity writer. */
+  @Path("/")
+  class MissingEndpoint {
+    /** Returns a problem selected independently of its shared status. */
+    @GET
+    @Path("missing/{kind}")
+    fun read(
+      @PathParam("kind") kind: String,
+    ): Response =
+      Response
+        .status(404)
+        .type("application/problem+json")
+        .entity(if (kind == "team") TeamNotFoundProblem() else UserNotFoundProblem())
+        .build()
+
+    /** Exercises the named union response as well as the inline union. */
+    @GET
+    @Path("missing-named/{kind}")
+    fun readNamed(
+      @PathParam("kind") kind: String,
+    ): Response = read(kind)
   }
 
   /** Supplies a problem entity to the JAX-RS response pipeline. */

@@ -63,4 +63,37 @@ class InheritedProblemTest {
       )
     }
   }
+
+  @Test
+  fun `both alternatives of a 404 response retain inherited fields`() {
+    HttpClient.newHttpClient().use { client ->
+      for (path in listOf("missing", "missing-named")) {
+        for ((kind, title, detail) in listOf(
+          Triple("team", "Team Not Found", "Team not found"),
+          Triple("user", "User Not Found", "Resource not found"),
+        )) {
+          val response =
+            client.send(
+              HttpRequest.newBuilder(baseUri.resolve("/$path/$kind")).GET().build(),
+              HttpResponse.BodyHandlers.ofString(),
+            )
+          assertEquals(404, response.statusCode(), response.body())
+          assertTrue(
+            response
+              .headers()
+              .firstValue("Content-Type")
+              .orElse("")
+              .startsWith("application/problem+json"),
+          )
+          assertEquals(
+            mapper.readTree(
+              """{"type":"https://example.com/problems/$kind-not-found","title":"$title","status":404,
+            "detail":"$detail","instance":"/$path/$kind","traceId":"trace-A","nullableParent":null,"resourceId":"unknown","error-code":"missing"}""",
+            ),
+            mapper.readTree(response.body()),
+          )
+        }
+      }
+    }
+  }
 }

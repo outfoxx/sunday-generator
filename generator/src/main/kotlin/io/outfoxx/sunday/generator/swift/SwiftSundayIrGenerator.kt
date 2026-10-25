@@ -73,6 +73,7 @@ import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
@@ -272,6 +273,7 @@ class SwiftSundayIrGenerator(
 
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
+    apiIndex.validateSchemaProblemResponses()
     typeRegistry.outputOwnership.current = api.outputOrigin()
 
     options.requireBrokerServicesSupported("Swift/Sunday")

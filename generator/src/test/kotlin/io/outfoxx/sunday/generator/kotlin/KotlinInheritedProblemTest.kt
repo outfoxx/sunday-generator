@@ -27,6 +27,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
+import io.outfoxx.sunday.generator.tools.TEAM_NOT_FOUND_JSON
+import io.outfoxx.sunday.generator.tools.USER_NOT_FOUND_JSON
 import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -121,6 +123,15 @@ class KotlinInheritedProblemTest {
               """
               package io.test.inherited
 
+              fun missingProblem(team: Boolean): NotFoundProblem {
+                val value = if (team) TeamNotFoundProblem() else UserNotFoundProblem()
+                check(value.resourceId == "unknown")
+                check(value.errorCode == "missing")
+                val overridden = TeamNotFoundProblem(detail = "Override", resourceId = "123")
+                check(overridden.detail == "Override" && overridden.resourceId == "123")
+                return value
+              }
+
               fun problem(key: String = "A", position: Int = 2): QueuedProblem = QueuedProblem(
                 detail = "Resource A is rebuilding",
                 traceId = "trace-A",
@@ -164,6 +175,15 @@ class KotlinInheritedProblemTest {
                       exchange.sendResponseHeaders(409, body.size.toLong())
                       exchange.responseBody.use { it.write(body) }
                     }
+                    server.createContext("/missing") { exchange ->
+                      val raw = if (exchange.requestURI.path.endsWith("/team"))
+                        ${'"'}${'"'}${'"'}$TEAM_NOT_FOUND_JSON${'"'}${'"'}${'"'} else
+                        ${'"'}${'"'}${'"'}$USER_NOT_FOUND_JSON${'"'}${'"'}${'"'}
+                      val body = raw.toByteArray()
+                      exchange.responseHeaders.add("Content-Type", "application/problem+json")
+                      exchange.sendResponseHeaders(404, body.size.toLong())
+                      exchange.responseBody.use { it.write(body) }
+                    }
                     server.start()
                     try {
                       io.outfoxx.sunday.jdk.JdkTransport(
@@ -172,6 +192,16 @@ class KotlinInheritedProblemTest {
                       ).use { transport ->
                         val client = API(transport)
                         check(transport.registeredProblemTypes["https://example.com/problems/rebuilding"] == QueuedProblem::class)
+                        for (kind in listOf("team", "user")) {
+                          for (request in listOf(client.readMissing(kind), client.readMissingNamed(kind))) {
+                            try { kotlinx.coroutines.runBlocking { request.execute() }; error("Expected 404 problem") }
+                            catch (problem: NotFoundProblem) {
+                              check(if (kind == "team") problem is TeamNotFoundProblem else problem is UserNotFoundProblem)
+                              check(problem.resourceId == "unknown" && problem.errorCode == "missing")
+                              check(problem.detail == if (kind == "team") "Team not found" else "Resource not found")
+                            }
+                          }
+                        }
                         try { kotlinx.coroutines.runBlocking { client.readResource().execute() } }
                         catch (problem: RebuildingProblem) { return problem }
                       }
@@ -201,6 +231,42 @@ class KotlinInheritedProblemTest {
             "https://example.com/problems/rebuilding",
           ),
         )
+      }
+      if (library == KotlinProblemLibrary.ZALANDO) {
+        mapper.registerSubtypes(
+          com.fasterxml.jackson.databind.jsontype.NamedType(
+            result.classLoader.loadClass("io.test.inherited.TeamNotFoundProblem"),
+            "https://example.com/problems/team-not-found",
+          ),
+          com.fasterxml.jackson.databind.jsontype.NamedType(
+            result.classLoader.loadClass("io.test.inherited.UserNotFoundProblem"),
+            "https://example.com/problems/user-not-found",
+          ),
+        )
+      }
+      for ((team, raw) in listOf(true to TEAM_NOT_FOUND_JSON, false to USER_NOT_FOUND_JSON)) {
+        val missing = consumer.getMethod("missingProblem", Boolean::class.javaPrimitiveType).invoke(null, team)
+        assertEquals(mapper.readTree(raw), mapper.readTree(mapper.writeValueAsBytes(missing)))
+        assertEquals(
+          mapper.readTree(raw),
+          mapper.readTree(mapper.writeValueAsBytes(mapper.readValue(raw, missing.javaClass))),
+        )
+        for (unionName in listOf(
+          "io.test.inherited.NotFoundProblems",
+          "io.test.inherited.APIReadMissingResponseBody",
+        )) {
+          val union = result.classLoader.loadClass(unionName)
+          val decodedUnion = mapper.readValue(raw, union)
+          assertEquals(missing.javaClass, decodedUnion.javaClass)
+          assertEquals(mapper.readTree(raw), mapper.readTree(mapper.writeValueAsBytes(decodedUnion)))
+          for (invalid in listOf(
+            mapper.readTree(raw).deepCopy<ObjectNode>().put("status", 400),
+            mapper.readTree(raw).deepCopy<ObjectNode>().put("error-code", "wrong"),
+            mapper.readTree(raw).deepCopy<ObjectNode>().apply { remove("resourceId") },
+          )) {
+            assertThrows(JsonMappingException::class.java) { mapper.readValue(invalid.toString(), union) }
+          }
+        }
       }
       val expected = mapper.readTree(INHERITED_PROBLEM_JSON)
       assertEquals(expected, mapper.readTree(mapper.writeValueAsBytes(problem)))

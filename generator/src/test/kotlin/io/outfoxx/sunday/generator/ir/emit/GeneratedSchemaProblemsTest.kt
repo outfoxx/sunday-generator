@@ -1,0 +1,113 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.outfoxx.sunday.generator.ir.emit
+
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.test.extensions.ResourceExtension
+import io.outfoxx.sunday.test.extensions.ResourceUri
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import java.net.URI
+
+@ExtendWith(ResourceExtension::class)
+class GeneratedSchemaProblemsTest {
+  @Test
+  fun `inline and named anyOf retain original inherited problem references`(
+    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(source)
+    val index = GeneratedApiIndex(api)
+    index.validateSchemaProblemResponses()
+    val service = api.services.single()
+    for (name in listOf("readMissing", "readMissingNamed")) {
+      val operation = service.operations.single { it.id == name }
+      val problems = service.copy(operations = listOf(operation)).referencedSchemaProblems(index)
+      assertEquals(setOf("TeamNotFoundProblem", "UserNotFoundProblem"), problems.values.map { it.name }.toSet())
+      assertEquals(
+        setOf("https://example.com/problems/team-not-found", "https://example.com/problems/user-not-found"),
+        problems.keys,
+      )
+      problems.values.forEach { assertEquals(listOf("NotFoundProblem"), it.inherits.map { parent -> parent.name }) }
+    }
+  }
+
+  @Test
+  fun `unsupported problem union shapes fail with actionable diagnostics`(
+    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(source)
+    val union = api.models.single { it.name == "NotFoundProblems" }
+    val team = union.aliases.first()
+    val invalid =
+      listOf(
+        union.copy(aliases = listOf(team, GeneratedTypeRef.scalar("string"))) to "direct references",
+        union.copy(aliases = listOf(team, team.copy(nullable = true))) to "direct references",
+        union.copy(aliases = listOf(team, GeneratedTypeRef.named("NotFoundProblems"))) to "direct references",
+        union.copy(aliases = listOf(team, GeneratedTypeRef.named("Metadata"))) to "direct references",
+        union.copy(aliases = listOf(team, GeneratedTypeRef.named("Problem"))) to "non-leaf",
+        union.copy(aliases = listOf(team, team)) to "distinct type URIs",
+        union.copy(closed = true) to "cannot add constraints",
+        union.copy(discriminator = "status") to "discriminator must map",
+        union.copy(discriminatorMappings = emptyMap()) to "discriminator must map",
+      )
+    for ((replacement, message) in invalid) {
+      val index = GeneratedApiIndex(api.copy(models = api.models.map { if (it == union) replacement else it }))
+      val error = assertThrows(IllegalArgumentException::class.java) { index.validateSchemaProblemResponses() }
+      assertTrue(error.message.orEmpty().contains(message), error.message)
+    }
+    val withoutType =
+      api.copy(
+        models =
+          api.models.map { model ->
+            if (model.name ==
+              "TeamNotFoundProblem"
+            ) {
+              model.copy(properties = model.properties.filter { it.name != "type" })
+            } else {
+              model
+            }
+          },
+      )
+    val error =
+      assertThrows(
+        IllegalArgumentException::class.java,
+      ) { GeneratedApiIndex(withoutType).validateSchemaProblemResponses() }
+    assertTrue(error.message.orEmpty().contains("fixed type URI"), error.message)
+    val ordinaryUnion =
+      union.copy(
+        aliases = listOf(GeneratedTypeRef.named("Metadata"), GeneratedTypeRef.scalar("string")),
+      )
+    GeneratedApiIndex(
+      api.copy(
+        models =
+          api.models.map {
+            if (it ==
+              union
+            ) {
+              ordinaryUnion
+            } else {
+              it
+            }
+          },
+      ),
+    ).validateSchemaProblemResponses()
+  }
+}

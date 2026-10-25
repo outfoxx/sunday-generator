@@ -102,6 +102,7 @@ import io.outfoxx.sunday.generator.ir.emit.referencedProblems
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.sseEnabled
 import io.outfoxx.sunday.generator.ir.emit.target
+import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.ir.mergeWith
 import io.outfoxx.sunday.generator.ir.orInvocation
@@ -487,6 +488,7 @@ class KotlinJAXRSIrGenerator(
    * Generates Kotlin/JAX-RS service types from IR and registers them in the type registry.
    */
   fun generateServiceTypes() {
+    apiIndex.validateSchemaProblemResponses()
     typeRegistry.outputOwnership.current = api.outputOrigin()
     api.models
       .filter { model ->
@@ -2675,8 +2677,9 @@ class KotlinJAXRSIrGenerator(
     val inheritedProperties = inheritedModelProperties()
     val directUnionSupertypes = directUnionSupertypes()
     val inheritedMappingUnionSupertypes = inheritedDiscriminatorMappingUnionSupertypes
+    // Throwable subclasses retain parent storage and constructor arguments even when they also implement a union.
     val flattensInheritedProperties =
-      directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty()
+      !isProblemModel() && (directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty())
     val localProperties = localModelProperties(inheritedProperties, allowOverrides = flattensInheritedProperties)
     val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
     val hasClassParent =
@@ -4019,6 +4022,10 @@ class KotlinJAXRSIrGenerator(
       val modelPackageName = target(preferredTargetId, "kotlin")?.modelPackageName
       if (modelPackageName != null && modelPackageName != ownerName.packageName) {
         return ClassName(modelPackageName, name.toUpperCamelCase())
+      }
+      // Problem classes belong to the model artifact, which must not depend on a service-owned union.
+      if (kind == GeneratedModel.Kind.UNION && aliases.any { it.modelOrNull(apiIndex)?.isProblemModel() == true }) {
+        return ClassName(modelPackageName ?: ownerName.packageName, ownerName.simpleName + name.toUpperCamelCase())
       }
       return ownerName.nestedClass(name.toUpperCamelCase())
     }

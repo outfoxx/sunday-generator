@@ -20,6 +20,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
+import io.outfoxx.sunday.generator.tools.TEAM_NOT_FOUND_JSON
+import io.outfoxx.sunday.generator.tools.USER_NOT_FOUND_JSON
 import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
@@ -203,6 +205,47 @@ class PythonInheritedProblemTest : PythonTest() {
                       else:
                           raise AssertionError('HTTP problem was not raised')
           asyncio.run(http_problem())
+          from pydantic import TypeAdapter
+          from test_api.models import NotFoundProblems
+          from test_api.models_problems import TeamNotFoundProblem, UserNotFoundProblem, NotFoundProblem
+          union = TypeAdapter(NotFoundProblems)
+          async def missing_problems():
+              for raw, cls in [(json.loads('''$TEAM_NOT_FOUND_JSON'''), TeamNotFoundProblem),
+                               (json.loads('''$USER_NOT_FOUND_JSON'''), UserNotFoundProblem)]:
+                  value = cls(nullableParent=None)
+                  assert isinstance(value, NotFoundProblem) and isinstance(value, Problem)
+                  assert value.model_dump(mode='json', by_alias=True) == raw
+                  assert union.dump_python(union.validate_python(raw), mode='json', by_alias=True) == raw
+                  overridden = cls(detail='Override', resourceId='123')
+                  assert overridden.detail == 'Override' and overridden.resource_id == '123'
+                  for invalid in [dict(raw, type='wrong'), dict(raw, status=400), dict(raw, **{'error-code': 'wrong'}),
+                                  {k: v for k, v in raw.items() if k != 'resourceId'}]:
+                      try:
+                          union.validate_python(invalid)
+                      except ValidationError:
+                          pass
+                      else:
+                          raise AssertionError(f'Accepted invalid union problem: {invalid}')
+                  try:
+                      value.payload.error_code = 'changed'
+                  except ValidationError:
+                      pass
+                  else:
+                      raise AssertionError('Mutable inherited constant')
+                  async with httpx.AsyncClient(base_url="https://example.test", transport=httpx.MockTransport(
+                      lambda request: httpx.Response(404, json=raw, headers={"Content-Type": "application/problem+json"})
+                  )) as native:
+                      async with HttpxTransport(native) as transport:
+                          client = ResourcesClient(transport)
+                          for request in [client.read_missing('test'), client.read_missing_named('test')]:
+                              try:
+                                  await request.execute()
+                              except NotFoundProblem as caught:
+                                  assert isinstance(caught, cls)
+                                  assert caught.model_dump(mode='json', by_alias=True) == raw
+                              else:
+                                  raise AssertionError('404 problem was not raised')
+          asyncio.run(missing_problems())
           for invalid in [dict(raw, resourceKey=''), dict(raw, queuePosition=0)]:
               try:
                   QueuedProblem(**invalid)

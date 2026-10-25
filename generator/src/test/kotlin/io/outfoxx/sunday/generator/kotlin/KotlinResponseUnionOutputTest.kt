@@ -7,6 +7,7 @@ import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedNestedType
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -15,6 +16,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.PlacementRegressionFixture
 import io.outfoxx.sunday.generator.tools.ResponseUnionOutputFixture
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
+import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -22,6 +24,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarEntry
@@ -139,6 +142,27 @@ class KotlinResponseUnionOutputTest {
       assertEquals(KotlinCompilation.ExitCode.OK, services.exitCode, services.messages)
       assertFalse(Files.exists(serviceSources.resolve("example/model")))
       assertTrue(Files.exists(serviceSources.resolve("example/api")))
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["server", "client", "sunday"])
+  fun `problem models include inline response unions when sharing the service package`(
+    backend: String,
+    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+  ) {
+    val registry = generate(GeneratedApiIrExporter().export(source), backend)
+    val models =
+      compileTypesResult(
+        registry.buildTypes(
+          GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+        ),
+      )
+    assertEquals(KotlinCompilation.ExitCode.OK, models.exitCode, models.messages)
+    val union = models.classLoader.loadClass("io.test.inherited.APIReadMissingResponseBody")
+    assertTrue(union.enclosingClass == null)
+    for (name in listOf("TeamNotFoundProblem", "UserNotFoundProblem")) {
+      assertTrue(union.isAssignableFrom(models.classLoader.loadClass("io.test.inherited.$name")))
     }
   }
 
