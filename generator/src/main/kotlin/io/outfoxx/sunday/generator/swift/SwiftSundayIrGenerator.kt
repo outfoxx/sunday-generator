@@ -68,6 +68,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.referencedSchemaProblems
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
@@ -1041,8 +1042,15 @@ class SwiftSundayIrGenerator(
         .addModifiers(PUBLIC, FINAL)
         .addTypeVariable(transportTypeVariable)
         .addSuperType(SENDABLE)
-        .addProperty(problemTypesProperty(referencedProblems))
         .addProperty(
+          problemTypesProperty(
+            referencedProblems,
+            services
+              .flatMap {
+                it.service.referencedSchemaProblems(apiIndex).entries
+              }.associate { it.toPair() },
+          ),
+        ).addProperty(
           PropertySpec
             .builder("transport", transportTypeVariable)
             .addModifiers(PUBLIC)
@@ -1438,7 +1446,7 @@ class SwiftSundayIrGenerator(
           .addTypeVariable(transportTypeVariable)
           .addSuperType(SENDABLE)
           .addSwiftDoc(service.documentation)
-          .addProperty(problemTypesProperty(referencedProblems))
+          .addProperty(problemTypesProperty(referencedProblems, service.referencedSchemaProblems(apiIndex)))
       val constructorBuilder =
         FunctionSpec
           .constructorBuilder()
@@ -1510,17 +1518,50 @@ class SwiftSundayIrGenerator(
     }
   }
 
-  private fun problemTypesProperty(problems: List<GeneratedProblem>): PropertySpec =
+  private fun problemTypesProperty(
+    problems: List<GeneratedProblem>,
+    schemas: Map<String, GeneratedModel> = emptyMap(),
+  ): PropertySpec =
     PropertySpec
       .builder("problemTypes", ARRAY.parameterizedBy(PROBLEM_REGISTRATION), PUBLIC, STATIC)
-      .getter(problemTypesGetter(problems))
+      .getter(problemTypesGetter(problems, schemas))
       .build()
 
-  private fun problemTypesGetter(problems: List<GeneratedProblem>): FunctionSpec =
+  private fun problemTypesGetter(
+    problems: List<GeneratedProblem>,
+    schemas: Map<String, GeneratedModel>,
+  ): FunctionSpec =
     FunctionSpec
       .getterBuilder()
-      .addCode("%L", problemTypesReturnCode(problems))
+      .addCode("%L", problemTypesReturnCode(problems, schemas))
       .build()
+
+  private fun problemTypesReturnCode(
+    problems: List<GeneratedProblem>,
+    schemas: Map<String, GeneratedModel>,
+  ): CodeBlock {
+    if (schemas.isEmpty()) return problemTypesReturnCode(problems)
+    val entries =
+      problems.map { problem ->
+        CodeBlock.of(
+          "%T(type: %T(string: %S)!, problemType: %T.self)",
+          PROBLEM_REGISTRATION,
+          URL,
+          problem.resolvedTypeUri(options.defaultProblemBaseUri),
+          problem.swiftProblemTypeName(),
+        )
+      } +
+        schemas.filterValues { !it.isProblemHierarchyProtocolModel }.map { (uri, model) ->
+          CodeBlock.of(
+            "%T(type: %T(string: %S)!, problemType: %T.self)",
+            PROBLEM_REGISTRATION,
+            URL,
+            uri,
+            model.swiftDeclaredTypeName(),
+          )
+        }
+    return CodeBlock.of("return [%L]\n", entries.joinToCode(",\n"))
+  }
 
   private fun problemTypesReturnCode(problems: List<GeneratedProblem>): CodeBlock =
     if (problems.isEmpty()) {
@@ -3970,7 +4011,7 @@ class SwiftSundayIrGenerator(
   private fun GeneratedModelProperty.normalizedSwiftBaseProblemProperty(): GeneratedModelProperty =
     if (isSatisfiedByBaseProblemClass()) {
       when (name) {
-        in optionalBaseProblemProperties -> copy(required = false, type = type.copy(nullable = true))
+        in optionalBaseProblemProperties -> copy(required = false)
         else -> copy(required = true, type = type.copy(nullable = false))
       }
     } else {

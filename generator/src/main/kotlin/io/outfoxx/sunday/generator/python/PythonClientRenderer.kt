@@ -45,7 +45,7 @@ class PythonClientRenderer(
   private val packageName: String,
   private val registerProblems: Boolean = false,
   private val problems: List<io.outfoxx.sunday.generator.ir.GeneratedProblem> = emptyList(),
-  models: List<GeneratedModel> = emptyList(),
+  private val models: List<GeneratedModel> = emptyList(),
   private val defaultMediaTypes: List<String> = listOf("application/json"),
   private val profile: String? = null,
   private val configurationFactories: Boolean = false,
@@ -82,7 +82,8 @@ class PythonClientRenderer(
               it.pythonModule(
                 packageName,
               )
-            }.distinct()
+            }.plus(models.filter(PythonProblemModels(models)::isProblem).map { it.pythonProblemModule(packageName) })
+            .distinct()
             .ifEmpty { listOf("$packageName.problems") }
         PythonCodeBlock.join(
           modules.mapIndexed { index, owner ->

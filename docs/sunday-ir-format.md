@@ -288,6 +288,27 @@ The `detail` property in `sunday.problemTypes` and `x-sunday-problemTypes` is op
 
 The OpenAPI reader maps `x-sunday-problemBaseUri`, `x-sunday-problemUriParams`, `x-sunday-problemTypes`, `x-sunday-problems`, and `x-sunday-nullify` into the same IR fields used by RAML Sunday annotations.
 
+### Problems declared as schemas
+
+A source object hierarchy whose root name ends in `Problem` and declares `type`,
+`title`, and `status` remains a normal `GeneratedModel` inheritance graph. Its
+properties, including `allOf` refinements and constant values, retain their schema
+validation rules. Kotlin, Swift, and TypeScript generate runtime problem types.
+Python keeps the Pydantic payloads in their model module and adds catchable exception
+companions in a module with `_problems` appended (for example,
+`api.models_problems.QueuedProblem` wraps `api.models.QueuedProblem`). Python
+exception companions inherit from their parent exceptions and expose typed extension
+properties through `payload` and read-only accessors. A nullable or absent payload
+`type` is preserved in Python; the exception's `type` accessor returns `about:blank`
+when no URI is present.
+
+A fixed `type` URI enables automatic Sunday client registration. Problems whose URI
+is selected at runtime require explicit transport registration. Constructors fill
+fixed fields; decoders still reject conflicting wire values. Nullable extension
+values remain JSON null, while absent optional non-nullable fields are omitted.
+Kotlin/JAX-RS preserves these rules with Sunday, Zalando, and Quarkus problem
+libraries, including the runtime parameter maps used by framework serializers.
+
 ## Model Metadata
 
 Object models may carry inheritance and discriminator metadata. `inherits` lists direct parent model references. Root discriminator models carry `discriminator`, and concrete child models carry `discriminatorValue` when RAML defines one. Child models declare only local properties; inherited parent properties remain on the parent model.

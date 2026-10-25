@@ -14,6 +14,7 @@ dependencies {
   implementation(libs.jakartaValidation)
   implementation(libs.validation)
   implementation(libs.jackson)
+  implementation(libs.sundayProblem)
   implementation("io.outfoxx.sunday:sunday-validation-jakarta:${libs.versions.sundayKt.get()}")
   implementation("io.outfoxx.sunday:sunday-validation-javax:${libs.versions.sundayKt.get()}")
   testImplementation(libs.jacksonKotlin)
@@ -282,7 +283,35 @@ val generateSseApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val inheritedProblemSources = layout.buildDirectory.dir("generated/inherited-problems")
+val inheritedProblemContract =
+  rootProject.layout.projectDirectory.file(
+    "generator/src/test/resources/openapi/ir/inherited-problem.yaml",
+  )
+val generateInheritedProblems by tasks.registering(JavaExec::class) {
+  inputs.file(inheritedProblemContract)
+  outputs.dir(inheritedProblemSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-use-jakarta-packages",
+    "-problem-library",
+    "sunday",
+    "-category",
+    "models",
+    "-category",
+    "problems",
+    "-out",
+    inheritedProblemSources.get().asFile.absolutePath,
+    inheritedProblemContract.asFile.absolutePath,
+  )
+}
+
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateInheritedProblems)
   kotlin.srcDir(generateSseApi)
   kotlin.srcDir(generateCustomTypeApi)
   kotlin.srcDir(generateAnyOfApi)

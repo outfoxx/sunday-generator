@@ -94,6 +94,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.referencedSchemaProblems
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
@@ -165,6 +166,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.addKotlinPatchHelpers
 import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
+import io.outfoxx.sunday.generator.kotlin.utils.addZalandoProblemExtensions
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinBindings
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
@@ -522,6 +524,9 @@ class KotlinSundayIrGenerator(
           )
         }
       }
+    }
+    if (typeRegistry.problemLibrary == KotlinProblemLibrary.ZALANDO) {
+      addZalandoProblemExtensions(modelTypes, modelProperties)
     }
     addKotlinPatchHelpers(
       modelTypes,
@@ -1145,6 +1150,10 @@ class KotlinSundayIrGenerator(
           problem.resolvedTypeUri(options.defaultProblemBaseUri),
           problem.typeName(),
         )
+      }
+
+      service.referencedSchemaProblems(apiIndex).forEach { (uri, model) ->
+        constructorBuilder.addStatement("transport.registerProblem(%S, %T::class)", uri, model.kotlinClassName())
       }
 
       serviceTypeBuilder

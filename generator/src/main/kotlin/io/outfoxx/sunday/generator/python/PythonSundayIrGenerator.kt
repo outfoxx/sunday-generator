@@ -89,6 +89,15 @@ class PythonSundayIrGenerator(
           renderPlacedModels(api.models, selectedModels, packageName, options)
         }
     }
+    if (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories) {
+      modules +=
+        PythonSchemaProblemRenderer(packageName, api.models).render(
+          api.models
+            .filter {
+              selection.includes(it.outputOrigin(api).copy(category = GeneratedTypeCategory.Problem))
+            }.toSet(),
+        )
+    }
     val problems =
       api.problems.filter { problem ->
         val origin = problem.outputOrigin(api)
@@ -110,7 +119,7 @@ class PythonSundayIrGenerator(
       val clientRenderer =
         PythonClientRenderer(
           packageName,
-          registerProblems = api.problems.isNotEmpty(),
+          registerProblems = api.problems.isNotEmpty() || api.models.any(PythonProblemModels(api.models)::isProblem),
           problems = api.problems,
           models = api.models,
           defaultMediaTypes = defaultMediaTypes,

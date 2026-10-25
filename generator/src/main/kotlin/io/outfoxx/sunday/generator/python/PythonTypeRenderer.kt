@@ -61,6 +61,13 @@ private fun GeneratedTypeRef.renderScalarPythonType(): PythonCodeBlock {
     "datetime-only",
     -> PythonCodeBlock.of("%T", PythonSymbol("pydantic", "NaiveDatetime"))
     "time", "time-only", "partial-time" -> PythonCodeBlock.of("%T", PythonSymbol("datetime", "time"))
+    "problem-uri" ->
+      PythonCodeBlock.of(
+        "%T[str, %T(lambda value: str(%T(value)))]",
+        PythonSymbol("typing", "Annotated"),
+        PythonSymbol("pydantic", "AfterValidator"),
+        PythonSymbol("pydantic", "AnyUrl"),
+      )
     "uri", "url", "iri" -> PythonCodeBlock.of("%T", PythonSymbol("pydantic", "AnyUrl"))
     "uri-reference", "iri-reference" -> PythonCodeBlock.of("str")
     "uuid" -> PythonCodeBlock.of("%T", PythonSymbol("uuid", "UUID"))

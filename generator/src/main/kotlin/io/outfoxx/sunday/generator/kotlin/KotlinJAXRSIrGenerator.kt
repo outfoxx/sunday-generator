@@ -166,6 +166,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusProblemExtensions
+import io.outfoxx.sunday.generator.kotlin.utils.addZalandoProblemExtensions
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
@@ -801,6 +802,9 @@ class KotlinJAXRSIrGenerator(
     }
     if (typeRegistry.problemLibrary == KotlinProblemLibrary.QUARKUS) {
       addQuarkusProblemExtensions(modelTypes, modelProperties, typeRegistry.options)
+    }
+    if (typeRegistry.problemLibrary == KotlinProblemLibrary.ZALANDO) {
+      addZalandoProblemExtensions(modelTypes, modelProperties)
     }
     addKotlinPatchHelpers(
       modelTypes,
@@ -2861,7 +2865,27 @@ class KotlinJAXRSIrGenerator(
             ) { it.kotlinTypeName() }
             .takeUnless {
               it.isEmpty()
-            }?.let(::addInitializerBlock)
+            }?.let { checks ->
+              val numericStatus =
+                isProblemModel() &&
+                  typeRegistry.problemLibrary == KotlinProblemLibrary.ZALANDO &&
+                  modelProperties.fields(this@classTypeSpec).any {
+                    it.wireName == "status" &&
+                      it.effective.allowedValues?.size == 1
+                  }
+              addInitializerBlock(
+                if (numericStatus) {
+                  CodeBlock
+                    .builder()
+                    .addStatement(
+                      "val status = this.status?.statusCode",
+                    ).add(checks)
+                    .build()
+                } else {
+                  checks
+                },
+              )
+            }
         }
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {

@@ -64,6 +64,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.referencedSchemaProblems
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
@@ -698,6 +699,17 @@ class TypeScriptSundayIrGenerator(
             .builder()
             .add("transport.registerProblem(%S, ", problem.resolvedTypeUri(options.defaultProblemBaseUri))
             .add(typeRegistry.schemaInitializer(problem.typeName()))
+            .add(");\n")
+            .build(),
+        )
+      }
+
+      service.referencedSchemaProblems(index).forEach { (uri, model) ->
+        constructorBuilder.addCode(
+          CodeBlock
+            .builder()
+            .add("transport.registerProblem(%S, ", uri)
+            .add(typeRegistry.schemaInitializer(model.typeName(model.name.toUpperCamelCase())))
             .add(");\n")
             .build(),
         )
@@ -1793,25 +1805,57 @@ class TypeScriptSundayIrGenerator(
     }
 
     if (allSerializableProperties.isNotEmpty() || options.preserveUnknownFields) {
+      val constants =
+        allSerializableProperties.filter {
+          it.required &&
+            it.allowedValues?.size == 1 &&
+            it.type
+              .typeName(ownerTypeName)
+              .nonOptional.nonNullable in setOf(STRING, NUMBER, BOOLEAN, URL_TYPE)
+        }
+      val constructorType =
+        if (constants.isEmpty()) {
+          specName
+        } else {
+          val keys = constants.joinToString(" | ") { literal(it.name.typeScriptIdentifierName).toString() }
+          TypeName.implicit(
+            CodeBlock.of("Omit<%T, %L> & Partial<Pick<%T, %L>>", specName, keys, specName, keys).toString(),
+          )
+        }
       val constructorBuilder =
         FunctionSpec
           .constructorBuilder()
           .addParameter(
             ParameterSpec
-              .builder("init", specName)
+              .builder("init", constructorType)
               .apply {
                 if (allSerializableProperties.isEmpty()) defaultValue("{}")
               }.build(),
           )
 
+      val inputName = if (constants.isEmpty()) "init" else "values"
+      if (constants.isNotEmpty()) {
+        constructorBuilder.addStatement(
+          "const values: %T = {%L, ...init}",
+          specName,
+          constants
+            .map {
+              CodeBlock.of(
+                "%N: %L",
+                it.name.typeScriptIdentifierName,
+                it.type.defaultValueCode(ownerTypeName, it.allowedValues!!.single()),
+              )
+            }.joinToCode(", "),
+        )
+      }
       if (superTypeName != null) {
         if (inheritedProperties.isNotEmpty() || options.preserveUnknownFields) {
-          constructorBuilder.addStatement("super(init)")
+          constructorBuilder.addStatement("super(%N)", inputName)
         } else {
           constructorBuilder.addStatement("super()")
         }
       } else if (isRootProblemModel) {
-        constructorBuilder.addCode(problemModelSuperCode())
+        constructorBuilder.addCode(problemModelSuperCode(inputName))
       }
 
       declaredProperties.forEach { property ->
@@ -1820,7 +1864,7 @@ class TypeScriptSundayIrGenerator(
           !(isRootProblemModel && property.isSatisfiedByBaseProblemClass()) &&
           !(isProblemModel && superTypeName != null && property.name in inheritedPropertyNames)
         ) {
-          constructorBuilder.addStatement("this.%N = init.%N", propertyName, propertyName)
+          constructorBuilder.addStatement("this.%N = %N.%N", propertyName, inputName, propertyName)
         }
       }
       if (options.preserveUnknownFields) {
@@ -2133,18 +2177,18 @@ class TypeScriptSundayIrGenerator(
     serializationName == null &&
       (name in requiredBaseProblemProperties || (name in optionalBaseProblemProperties && !required))
 
-  private fun problemModelSuperCode(): CodeBlock =
+  private fun problemModelSuperCode(inputName: String): CodeBlock =
     CodeBlock
       .builder()
       .add(
         """
         |super({
-        |  ...init,
-        |  type: init.type ?? %T.BLANK_URL,
-        |  title: init.title ?? '',
-        |  status: init.status ?? 0,
-        |  detail: init.detail ?? undefined,
-        |  instance: init.instance ?? undefined
+        |  ...$inputName,
+        |  type: $inputName.type ?? %T.BLANK_URL,
+        |  title: $inputName.title ?? '',
+        |  status: $inputName.status ?? 0,
+        |  detail: $inputName.detail ?? undefined,
+        |  instance: $inputName.instance ?? undefined
         |});
         |
         """.trimMargin(),

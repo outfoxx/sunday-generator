@@ -85,6 +85,15 @@ class PythonLitestarIrGenerator(
           renderPlacedModels(api.models, selectedModels, packageName, options)
         }
     }
+    if (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories) {
+      modules +=
+        PythonSchemaProblemRenderer(packageName, api.models).render(
+          api.models
+            .filter {
+              selection.includes(it.outputOrigin(api).copy(category = GeneratedTypeCategory.Problem))
+            }.toSet(),
+        )
+    }
     val problems =
       api.problems.filter { problem ->
         val origin = problem.outputOrigin(api)
