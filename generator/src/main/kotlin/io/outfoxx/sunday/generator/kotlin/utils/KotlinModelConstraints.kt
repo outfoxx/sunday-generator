@@ -40,6 +40,7 @@ internal object KotlinModelConstraints {
     fields: List<GeneratedModelProperties.Field>,
     properties: GeneratedModelProperties,
     patchParameters: Set<String> = emptySet(),
+    propertyNames: Map<String, String> = emptyMap(),
     typeName: (GeneratedTypeRef) -> TypeName,
   ): CodeBlock =
     CodeBlock
@@ -47,7 +48,7 @@ internal object KotlinModelConstraints {
       .apply {
         fields.forEach { field ->
           val property = field.effective
-          val name = field.storage.name.kotlinIdentifierName
+          val name = propertyNames[field.wireName] ?: field.storage.name.kotlinIdentifierName
           val patch = name in patchParameters
           val value = CodeBlock.of(if (patch) "%N.value" else "%N", name)
           val storageType = typeName(field.storage.type).copy(nullable = false)

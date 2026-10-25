@@ -1,0 +1,55 @@
+openapi: 3.1.0
+info: {title: Inherited problems, version: '1'}
+x-sunday-placement:
+  kotlin: {package: io.test.inherited}
+paths:
+  /inherited-problems:
+    get:
+      operationId: readResource
+      responses:
+        '409':
+          description: Resource is rebuilding
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/QueuedProblem'}
+components:
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        instance: {type: string, format: uri}
+        traceId: {type: string}
+        nullableParent: {type: [string, 'null']}
+      additionalProperties: true
+    RebuildingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          required: [resourceKey, retryAfterSeconds, nullableChild, metadata]
+          properties:
+            type: {type: string, format: uri, const: 'https://example.com/problems/rebuilding'}
+            title: {type: string, const: Resource Rebuilding}
+            status: {type: integer, const: 409}
+            resourceKey: {type: string, minLength: 1}
+            retryAfterSeconds: {type: integer, minimum: 1, const: 1}
+            optionalChild: {type: string}
+            nullableChild: {type: [string, 'null']}
+            metadata: {$ref: '#/components/schemas/Metadata'}
+    QueuedProblem:
+      allOf:
+        - {$ref: '#/components/schemas/RebuildingProblem'}
+        - type: object
+          required: [queuePosition, queue-name]
+          properties:
+            queuePosition: {type: integer, minimum: 1}
+            queue-name: {type: string, const: rebuilds}
+    Metadata:
+      type: object
+      required: [region]
+      properties:
+        region: {type: string, minLength: 1}

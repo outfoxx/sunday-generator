@@ -165,6 +165,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
+import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusProblemExtensions
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
@@ -797,6 +798,9 @@ class KotlinJAXRSIrGenerator(
           )
         }
       }
+    }
+    if (typeRegistry.problemLibrary == KotlinProblemLibrary.QUARKUS) {
+      addQuarkusProblemExtensions(modelTypes, modelProperties, typeRegistry.options)
     }
     addKotlinPatchHelpers(
       modelTypes,
@@ -2842,6 +2846,18 @@ class KotlinJAXRSIrGenerator(
                     (it.type as? ParameterizedTypeName)?.rawType in
                       setOf(PATCH_OP, UPDATE_OP)
                   }.mapTo(mutableSetOf()) { it.name },
+              // Constant parameters are removed later; use the runtime's integer status accessor then.
+              propertyNames =
+                if (isProblemModel() &&
+                  typeRegistry.problemLibrary == KotlinProblemLibrary.QUARKUS &&
+                  modelProperties.fields(this@classTypeSpec).any {
+                    it.wireName == "status" && it.effective.allowedValues?.size == 1
+                  }
+                ) {
+                  mapOf("status" to "statusCode")
+                } else {
+                  emptyMap()
+                },
             ) { it.kotlinTypeName() }
             .takeUnless {
               it.isEmpty()
@@ -3002,7 +3018,7 @@ class KotlinJAXRSIrGenerator(
     val builder = CodeBlock.builder()
     val propertiesByName = properties.associateBy { property -> property.name }
 
-    builder.add("run {\n").indent()
+    builder.add("kotlin.run {\n").indent()
     builder.addStatement("val builder = %T.builder()", QUARKUS_HTTP_PROBLEM)
     propertiesByName["type"]?.let { property -> builder.addQuarkusProblemBuilderCall(property, "withType") }
     propertiesByName["title"]?.let { property -> builder.addQuarkusProblemBuilderCall(property, "withTitle") }
@@ -3014,7 +3030,7 @@ class KotlinJAXRSIrGenerator(
       .forEach { property ->
         val name = property.name.kotlinIdentifierName
         val wireName = property.serializationName ?: property.name
-        if (property.modelPropertyTypeName().isNullable) {
+        if (!property.required && !modelProperties.acceptsNull(property.type)) {
           builder.beginControlFlow("if (%N != null)", name)
           builder.addStatement("builder.with(%S, %N)", wireName, name)
           builder.endControlFlow()
