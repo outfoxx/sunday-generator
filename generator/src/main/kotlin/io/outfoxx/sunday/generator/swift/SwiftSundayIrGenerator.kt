@@ -4742,6 +4742,8 @@ class SwiftSundayIrGenerator(
               .apply {
                 if (patchable) {
                   defaultValue(".unchanged")
+                } else if (model.isProblemModel && property.swiftDefault(model, constructor = true) != null) {
+                  defaultValue(requireNotNull(property.swiftDefault(model, constructor = true)))
                 } else if (property.swiftTypeName().optional) {
                   defaultValue("nil")
                 }
@@ -6430,9 +6432,12 @@ class SwiftSundayIrGenerator(
     replace("/*", "/ *")
       .replace("*/", "* /")
 
-  private fun GeneratedModelProperty.swiftDefault(model: GeneratedModel): CodeBlock? {
+  private fun GeneratedModelProperty.swiftDefault(
+    model: GeneratedModel,
+    constructor: Boolean = false,
+  ): CodeBlock? {
     val field = modelProperties.fields(model).firstOrNull { it.wireName == (serializationName ?: name) }
-    if (field?.effective?.required == true) return null
+    if (!constructor && field?.effective?.required == true) return null
     val nominal = modelProperties.declarationModel(type)?.takeIf { it.nominal }
     if (nominal != null) {
       val scalar = nominalTypes.scalar(nominal)

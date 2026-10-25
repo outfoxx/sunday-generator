@@ -28,11 +28,7 @@ class InheritedProblemEndpoint {
   @GET
   fun readResource(): String =
     throw QueuedProblem(
-      detail = "Resource A is rebuilding",
-      traceId = "trace-A",
-      resourceKey = "A",
       nullableChild = null,
       metadata = Metadata(region = "west"),
-      queuePosition = 2,
     )
 }

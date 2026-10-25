@@ -52,6 +52,7 @@ class TypeScriptInheritedProblemTest {
             import {createAPI} from './api';
             import {QueuedProblem, QueuedProblemSchema} from './queued-problem';
             import {RebuildingProblem} from './rebuilding-problem';
+            import {DefaultedProblem} from './defaulted-problem';
             function ok(value: boolean, message = 'assertion failed'): void { if (!value) throw new Error(message); }
             function deepStrictEqual(value: unknown, expected: unknown): void {
               const sorted = (v: unknown): unknown => v && typeof v === 'object' && !Array.isArray(v)
@@ -68,12 +69,34 @@ class TypeScriptInheritedProblemTest {
             const schema = runtime.resolveSchema(QueuedProblemSchema);
             const value = new QueuedProblem({detail: 'Resource A is rebuilding', traceId: 'trace-A',
               resourceKey: 'A', nullableParent: null, nullableChild: null, metadata: {region: 'west'}, queuePosition: 2});
+            const baseDefaults = new DefaultedProblem();
+            ok(baseDefaults.detail === 'Something bad happened');
+            ok(baseDefaults.enabled === false && baseDefaults.count === 0 && baseDefaults.note === 'fallback');
+            ok(baseDefaults.location?.toString() === 'https://example.com/default' && baseDefaults.revision === 1);
+            ok(new DefaultedProblem({enabled: true, count: 3, note: null}).note === null);
+            ok(!Reflect.set(baseDefaults, 'revision', 2));
+            const defaulted = new QueuedProblem({nullableParent: null, nullableChild: null, metadata: {region: 'west'}});
+            deepStrictEqual(schema.encode(defaulted), raw);
+            const explicitUndefined = new QueuedProblem({detail: undefined, traceId: undefined, resourceKey: undefined,
+              queuePosition: undefined, nullableParent: null, nullableChild: null, metadata: {region: 'west'}});
+            deepStrictEqual(schema.encode(explicitUndefined), raw);
+            const overridden = new QueuedProblem({detail: 'Override', traceId: 'trace-B', resourceKey: 'B',
+              queuePosition: 3, nullableChild: null, metadata: {region: 'east'}});
+            ok(overridden.detail === 'Override' && overridden.traceId === 'trace-B');
+            ok(overridden.resourceKey === 'B' && overridden.queuePosition === 3);
+            ok(!Reflect.set(value, 'retryAfterSeconds', 2));
+            ok(!Reflect.set(value, 'queueName', 'wrong'));
+            ok(!Reflect.set(value, 'type', new URL('https://example.com/wrong')));
+            value.type.href = 'https://example.com/wrong';
+            deepStrictEqual(schema.encode(value), raw);
+            throws(() => new QueuedProblem({...value, retryAfterSeconds: 2}));
             ok(value instanceof Problem);
             ok(value instanceof RebuildingProblem);
             deepStrictEqual(schema.encode(value), raw);
             deepStrictEqual(schema.encode(schema.parse(raw)), raw);
             for (const invalid of [{...raw, resourceKey: ''}, {...raw, retryAfterSeconds: 2},
-              {...raw, queuePosition: 0}, {...raw, type: 'https://example.com/wrong'}, {...raw, nullableChild: undefined}]) {
+              {...raw, queuePosition: 0}, {...raw, type: 'https://example.com/wrong'}, {...raw, nullableChild: undefined},
+              {...raw, resourceKey: undefined}, {...raw, queuePosition: undefined}, {...raw, detail: null}]) {
               ok(!schema.safeParse(invalid).success, JSON.stringify(invalid));
             }
             throws(() => new QueuedProblem({...value, resourceKey: ''}));

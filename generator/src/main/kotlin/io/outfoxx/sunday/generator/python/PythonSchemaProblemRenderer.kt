@@ -94,6 +94,37 @@ internal class PythonSchemaProblemRenderer(
                 emptyList()
               }
             ) + accessors
+          val defaults =
+            problems.properties.fields(model).map { it.effective }.filter {
+              it.defaultValue != null && it.allowedValues?.size != 1
+            }
+          val constructorDefaults =
+            if (defaults.isEmpty()) {
+              PythonCodeBlock.of("")
+            } else {
+              PythonCodeBlock.of(
+                "        if payload is None:\n%C\n",
+                PythonCodeBlock.join(
+                  defaults.map { property ->
+                    PythonCodeBlock.of(
+                      "            if %S not in values and %S not in values:\n                values[%S] = %C",
+                      property.name.pythonIdentifierName,
+                      property.serializationName ?: property.name,
+                      property.serializationName ?: property.name,
+                      requireNotNull(problems.properties.scalarDefault(property)) {
+                        "Unsupported problem default for '${model.name}.${property.name}'"
+                      }.let { value ->
+                        when (value) {
+                          is String -> PythonCodeBlock.of("%S", value)
+                          is Boolean -> PythonCodeBlock.of(if (value) "True" else "False")
+                          else -> PythonCodeBlock.of("%L", value)
+                        }
+                      },
+                    )
+                  },
+                ),
+              )
+            }
           module.addExport(model.name.pythonTypeName)
           module.addCode(
             PythonCodeBlock.of(
@@ -105,7 +136,7 @@ internal class PythonSchemaProblemRenderer(
                   payload: %T
 
                   def __init__(self, payload: %T | None = None, **values: %T) -> None:
-                      super().__init__(payload if payload is not None else self.payload_type(**values))
+              %C        super().__init__(payload if payload is not None else self.payload_type(**values))
               %C
               """.trimIndent(),
               model.name.pythonTypeName,
@@ -122,6 +153,7 @@ internal class PythonSchemaProblemRenderer(
               payload,
               payload,
               PythonSymbol("typing", "Any"),
+              constructorDefaults,
               if (exceptionAccessors.isEmpty()) {
                 PythonCodeBlock.of(
                   "",

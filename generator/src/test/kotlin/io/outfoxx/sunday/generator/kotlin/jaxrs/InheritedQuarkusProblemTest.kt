@@ -103,6 +103,24 @@ class InheritedQuarkusProblemTest {
                 metadata = Metadata(region = "west"),
                 queuePosition = position,
               ).also {
+                val baseDefaults = DefaultedProblem()
+                check(baseDefaults.detail == "Something bad happened")
+                check(baseDefaults.enabled == false && baseDefaults.count == 0)
+                check(baseDefaults.note == "fallback")
+                check(baseDefaults.location == java.net.URI.create("https://example.com/default"))
+                check(baseDefaults.revision == 1)
+                check(DefaultedProblem(note = null, enabled = true, count = 3).note == null)
+                val defaulted = QueuedProblem(nullableChild = null, metadata = Metadata(region = "west"))
+                check(defaulted.detail == "Resource A is rebuilding")
+                check(defaulted.traceId == "trace-A")
+                check(defaulted.resourceKey == "A")
+                check(defaulted.queuePosition == 2)
+                val overridden = QueuedProblem(detail = "Override", traceId = "trace-B", resourceKey = "B",
+                  queuePosition = 3, nullableChild = null, metadata = Metadata(region = "east"))
+                check(overridden.detail == "Override")
+                check(overridden.traceId == "trace-B")
+                check(overridden.resourceKey == "B")
+                check(overridden.queuePosition == 3)
                 check(RuntimeException::class.java.isInstance(it))
                 check(it.resourceKey == key)
                 check(it.retryAfterSeconds == 1)
@@ -169,13 +187,17 @@ class InheritedQuarkusProblemTest {
           """{"type":"about:blank","title":"Failure","status":400,"traceId":"root","nullableParent":null}""",
         )
       val root = result.classLoader.loadClass("io.test.inherited.Problem")
-      assertEquals(rootJson, mapper.readTree(mapper.writeValueAsBytes(mapper.readValue(rootJson.toString(), root))))
+      val decodedRoot = mapper.readTree(mapper.writeValueAsBytes(mapper.readValue(rootJson.toString(), root)))
+      assertEquals(rootJson.deepCopy<ObjectNode>().put("detail", "Something bad happened"), decodedRoot)
       for (json in listOf(
         expected.toString().replace("\"resourceKey\":\"A\"", "\"resourceKey\":\"\""),
         expected.toString().replace("\"retryAfterSeconds\":1", "\"retryAfterSeconds\":2"),
         expected.toString().replace("\"queuePosition\":2", "\"queuePosition\":0"),
         expected.toString().replace("\"region\":\"west\"", "\"region\":\"\""),
         expected.toString().replace("\"nullableChild\":null,", ""),
+        expected.toString().replace("\"resourceKey\":\"A\",", ""),
+        expected.toString().replace("\"queuePosition\":2,", ""),
+        expected.toString().replace("\"detail\":\"Resource A is rebuilding\"", "\"detail\":null"),
       )) {
         assertThrows(JsonMappingException::class.java) { mapper.readValue(json, problem.javaClass) }
       }

@@ -1760,6 +1760,7 @@ class TypeScriptSundayIrGenerator(
         PropertySpec
           .builder(propertyName, propertyType.nonUndefinable)
           .optional(propertyType.isUndefinable)
+          .apply { if (property.allowedValues?.size == 1) addModifiers(Modifier.READONLY) }
           .build(),
       )
       if (
@@ -1770,6 +1771,7 @@ class TypeScriptSundayIrGenerator(
           PropertySpec
             .builder(propertyName, propertyType.nonUndefinable)
             .optional(propertyType.isUndefinable)
+            .apply { if (property.allowedValues?.size == 1) addModifiers(Modifier.READONLY) }
             .build(),
         )
       }
@@ -1805,19 +1807,14 @@ class TypeScriptSundayIrGenerator(
     }
 
     if (allSerializableProperties.isNotEmpty() || options.preserveUnknownFields) {
-      val constants =
-        allSerializableProperties.filter {
-          it.required &&
-            it.allowedValues?.size == 1 &&
-            it.type
-              .typeName(ownerTypeName)
-              .nonOptional.nonNullable in setOf(STRING, NUMBER, BOOLEAN, URL_TYPE)
-        }
+      val constants = allSerializableProperties.filter { it.allowedValues?.size == 1 }
+      val defaulted = allSerializableProperties.filter { it.defaultValue != null && it !in constants }
+      val initialized = constants + defaulted
       val constructorType =
-        if (constants.isEmpty()) {
+        if (initialized.isEmpty()) {
           specName
         } else {
-          val keys = constants.joinToString(" | ") { literal(it.name.typeScriptIdentifierName).toString() }
+          val keys = initialized.joinToString(" | ") { literal(it.name.typeScriptIdentifierName).toString() }
           TypeName.implicit(
             CodeBlock.of("Omit<%T, %L> & Partial<Pick<%T, %L>>", specName, keys, specName, keys).toString(),
           )
@@ -1829,21 +1826,24 @@ class TypeScriptSundayIrGenerator(
             ParameterSpec
               .builder("init", constructorType)
               .apply {
-                if (allSerializableProperties.isEmpty()) defaultValue("{}")
+                if (allSerializableProperties.all { !it.required || it in initialized }) defaultValue("{}")
               }.build(),
           )
 
-      val inputName = if (constants.isEmpty()) "init" else "values"
-      if (constants.isNotEmpty()) {
+      val inputName = if (initialized.isEmpty()) "init" else "values"
+      if (initialized.isNotEmpty()) {
         constructorBuilder.addStatement(
-          "const values: %T = {%L, ...init}",
+          "const values: %T = {...init, %L}",
           specName,
-          constants
+          initialized
             .map {
+              val value = if (it in constants) it.allowedValues!!.single() else modelProperties.scalarDefault(it)
               CodeBlock.of(
-                "%N: %L",
+                "%N: init.%N === undefined ? %L : init.%N",
                 it.name.typeScriptIdentifierName,
-                it.type.defaultValueCode(ownerTypeName, it.allowedValues!!.single()),
+                it.name.typeScriptIdentifierName,
+                it.type.defaultValueCode(ownerTypeName, value),
+                it.name.typeScriptIdentifierName,
               )
             }.joinToCode(", "),
         )
@@ -1880,9 +1880,22 @@ class TypeScriptSundayIrGenerator(
         constructorBuilder.addCode(
           CodeBlock
             .builder()
-            .add("if (new.target === %T) %Q(this, ", typeName, VALIDATE_MODEL_CONSTRUCTION)
+            .add("if (new.target === %T) {\n", typeName)
+            .indent()
+            .add("%Q(this, ", VALIDATE_MODEL_CONSTRUCTION)
             .add(typeRegistry.schemaInitializer(typeName))
             .add(", %T);\n", typeName)
+            .apply {
+              // Lock after the complete descendant has initialized and validated its effective constants.
+              constants.forEach { property ->
+                addStatement(
+                  "Object.defineProperty(this, %S, {enumerable: true, configurable: false, get: () => %L})",
+                  property.name.typeScriptIdentifierName,
+                  property.type.defaultValueCode(ownerTypeName, property.allowedValues!!.single()),
+                )
+              }
+            }.unindent()
+            .add("}\n")
             .build(),
         )
       }

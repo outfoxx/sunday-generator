@@ -21,9 +21,9 @@ components:
         type: {type: string, format: uri}
         title: {type: string}
         status: {type: integer}
-        detail: {type: string}
+        detail: {type: string, default: Something bad happened}
         instance: {type: string, format: uri}
-        traceId: {type: string}
+        traceId: {type: string, default: trace-A}
         nullableParent: {type: [string, 'null']}
       additionalProperties: true
     RebuildingProblem:
@@ -32,10 +32,11 @@ components:
         - type: object
           required: [resourceKey, retryAfterSeconds, nullableChild, metadata]
           properties:
+            detail: {type: string, default: Resource A is rebuilding}
             type: {type: string, format: uri, const: 'https://example.com/problems/rebuilding'}
             title: {type: string, const: Resource Rebuilding}
             status: {type: integer, const: 409}
-            resourceKey: {type: string, minLength: 1}
+            resourceKey: {type: string, minLength: 1, default: A}
             retryAfterSeconds: {type: integer, minimum: 1, const: 1}
             optionalChild: {type: string}
             nullableChild: {type: [string, 'null']}
@@ -46,8 +47,22 @@ components:
         - type: object
           required: [queuePosition, queue-name]
           properties:
-            queuePosition: {type: integer, minimum: 1}
+            detail: {type: string, maxLength: 200}
+            queuePosition: {type: integer, minimum: 1, default: 2}
             queue-name: {type: string, const: rebuilds}
+    DefaultedProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.com/problems/defaulted'}
+            title: {type: string, const: Defaulted}
+            status: {type: integer, const: 400}
+            enabled: {type: boolean, default: false}
+            count: {type: integer, default: 0}
+            note: {type: [string, 'null'], default: fallback}
+            location: {type: string, format: uri, default: 'https://example.com/default'}
+            revision: {type: integer, const: 1}
     Metadata:
       type: object
       required: [region]

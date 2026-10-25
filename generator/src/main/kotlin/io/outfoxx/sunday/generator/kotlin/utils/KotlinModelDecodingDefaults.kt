@@ -24,6 +24,7 @@ import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.NameAllocator
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
@@ -34,12 +35,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 
-/** Separates implicit constants and decode-only defaults from public construction. */
+/** Keeps implicit constants and constructor conveniences separate from required wire fields. */
 internal fun addModelDecodingDefaults(
   models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   options: Set<KotlinTypeRegistry.Option>,
   properties: GeneratedModelProperties,
   enumEntries: KotlinEnumEntriesResolver,
+  constructorDefaults: (GeneratedModel) -> Boolean = { false },
   typeName: (GeneratedTypeRef) -> TypeName,
 ) {
   fun constantCode(field: GeneratedModelProperties.Field): CodeBlock {
@@ -88,6 +90,7 @@ internal fun addModelDecodingDefaults(
   models.forEach { (name, entry) ->
     val (model, builder) = entry
     if (model.kind != GeneratedModel.Kind.OBJECT || model.patchable) return@forEach
+    val problemDefaults = constructorDefaults(model)
     val type = builder.build()
     val constructor = type.primaryConstructor ?: return@forEach
     val fields = properties.fields(model).associateBy { it.storage.name.kotlinIdentifierName }
@@ -96,7 +99,7 @@ internal fun addModelDecodingDefaults(
       constructor.parameters
         .filter { parameter ->
           val field = fields[parameter.name] ?: return@filter false
-          !field.effective.required &&
+          (!field.effective.required || problemDefaults) &&
             field.effective.defaultValue != null &&
             parameter.defaultValue != null &&
             parameter.defaultValue != CodeBlock.of("null") &&
@@ -120,7 +123,7 @@ internal fun addModelDecodingDefaults(
             parameter
               .toBuilder()
               .apply {
-                if (parameter.name in defaulted) defaultValue("null")
+                if (parameter.name in defaulted && !problemDefaults) defaultValue("null")
                 if (parameter.name in extensionParameters) annotations.clear()
               }.build()
           }
@@ -184,13 +187,21 @@ internal fun addModelDecodingDefaults(
           }
           decodedParameters.forEach { parameter ->
             addParameter(
-              parameter
-                .toBuilder(type = parameter.type.withoutValidationAnnotations())
-                .apply {
-                  // Static Jackson factories delegate to the validated constructor; Bean Validation ignores them.
-                  annotations.removeAll { it.isValidationAnnotation() }
-                  annotations.replaceAll { it.toBuilder().useSiteTarget(null).build() }
-                }.build(),
+              (
+                if (problemDefaults && fields[parameter.name]?.effective?.required == true) {
+                  ParameterSpec
+                    .builder(parameter.name, parameter.type.withoutValidationAnnotations())
+                    .addModifiers(parameter.modifiers)
+                    .addAnnotations(parameter.annotations)
+                    .addKdoc(parameter.kdoc)
+                } else {
+                  parameter.toBuilder(type = parameter.type.withoutValidationAnnotations())
+                }
+              ).apply {
+                // Static Jackson factories delegate to the validated constructor; Bean Validation ignores them.
+                annotations.removeAll { it.isValidationAnnotation() }
+                annotations.replaceAll { it.toBuilder().useSiteTarget(null).build() }
+              }.build(),
             )
           }
         }.returns(name)

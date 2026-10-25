@@ -510,6 +510,7 @@ class KotlinSundayIrGenerator(
       typeRegistry.options,
       modelProperties,
       kotlinEnumEntries,
+      constructorDefaults = { it.isProblemModel() },
     ) { it.kotlinTypeName() }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       addNativeModelGraphs(modelTypes, modelProperties, typeRegistry.beanValidationTypes) { it.commonSchemaOwner() }
@@ -1676,6 +1677,7 @@ class KotlinSundayIrGenerator(
           inheritedProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
+                problemDefaults = isProblemModel(),
                 patchable = patchableProperty(property.wireName) && !property.patchDiscriminator,
                 effective =
                   modelProperties
@@ -1690,7 +1692,8 @@ class KotlinSundayIrGenerator(
           localProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
-                patchable && !property.patchDiscriminator,
+                problemDefaults = isProblemModel(),
+                patchable = patchable && !property.patchDiscriminator,
                 declaresProperty = !(isProblemRootModel() && property.isBaseProblemProperty()),
                 effective =
                   modelProperties
@@ -1709,6 +1712,20 @@ class KotlinSundayIrGenerator(
           .initializer(
             modelProperties.fields(this@classTypeSpec),
             modelProperties,
+            nonNullableParameters =
+              if (isProblemModel()) {
+                val defaults =
+                  modelProperties
+                    .fields(this@classTypeSpec)
+                    .filter {
+                      it.effective.defaultValue != null && it.effective.allowedValues?.size != 1
+                    }.mapTo(mutableSetOf()) { it.storage.name.kotlinIdentifierName }
+                constructor.parameters
+                  .filter { !it.type.isNullable && it.name in defaults }
+                  .mapTo(mutableSetOf()) { it.name }
+              } else {
+                emptySet()
+              },
             patchParameters =
               constructor.parameters
                 .filter { (it.type as? ParameterizedTypeName)?.rawType in setOf(PATCH_OP, UPDATE_OP) }
@@ -1881,7 +1898,7 @@ class KotlinSundayIrGenerator(
       properties.firstOrNull { candidate -> candidate.name == "status" }
         ?: return CodeBlock.of("null")
     val name = property.name.kotlinIdentifierName
-    return if (property.modelPropertyTypeName().isNullable) {
+    return if (property.problemConstructorTypeName().isNullable) {
       CodeBlock.of("%N?.let { %T.valueOf(it) }", name, ZALANDO_STATUS)
     } else {
       CodeBlock.of("%T.valueOf(%N)", ZALANDO_STATUS, name)
@@ -1901,12 +1918,17 @@ class KotlinSundayIrGenerator(
     if (defaultFormat == "%L" && defaultArguments.singleOrNull() == "null") {
       return CodeBlock.of("%N", name)
     }
-    return if (property.modelPropertyTypeName().isNullable) {
+    return if (property.problemConstructorTypeName().isNullable) {
       CodeBlock.of("%N ?: %L", name, CodeBlock.of(defaultFormat, *defaultArguments))
     } else {
       CodeBlock.of("%N", name)
     }
   }
+
+  private fun GeneratedModelProperty.problemConstructorTypeName(): TypeName =
+    modelPropertyTypeName().let {
+      if (defaultValue != null) it.copy(nullable = modelProperties.acceptsNull(type)) else it
+    }
 
   private fun GeneratedModel.dataClassTypeSpec(properties: List<GeneratedModelProperty>): TypeSpec.Builder {
     val constructor =
@@ -1976,10 +1998,28 @@ class KotlinSundayIrGenerator(
     patchable: Boolean = false,
     effective: GeneratedModelProperty = this,
     declaresProperty: Boolean = false,
+    problemDefaults: Boolean = false,
   ): ParameterSpec =
     ParameterSpec
-      .builder(name.kotlinIdentifierName, modelPropertyTypeName(patchable))
-      .apply {
+      .builder(
+        name.kotlinIdentifierName,
+        modelPropertyTypeName(patchable).let {
+          if (problemDefaults && effective.defaultValue != null && !patchable) {
+            it.copy(nullable = modelProperties.acceptsNull(effective.type))
+          } else {
+            it
+          }
+        },
+      ).apply {
+        val parameterProperty =
+          declaresProperty &&
+            !(
+              problemDefaults &&
+                !patchable &&
+                effective.defaultValue != null &&
+                modelPropertyTypeName().isNullable &&
+                !modelProperties.acceptsNull(effective.type)
+            )
         // A nullable value still needs a creator argument when the wire property is required.
         val requiresPresence =
           !patchable &&
@@ -1992,7 +2032,7 @@ class KotlinSundayIrGenerator(
               if (patchable) effective.copy(required = true) else effective,
               modelProperties,
               typeRegistry.beanValidationTypes,
-              AnnotationSpec.UseSiteTarget.PARAM.takeIf { declaresProperty },
+              AnnotationSpec.UseSiteTarget.PARAM.takeIf { parameterProperty },
               objectSchema =
                 KotlinNativeSchema.commonSchema(
                   effective.type,
@@ -2004,7 +2044,7 @@ class KotlinSundayIrGenerator(
               AnnotationSpec
                 .builder(
                   typeRegistry.beanValidationTypes.valid,
-                ).apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+                ).apply { if (parameterProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
                 .build(),
             )
           }
@@ -2037,13 +2077,24 @@ class KotlinSundayIrGenerator(
           addAnnotation(
             AnnotationSpec
               .builder(ClassName("com.fasterxml.jackson.annotation", "JsonSetter"))
-              .apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+              .apply { if (parameterProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
               .addMember("nulls = %T.FAIL", ClassName("com.fasterxml.jackson.annotation", "Nulls"))
               .build(),
           )
         }
         if (patchable) {
           defaultValue("%T.none()", PATCH_OP)
+        } else if (problemDefaults && effective.defaultValue != null) {
+          defaultValue(
+            requireNotNull(
+              KotlinModelDefaults.code(
+                effective.defaultValue,
+                modelPropertyTypeName(),
+                modelProperties.declarationModel(type),
+                kotlinEnumEntries,
+              ),
+            ) { "Unsupported problem default for '$name'" },
+          )
         } else if ((!required || type.nullable) && !requiresPresence) {
           defaultValue(
             KotlinModelDefaults.code(

@@ -80,12 +80,8 @@ class InheritedProblemTest : JerseyTest() {
         .type("application/problem+json")
         .entity(
           QueuedProblem(
-            detail = "Resource A is rebuilding",
-            traceId = "trace-A",
-            resourceKey = "A",
             nullableChild = null,
             metadata = Metadata(region = "west"),
-            queuePosition = 2,
           ),
         ).build()
   }

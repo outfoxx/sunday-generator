@@ -77,6 +77,22 @@ class SwiftInheritedProblemTest {
           let expected = try XCTUnwrap(JSONSerialization.jsonObject(with: raw) as? NSDictionary)
           let value = try QueuedProblem(detail: "Resource A is rebuilding", traceId: "trace-A",
             resourceKey: "A", nullableChild: nil, metadata: Metadata(region: "west"), queuePosition: 2)
+          let baseDefaults = try DefaultedProblem()
+          XCTAssertEqual(baseDefaults.detail, "Something bad happened")
+          XCTAssertEqual(baseDefaults.enabled, false)
+          XCTAssertEqual(baseDefaults.count, 0)
+          XCTAssertEqual(baseDefaults.note, "fallback")
+          XCTAssertEqual(baseDefaults.location, URL(string: "https://example.com/default"))
+          XCTAssertEqual(baseDefaults.revision, 1)
+          XCTAssertNil(try DefaultedProblem(enabled: true, count: 3, note: nil).note)
+          let defaulted = try QueuedProblem(nullableChild: nil, metadata: Metadata(region: "west"))
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(defaulted)) as? NSDictionary, expected)
+          let overridden = try QueuedProblem(detail: "Override", traceId: "trace-B", resourceKey: "B",
+            nullableChild: nil, metadata: Metadata(region: "east"), queuePosition: 3)
+          XCTAssertEqual(overridden.detail, "Override")
+          XCTAssertEqual(overridden.traceId, "trace-B")
+          XCTAssertEqual(overridden.resourceKey, "B")
+          XCTAssertEqual(overridden.queuePosition, 3)
           let problem: any Sunday.Problem = value
           XCTAssertEqual(problem.status, 409)
           let inherited: any RebuildingProblem = value
@@ -85,9 +101,9 @@ class SwiftInheritedProblemTest {
             XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(model)) as? NSDictionary, expected)
           }
           for (field, invalid) in [("resourceKey", "" as Any), ("retryAfterSeconds", 2),
-            ("queuePosition", 0), ("type", "https://example.com/wrong"), ("nullableChild", "missing")] {
+            ("queuePosition", 0), ("type", "https://example.com/wrong"), ("nullableChild", "missing"), ("queuePosition", "missing"), ("resourceKey", "missing"), ("detail", NSNull())] {
             var object = try XCTUnwrap(JSONSerialization.jsonObject(with: raw) as? [String: Any])
-            if field == "nullableChild" { object.removeValue(forKey: field) } else { object[field] = invalid }
+            if invalid as? String == "missing" { object.removeValue(forKey: field) } else { object[field] = invalid }
             XCTAssertThrowsError(try JSONDecoder().decode(QueuedProblem.self, from: JSONSerialization.data(withJSONObject: object)))
           }
           XCTAssertThrowsError(try QueuedProblem(resourceKey: "", nullableChild: nil,

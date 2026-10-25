@@ -304,7 +304,12 @@ when no URI is present.
 
 A fixed `type` URI enables automatic Sunday client registration. Problems whose URI
 is selected at runtime require explicit transport registration. Constructors fill
-fixed fields; decoders still reject conflicting wire values. Nullable extension
+fixed fields; decoders still reject conflicting wire values. HTTP Problem constructors
+also expose inherited scalar schema defaults as overridable arguments, including
+`detail` and extension properties. A descendant's default takes precedence over its
+ancestor's default. Constants are initialized implicitly and remain read-only at
+runtime. Constructor defaults do not relax required wire fields or replace explicit
+null values; ordinary model constructor behavior is unchanged. Nullable extension
 values remain JSON null, while absent optional non-nullable fields are omitted.
 Kotlin/JAX-RS preserves these rules with Sunday, Zalando, and Quarkus problem
 libraries, including the runtime parameter maps used by framework serializers.

@@ -148,6 +148,25 @@ class PythonInheritedProblemTest : PythonTest() {
               resourceKey='A', nullableParent=None, nullableChild=None, metadata=Metadata(region='west'), queuePosition=2)
           assert isinstance(value, RebuildingProblem)
           assert isinstance(value, Problem)
+          from test_api.models_problems import DefaultedProblem
+          base_defaults = DefaultedProblem()
+          assert base_defaults.detail == 'Something bad happened'
+          assert base_defaults.enabled is False and base_defaults.count == 0 and base_defaults.note == 'fallback'
+          assert str(base_defaults.location) == 'https://example.com/default' and base_defaults.revision == 1
+          assert DefaultedProblem(enabled=True, count=3, note=None).note is None
+          defaulted = QueuedProblem(nullableParent=None, nullableChild=None, metadata=Metadata(region='west'))
+          assert defaulted.model_dump(mode='json', by_alias=True) == raw
+          overridden = QueuedProblem(detail='Override', trace_id='trace-B', resource_key='B', queue_position=3,
+              nullableChild=None, metadata=Metadata(region='east'))
+          assert overridden.detail == 'Override' and overridden.trace_id == 'trace-B'
+          assert overridden.resource_key == 'B' and overridden.queue_position == 3
+          for field, invalid in [('retry_after_seconds', 2), ('queue_name', 'wrong'), ('type', 'https://example.com/wrong')]:
+              try:
+                  setattr(value.payload, field, invalid)
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError(f'Mutable constant: {field}')
           assert value.resource_key == 'A'
           assert value.metadata.region == 'west'
           registry = ProblemRegistry()
@@ -162,7 +181,8 @@ class PythonInheritedProblemTest : PythonTest() {
           assert value.model_dump(mode='json', by_alias=True) == raw
           assert QueuedProblem.model_validate(raw).model_dump(mode='json', by_alias=True) == raw
           for invalid in [dict(raw, resourceKey=''), dict(raw, retryAfterSeconds=2), dict(raw, queuePosition=0),
-              dict(raw, type='https://example.com/wrong'), {k: v for k, v in raw.items() if k != 'nullableChild'}]:
+              dict(raw, type='https://example.com/wrong'), dict(raw, detail=None),
+              *[{k: v for k, v in raw.items() if k != field} for field in ['nullableChild', 'resourceKey', 'queuePosition']]]:
               try:
                   QueuedProblem.model_validate(invalid)
               except ValidationError:
