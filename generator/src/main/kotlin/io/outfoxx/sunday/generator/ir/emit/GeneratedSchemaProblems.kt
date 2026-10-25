@@ -21,11 +21,24 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
 /**
- * Finds concrete source-schema problems returned directly or through a flat response union.
- * Problem unions require concrete object alternatives with distinct fixed type URIs so all
- * runtimes can dispatch to the same type without depending on alternative order.
+ * Finds unambiguous custom problem registrations for a client transport.
+ * Standard about:blank problems use the runtime fallback because their meaning depends on status.
  */
-fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<String, GeneratedModel> {
+fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<String, GeneratedModel> =
+  schemaProblemResponses(index)
+    .filterNot { (uri, _) -> uri == "about:blank" }
+    .groupBy({ it.first }, { it.second })
+    .mapValues { (uri, models) ->
+      val distinct = models.distinct()
+      require(distinct.size == 1) {
+        "HTTP Problem responses in service '$name' map type URI '$uri' to multiple problems: " +
+          distinct.map { it.name }.sorted().joinToString() + "; declare distinct fixed type URIs"
+      }
+      distinct.single()
+    }
+
+// Response shape validation also applies to servers, which do not need a URI-keyed client registry.
+private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): List<Pair<String, GeneratedModel>> {
   val properties = GeneratedModelProperties(index::modelOrNull)
 
   fun root(model: GeneratedModel): GeneratedModel =
@@ -111,18 +124,9 @@ fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<Str
     .mapNotNull(index::modelOrNull)
     .flatMap(::problems)
     .mapNotNull { model -> typeUri(model)?.let { it to model } }
-    .groupBy({ it.first }, { it.second })
-    .mapValues { (uri, models) ->
-      val distinct = models.distinct()
-      require(distinct.size == 1) {
-        "HTTP Problem responses in service '$name' map type URI '$uri' to multiple problems: " +
-          distinct.map { it.name }.sorted().joinToString() + "; declare distinct fixed type URIs"
-      }
-      distinct.single()
-    }
 }
 
 /** Validates the supported HTTP Problem response union shape consistently for every emitter. */
 fun GeneratedApiIndex.validateSchemaProblemResponses() {
-  api.services.forEach { it.referencedSchemaProblems(this) }
+  api.services.forEach { it.schemaProblemResponses(this) }
 }

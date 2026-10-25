@@ -1,0 +1,45 @@
+openapi: 3.1.0
+info: {title: Standard HTTP Problems, version: '1.0.0'}
+paths:
+  /example:
+    get:
+      operationId: getExample
+      responses:
+        '204': {description: Success}
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/BadRequestProblem'}
+        '404':
+          description: Missing resource
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/NotFoundProblem'}
+components:
+  schemas:
+    HttpProblem:
+      type: object
+      required: [title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        traceId: {type: string}
+    BadRequestProblem:
+      allOf:
+        - $ref: '#/components/schemas/HttpProblem'
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'about:blank'}
+            title: {type: string, const: Bad Request}
+            status: {type: integer, const: 400}
+    NotFoundProblem:
+      allOf:
+        - $ref: '#/components/schemas/HttpProblem'
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'about:blank'}
+            title: {type: string, const: Not Found}
+            status: {type: integer, const: 404}

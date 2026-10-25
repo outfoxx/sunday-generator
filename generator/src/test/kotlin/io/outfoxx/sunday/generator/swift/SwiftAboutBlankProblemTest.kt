@@ -1,0 +1,127 @@
+/*
+ * Copyright 2026 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.outfoxx.sunday.generator.swift
+
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
+import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
+import io.outfoxx.sunday.test.extensions.ResourceUri
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import java.net.URI
+import java.nio.file.Files
+import kotlin.io.path.writeText
+
+@SwiftTest
+@Tag("models")
+@Tag("responses")
+class SwiftAboutBlankProblemTest {
+  @Test
+  fun `standard status models retain constraints while HTTP errors use generic problems`(
+    @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
+    compiler: SwiftCompiler,
+  ) {
+    val registry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(
+      GeneratedApiIrExporter().export(source),
+      registry,
+      swiftSundayTestOptions,
+    ).generateServiceTypes()
+    registry.generateFiles(GeneratedOutputSelection(), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    compiler.testsDir.resolve("AboutBlankProblemTests.swift").writeText(
+      """
+      import Foundation
+      import XCTest
+      import Sunday
+      import PotentJSON
+      @testable import SundayGenTest
+      final class AboutBlankProblemTests: XCTestCase {
+        func testModels() throws {
+          let badRequest = try BadRequestProblem(detail: "Details", traceId: "trace")
+          let notFound = try NotFoundProblem(detail: "Details", traceId: "trace")
+          for (value, status, title) in [(badRequest as any Sunday.Problem, 400, "Bad Request"),
+                                        (notFound as any Sunday.Problem, 404, "Not Found")] {
+            XCTAssertEqual(value.type.absoluteString, "about:blank")
+            XCTAssertEqual(value.status, status)
+            XCTAssertEqual(value.title, title)
+            var raw = try XCTUnwrap(JSONSerialization.jsonObject(with: Foundation.JSONEncoder().encode(value)) as? [String: Any])
+            for (field, invalid) in [("status", 500 as Any), ("title", "Wrong"), ("type", "https://example.com/wrong")] {
+              let saved = raw[field]
+              raw[field] = invalid
+              let data = try JSONSerialization.data(withJSONObject: raw)
+              if status == 400 {
+                XCTAssertThrowsError(try Foundation.JSONDecoder().decode(BadRequestProblem.self, from: data))
+              } else {
+                XCTAssertThrowsError(try Foundation.JSONDecoder().decode(NotFoundProblem.self, from: data))
+              }
+              raw[field] = saved
+            }
+          }
+        }
+        func testGenericHTTPProblems() async throws {
+          for (status, title) in [(400, "Bad Request"), (404, "Not Found"), (503, "Service Unavailable")] {
+            for explicit in [false, true] {
+              let config = URLSessionConfiguration.ephemeral
+              config.protocolClasses = [BlankProblemProtocol.self]
+              let session = URLSession(configuration: config)
+              let transport = URLSessionTransport(baseURL: URI.Template(format: "https://example.test/\(status)/\(explicit)"),
+                session: session, eventSession: session)
+              defer { transport.close() }
+              let client = API(transport: transport)
+              do {
+                try await client.getExample().execute()
+                XCTFail("Expected generic HTTP problem")
+              } catch let problem as GenericProblem {
+                XCTAssertEqual(problem.type.absoluteString, "about:blank")
+                XCTAssertEqual(problem.status, status)
+                XCTAssertEqual(problem.title, title)
+                XCTAssertEqual(problem.detail, "Details")
+                let encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSON.Encoder.default.encode(problem)) as? NSDictionary)
+                XCTAssertEqual(encoded["traceId"] as? String, "trace")
+                XCTAssertEqual(encoded["extra"] as? NSDictionary, ["nested": [1, 2]] as NSDictionary)
+              }
+            }
+          }
+        }
+      }
+      private final class BlankProblemProtocol: URLProtocol, @unchecked Sendable {
+        override class func canInit(with request: URLRequest) -> Bool { true }
+        override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+        override func startLoading() {
+          let parts = request.url!.pathComponents
+          let status = Int(parts[1])!
+          let title = status == 400 ? "Bad Request" : status == 404 ? "Not Found" : "Service Unavailable"
+          var raw: [String: Any] = ["status": status, "title": title, "detail": "Details", "traceId": "trace",
+                                    "extra": ["nested": [1, 2]]]
+          if parts[2] == "true" { raw["type"] = "about:blank" }
+          let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+            headerFields: ["Content-Type": "application/problem+json"])!
+          client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+          client?.urlProtocol(self, didLoad: try! JSONSerialization.data(withJSONObject: raw))
+          client?.urlProtocolDidFinishLoading(self)
+        }
+        override func stopLoading() {}
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+}

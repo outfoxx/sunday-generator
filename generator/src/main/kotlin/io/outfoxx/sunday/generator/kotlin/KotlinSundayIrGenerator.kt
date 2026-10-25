@@ -1726,6 +1726,18 @@ class KotlinSundayIrGenerator(
                 constructor.parameters
                   .filter { !it.type.isNullable && it.name in defaults }
                   .mapTo(mutableSetOf()) { it.name }
+                  .apply {
+                    // Constant parameters are removed later, exposing the runtime's non-null type accessor.
+                    val fixedType =
+                      modelProperties.fields(this@classTypeSpec).any {
+                        it.wireName == "type" && it.effective.allowedValues?.singleOrNull() != null
+                      }
+                    if (fixedType ||
+                      constructor.parameters.none { it.name == "type" && it.type.isNullable }
+                    ) {
+                      add("type")
+                    }
+                  }
               } else {
                 emptySet()
               },
