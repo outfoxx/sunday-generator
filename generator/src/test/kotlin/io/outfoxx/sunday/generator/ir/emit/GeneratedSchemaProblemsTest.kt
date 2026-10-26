@@ -32,6 +32,24 @@ import java.net.URI
 @ExtendWith(ResourceExtension::class)
 class GeneratedSchemaProblemsTest {
   @Test
+  fun `standard status problems never register a global about blank subtype`(
+    @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(source)
+    val index = GeneratedApiIndex(api)
+    index.validateSchemaProblemResponses()
+    val service = api.services.single()
+    assertTrue(service.referencedSchemaProblems(index).isEmpty())
+    for (response in service.operations
+      .single()
+      .responses
+      .filter { it.status in listOf(400, 404) }) {
+      val onlyOne = service.copy(operations = listOf(service.operations.single().copy(responses = listOf(response))))
+      assertTrue(onlyOne.referencedSchemaProblems(index).isEmpty())
+    }
+  }
+
+  @Test
   fun `conflicting response problem URIs fail regardless of response or operation order`(
     @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
   ) {
@@ -49,7 +67,12 @@ class GeneratedSchemaProblemsTest {
         ordered.mapIndexed { index, response -> operation.copy(id = "read$index", responses = listOf(response)) },
       )) {
         val index = GeneratedApiIndex(api.copy(services = listOf(service.copy(operations = operations))))
-        val error = assertThrows(IllegalArgumentException::class.java) { index.validateSchemaProblemResponses() }
+        val error =
+          assertThrows(
+            IllegalArgumentException::class.java,
+          ) {
+            index.validateSchemaProblemResponses()
+          }
         messages.add(error.message)
         for (part in listOf(service.name, "QueuedProblem", "RebuildingProblem", "distinct fixed type URIs")) {
           assertTrue(error.message.orEmpty().contains(part), error.message)

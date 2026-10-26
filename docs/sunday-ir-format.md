@@ -302,8 +302,17 @@ properties through `payload` and read-only accessors. A nullable or absent paylo
 `type` is preserved in Python; the exception's `type` accessor returns `about:blank`
 when no URI is present.
 
-A fixed `type` URI enables automatic Sunday client registration. Problems whose URI
-is selected at runtime require explicit transport registration. Constructors fill
+A fixed custom `type` URI enables automatic Sunday client registration. Standard
+`about:blank` problems are not registered to one schema globally: their semantics
+come from the HTTP status. Clients use the runtime's generic Problem for both an
+explicit `about:blank` and an omitted `type`, preserving the received status, title,
+detail, and extensions. Status-specific schema models remain available for explicit
+construction and validation, including server and model/problem-only output.
+Distinct response problems sharing a fixed custom URI fail validation in every
+generation mode, including server and model/problem-only output, regardless of
+output selection. `about:blank` is the sole exception to this custom URI conflict check.
+
+Problems whose URI is selected at runtime require explicit transport registration. Constructors fill
 fixed fields; decoders still reject conflicting wire values. HTTP Problem constructors
 also expose inherited scalar schema defaults as overridable arguments, including
 `detail` and extension properties. A descendant's default takes precedence over its

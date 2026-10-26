@@ -176,7 +176,9 @@ internal class PythonSchemaProblemRenderer(
         val registered =
           declarations.filter { candidate ->
             val uri = problems.typeUri(candidate)
-            uri != null && problems.models.none { problems.parent(it) == candidate && problems.typeUri(it) == uri }
+            uri != null &&
+              uri != "about:blank" &&
+              problems.models.none { problems.parent(it) == candidate && problems.typeUri(it) == uri }
           }
         module.addExport("register_problems")
         module.addCode(

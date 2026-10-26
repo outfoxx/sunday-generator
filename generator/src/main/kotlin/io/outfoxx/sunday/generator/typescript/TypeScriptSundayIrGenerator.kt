@@ -1857,7 +1857,7 @@ class TypeScriptSundayIrGenerator(
           constructorBuilder.addStatement("super()")
         }
       } else if (isRootProblemModel) {
-        constructorBuilder.addCode(problemModelSuperCode(inputName))
+        constructorBuilder.addCode(model.problemModelSuperCode(inputName))
       }
 
       declaredProperties.forEach { property ->
@@ -2192,7 +2192,7 @@ class TypeScriptSundayIrGenerator(
     serializationName == null &&
       (name in requiredBaseProblemProperties || (name in optionalBaseProblemProperties && !required))
 
-  private fun problemModelSuperCode(inputName: String): CodeBlock =
+  private fun GeneratedModel.problemModelSuperCode(inputName: String): CodeBlock =
     CodeBlock
       .builder()
       .add(
@@ -2202,12 +2202,14 @@ class TypeScriptSundayIrGenerator(
         |  type: $inputName.type ?? %T.BLANK_URL,
         |  title: $inputName.title ?? '',
         |  status: $inputName.status ?? 0,
-        |  detail: $inputName.detail ?? undefined,
-        |  instance: $inputName.instance ?? undefined
+        |  detail: %L,
+        |  instance: %L
         |});
         |
         """.trimMargin(),
         PROBLEM,
+        if (properties.any { it.name == "detail" }) "$inputName.detail ?? undefined" else "undefined",
+        if (properties.any { it.name == "instance" }) "$inputName.instance ?? undefined" else "undefined",
       ).build()
 
   private fun GeneratedModel.inheritedProperties(discriminatorName: String?): List<GeneratedModelProperty> =

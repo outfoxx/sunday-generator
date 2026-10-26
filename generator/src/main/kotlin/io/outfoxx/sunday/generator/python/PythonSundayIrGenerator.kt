@@ -52,7 +52,8 @@ class PythonSundayIrGenerator(
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<PythonModule> {
-    GeneratedApiIndex(api).validateSchemaProblemResponses()
+    val apiIndex = GeneratedApiIndex(api)
+    apiIndex.validateSchemaProblemResponses()
     options.requireBrokerServicesSupported("Python/Sunday")
     val packageName = api.pythonPackageName()
     val services = api.pythonHttpServices()
