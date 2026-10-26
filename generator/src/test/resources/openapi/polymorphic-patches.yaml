@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info: {title: Polymorphic Patches, version: 1.0.0}
+paths:
+  /zoo:
+    patch:
+      operationId: updateZoo
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema: {$ref: '#/components/schemas/Zoo'}
+      responses: {'204': {description: Updated}}
+components:
+  schemas:
+    Animal:
+      type: object
+      required: [kind, name]
+      discriminator:
+        propertyName: kind
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+      properties:
+        kind: {type: string, enum: [cat, dog]}
+        name: {type: string}
+    Cat:
+      allOf:
+        - {$ref: '#/components/schemas/Animal'}
+        - type: object
+          properties:
+            indoor: {type: boolean}
+    Dog:
+      allOf:
+        - {$ref: '#/components/schemas/Animal'}
+        - type: object
+          properties:
+            trained: {type: boolean}
+    AnimalList:
+      type: array
+      items: {$ref: '#/components/schemas/Animal'}
+    AnimalChoice:
+      oneOf: [{$ref: '#/components/schemas/Animal'}]
+    NullableAnimalList:
+      anyOf: [{$ref: '#/components/schemas/AnimalList'}, {type: 'null'}]
+    NullableAnimalListAlias:
+      allOf: [{$ref: '#/components/schemas/NullableAnimalList'}]
+    Zoo:
+      type: object
+      x-sunday-patchable: true
+      required: [requiredAnimals]
+      properties:
+        requiredAnimals: {type: array, items: {$ref: '#/components/schemas/Animal'}}
+        choice: {$ref: '#/components/schemas/AnimalChoice'}
+        nullableAnimals: {$ref: '#/components/schemas/NullableAnimalListAlias'}
+        nestedNullableAnimals: {type: array, items: {$ref: '#/components/schemas/NullableAnimalListAlias'}}
+        favorite: {$ref: '#/components/schemas/Animal'}
+        animals: {type: array, items: {$ref: '#/components/schemas/Animal'}}
+        aliasedAnimals: {$ref: '#/components/schemas/AnimalList'}
+        byName: {type: object, additionalProperties: {$ref: '#/components/schemas/Animal'}}
+        matrix: {type: array, items: {type: array, items: {$ref: '#/components/schemas/Animal'}}}

@@ -280,7 +280,7 @@ The compiler-backed environment-aware tests use these companion runtimes:
 | Target | Runtime version | Distribution |
 | --- | --- | --- |
 | Kotlin | `2.0.0-beta.16` | Maven Central, including validation and Quarkus client artifacts |
-| Swift | `2.0.0-beta.16` | Swift Package Manager Git tag |
+| Swift | `2.0.0-beta.17` | Swift Package Manager Git tag |
 | TypeScript | `2.0.0-beta.11` | npm; Node.js 22 or later |
 | Python | `2.0.0-beta.10` | Released Git tag until PyPI publication |
 

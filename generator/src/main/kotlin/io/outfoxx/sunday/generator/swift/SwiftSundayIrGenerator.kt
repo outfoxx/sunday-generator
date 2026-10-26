@@ -137,6 +137,7 @@ import io.outfoxx.swiftpoet.ARRAY
 import io.outfoxx.swiftpoet.BOOL
 import io.outfoxx.swiftpoet.CASE_ITERABLE
 import io.outfoxx.swiftpoet.CodeBlock
+import io.outfoxx.swiftpoet.ComposedTypeName
 import io.outfoxx.swiftpoet.DATA
 import io.outfoxx.swiftpoet.DICTIONARY
 import io.outfoxx.swiftpoet.DOUBLE
@@ -1907,11 +1908,14 @@ class SwiftSundayIrGenerator(
                 },
                 model.isSwiftClassModel,
                 patchField = { model.patchable && it.name != model.discriminatorNameOrNull() },
+                patchReferenceTypes = { !it.type.hasSwiftPatchReferenceValue },
                 storageProperty = { property ->
                   when {
                     property.name == model.discriminatorNameOrNull() ->
                       property.copy(required = true, type = property.type.copy(nullable = false))
                     model.isProblemModel -> property.normalizedSwiftBaseProblemProperty()
+                    model.patchable && property.type.hasSwiftPatchReferenceValue ->
+                      property.copy(type = property.type.swiftPatchReferenceType())
                     else -> property
                   }
                 },
@@ -4726,7 +4730,8 @@ class SwiftSundayIrGenerator(
     val baseType = makeNonOptional()
     val existentialType =
       when (baseType) {
-        is DeclaredTypeName -> DeclaredTypeName.typeName(".any ${baseType.canonicalName}")
+        // SwiftPoet parenthesizes composed types when optional, as required for existentials before Swift 6.4.
+        is DeclaredTypeName -> ComposedTypeName.composed(".any ${baseType.canonicalName}")
         else -> baseType
       }
     return if (optional) {
@@ -5274,7 +5279,8 @@ class SwiftSundayIrGenerator(
             }
           val codingTypeName =
             if (patchable) {
-              property.swiftPatchOpTypeName()
+              (if (property.patchDeletionAllowed == true) PATCH_OP else UPDATE_OP)
+                .parameterizedBy(property.type.swiftStoredTypeName().makeNonOptional())
             } else {
               property.swiftTypeName().makeNonOptional()
             }
@@ -5316,7 +5322,18 @@ class SwiftSundayIrGenerator(
                 ),
               )
             }
-              ?: decode,
+              ?: if (patchable && property.type.hasSwiftPatchReferenceValue) {
+                CodeBlock.of(
+                  "%L.map { value in %L }",
+                  decode,
+                  property.type
+                    .swiftPatchReferenceType()
+                    .copy(nullable = false)
+                    .swiftPatchReferenceValue(CodeBlock.of("value"), wrap = false),
+                )
+              } else {
+                decode
+              },
           )
         }
         localProperties.filter { property -> property.externalDiscriminator != null }.forEach { property ->
@@ -5372,7 +5389,17 @@ class SwiftSundayIrGenerator(
           )
         }
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
-          if (property.type.containsFreeformMap()) {
+          if (patchable && property.type.hasSwiftPatchReferenceValue) {
+            addStatement(
+              "try container.encode(self.%N.map { value in %L }, forKey: .%N)",
+              property.name.swiftIdentifierName,
+              property.type
+                .swiftPatchReferenceType()
+                .copy(nullable = false)
+                .swiftPatchReferenceValue(CodeBlock.of("value"), wrap = true),
+              property.name.swiftIdentifierName,
+            )
+          } else if (property.type.containsFreeformMap()) {
             addFreeformMapEncoder(property, patchable)
           } else {
             addStatement(
@@ -5627,9 +5654,69 @@ class SwiftSundayIrGenerator(
       swiftTypeName()
     }
 
+  private val GeneratedTypeRef.hasSwiftPatchReferenceValue: Boolean
+    get() = swiftPublicTypeName() != swiftStoredTypeName()
+
+  // Resolve alias nullability before removing the operation's outer optional; collection elements keep theirs.
+  private fun GeneratedTypeRef.swiftPatchReferenceType(): GeneratedTypeRef {
+    if (!hasSwiftPatchReferenceValue) return this
+    val resolved =
+      if (kind == GeneratedTypeRef.Kind.NAMED) {
+        val model = requireNotNull(modelOrNull(apiIndex))
+        when {
+          !model.isAliasLike -> this
+          model.kind == GeneratedModel.Kind.ARRAY || model.kind == GeneratedModel.Kind.MAP ->
+            GeneratedTypeRef(
+              if (model.kind == GeneratedModel.Kind.ARRAY) GeneratedTypeRef.Kind.ARRAY else GeneratedTypeRef.Kind.MAP,
+              "collection",
+              arguments = model.aliases,
+            ).swiftPatchReferenceType()
+          else -> model.aliases.first().swiftPatchReferenceType()
+        }
+      } else {
+        copy(arguments = arguments.map { it.swiftPatchReferenceType() })
+      }
+    return resolved.copy(nullable = nullable || resolved.nullable)
+  }
+
+  // Patch storage exposes protocol values; coding uses concrete references only at the boundary.
+  private fun GeneratedTypeRef.swiftPatchReferenceValue(
+    value: CodeBlock,
+    wrap: Boolean,
+  ): CodeBlock {
+    if (!hasSwiftPatchReferenceValue) return value
+    if (nullable) {
+      return CodeBlock.of(
+        "%L.map { value in %L }",
+        value,
+        copy(nullable = false).swiftPatchReferenceValue(CodeBlock.of("value"), wrap),
+      )
+    }
+    return when (kind) {
+      GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP -> {
+        val item = arguments.single().let { if (kind == GeneratedTypeRef.Kind.MAP) it.swiftDictionaryValue() else it }
+        CodeBlock.of(
+          "%L.%L { value in %L }",
+          value,
+          if (kind == GeneratedTypeRef.Kind.MAP) "mapValues" else "map",
+          item.swiftPatchReferenceValue(CodeBlock.of("value"), wrap),
+        )
+      }
+      GeneratedTypeRef.Kind.NAMED -> {
+        val model = requireNotNull(modelOrNull(apiIndex))
+        if (wrap) {
+          CodeBlock.of("%T(value: %L)", model.swiftReferenceTypeName(), value)
+        } else {
+          CodeBlock.of("%L.value", value)
+        }
+      }
+      else -> value
+    }
+  }
+
   private fun GeneratedModelProperty.swiftPatchOpTypeName(): TypeName {
     val base = if (patchDeletionAllowed == true) PATCH_OP else UPDATE_OP
-    return base.parameterizedBy(type.swiftTypeName().makeNonOptional())
+    return base.parameterizedBy(type.swiftPublicTypeName().makeNonOptional())
   }
 
   private fun GeneratedOperation.operationFunction(service: GeneratedService): FunctionSpec {

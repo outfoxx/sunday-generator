@@ -112,7 +112,7 @@ factory hook forwarded by generated clients:
 | Target | Runtime version | Distribution |
 | --- | --- | --- |
 | Kotlin | `2.0.0-beta.16` | Maven Central |
-| Swift | `2.0.0-beta.16` | Swift Package Manager Git tag |
+| Swift | `2.0.0-beta.17` | Swift Package Manager Git tag |
 | TypeScript | `2.0.0-beta.12` | npm (`@outfoxx/sunday`) |
 | Python | `2.0.0-beta.11` | Git tag installed with pip; PyPI publication remains disabled |
 

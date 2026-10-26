@@ -122,11 +122,22 @@ and may return HTTP 400 for a mismatch; the generator cannot perform that persis
 Merge-patch generation requires Sunday Swift `2.0.0-beta.9`, Sunday Kotlin `2.0.0-beta.9`, and Sunday
 Python `2.0.0-beta.6` or later. Swift patch companions with inferred `Identifiable` conformance require
 `2.0.0-beta.15` or later for conditional `Hashable` support on `PatchOp` and `UpdateOp`. The compiler-backed
-tests use Swift `2.0.0-beta.16`, Kotlin `2.0.0-beta.16`, and Python `2.0.0-beta.10`, including Swift's
-explicit-state API and decoder fixes and Python's `UNSET` API.
+tests use Swift `2.0.0-beta.17`, Kotlin `2.0.0-beta.16`, and Python `2.0.0-beta.10`, including
+Swift's explicit-state API and decoder fixes and Python's `UNSET` API.
 Python uses its released Git tag until PyPI publishing is enabled. The Kotlin runtime rejects
 `UpdateOp` deletion directly and supports decoding operations at root and collection positions,
 without relying on generated Jackson field annotations.
+
+### Swift polymorphic patch fields
+
+Polymorphic patch fields store protocol values, including inside arrays and dictionaries. For
+example, an array field uses `PatchOp<[any Animal]>`, so callers can supply `.set([cat, dog])` directly.
+Decoding uses `AnimalRef` to dispatch by discriminator, then unwraps each reference's `.value` before
+storing it. Encoding creates temporary references. Omission and deletion retain their usual semantics.
+
+This requires Sunday Swift `2.0.0-beta.17` or later for conditional coding conformances and operation
+`map` support. Generic runtime clients that previously relied on
+`AnyPatchOp` inheriting `Codable` must now request the coding conformance explicitly.
 
 ## Model conversion and merge
 
