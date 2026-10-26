@@ -40,6 +40,8 @@ dependencies {
   api(libs.jacksonYaml)
   api(libs.jacksonKotlin)
 
+  implementation(libs.handyUriTemplates)
+
   //
   // TESTING
   //

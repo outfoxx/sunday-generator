@@ -61,6 +61,8 @@ tasks {
     archiveClassifier.set("all")
     minimize {
       exclude(dependency("com.github.ajalt.clikt:.*:.*"))
+      // Kotlin loads its reflection implementation by name; IR serialization needs it at runtime.
+      exclude(dependency("org.jetbrains.kotlin:kotlin-reflect:.*"))
     }
   }
 }
