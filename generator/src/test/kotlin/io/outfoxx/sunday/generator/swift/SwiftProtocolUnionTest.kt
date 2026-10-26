@@ -18,6 +18,11 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedModelScope
+import io.outfoxx.sunday.generator.ir.GeneratedOperation
+import io.outfoxx.sunday.generator.ir.GeneratedResponse
+import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.protocolUnionApi
@@ -26,6 +31,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
@@ -35,6 +41,77 @@ import kotlin.io.path.writeText
 @Tag("responses")
 @Tag("validation")
 class SwiftProtocolUnionTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["openapi", "asyncapi", "raml", "composed"])
+  fun `service scoped protocol union branches compile and decode`(
+    frontend: String,
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val input = protocolUnionApi(frontend, directory)
+    val scope = GeneratedModelScope("Local", "getChoice", usage = GeneratedModelScope.Usage.RESPONSE_BODY)
+    val scopedNames = setOf("CollectionProblem", "CollectionChoice")
+
+    fun scoped(type: GeneratedTypeRef): GeneratedTypeRef =
+      type.copy(scope = if (type.name in scopedNames) scope else type.scope, arguments = type.arguments.map(::scoped))
+    val api =
+      input.copy(
+        models =
+          input.models.map { model ->
+            model.copy(
+              scope = if (model.name in scopedNames) scope else model.scope,
+              inherits = model.inherits.map(::scoped),
+              aliases = model.aliases.map(::scoped),
+            )
+          },
+        services =
+          listOf(
+            GeneratedService(
+              "Local",
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    "getChoice",
+                    "get",
+                    "/choice",
+                    responses = listOf(GeneratedResponse(200, scoped(GeneratedTypeRef.named("CollectionChoice")))),
+                  ),
+                ),
+            ),
+          ),
+      )
+    val registry = SwiftTypeRegistry(emptySet())
+    SwiftSundayIrGenerator(
+      api,
+      registry,
+      SwiftSundayOptions("https://example.org/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
+    registry.generateFiles(GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    compiler.testsDir.resolve("ScopedProtocolUnionTests.swift").writeText(
+      """
+      import Foundation
+      import XCTest
+      import Sunday
+      @testable import SundayGenTest
+      final class ScopedProtocolUnionTests: XCTestCase {
+        func testParentOnlyValue() throws {
+          let wire = Data(#"{"type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"}"#.utf8)
+          let value = try JSONDecoder().decode(LocalAPI<URLSessionTransport>.CollectionChoice.self, from: wire)
+          guard case .collectionProblem(let parent) = value else { return XCTFail("Expected parent branch") }
+          let _: AnyCollectionProblem = parent
+          let _: any CollectionProblem = parent
+          XCTAssertTrue(parent.isValid(.response))
+          XCTAssertTrue(value.isValid(.response))
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as? NSDictionary,
+            try JSONSerialization.jsonObject(with: wire) as? NSDictionary)
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
   @ParameterizedTest
   @CsvSource(
     "openapi,FooRef,AnyFoo,AnyFooRef_,false",

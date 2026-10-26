@@ -39,6 +39,9 @@ protocols on a mapped inheritance path. An ordinary parent schema uses a generat
 `Any<ProtocolName>` implementation, such as `AnyCollectionProblem`. This value
 conforms to the parent protocol and retains its inherited fields and constraints.
 Its name is allocated alongside existing declarations to avoid collisions.
+Service-scoped protocol parents and their concrete implementations are emitted at
+module scope, because Swift protocols cannot be nested in the generic service.
+Their union enums can still be nested inside the service.
 
 The ordinary parent implementation accepts parent-only payloads; it does not
 restrict the schema to known descendants. Validation still counts matches against

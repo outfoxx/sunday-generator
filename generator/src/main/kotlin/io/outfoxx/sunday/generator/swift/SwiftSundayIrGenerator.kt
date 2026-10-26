@@ -286,11 +286,19 @@ class SwiftSundayIrGenerator(
         DeclaredTypeName.typeName(
           "${service.target("swift", "swift")?.moduleName.orEmpty()}.${service.typeSimpleName()}",
         )
-      apiIndex.referencedScopedModels(service).forEach { model ->
+      // Union-only parents are not direct service references, but their implementation still needs a declared home.
+      val scopedModels =
+        apiIndex.referencedScopedModels(service) +
+          protocolImplementations.keys.filter { it.scope?.service == service.name }
+      scopedModels.distinct().forEach { model ->
         val module = model.target("swift", "swift")?.modelModuleName
         scopedModelNames[model] =
-          if (module != null && module != serviceName.moduleName) {
-            DeclaredTypeName.typeName("$module.${model.name.toUpperCamelCase()}")
+          // Protocols cannot be nested in the generic service; their concrete companions must share this placement.
+          if ((module != null && module != serviceName.moduleName) ||
+            model.isProtocolHierarchyRootModel ||
+            model.isProblemHierarchyProtocolModel
+          ) {
+            DeclaredTypeName.typeName("${module ?: serviceName.moduleName}.${model.name.toUpperCamelCase()}")
           } else {
             serviceName.nestedType(model.name.toUpperCamelCase())
           }
