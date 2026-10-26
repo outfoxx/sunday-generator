@@ -97,6 +97,12 @@ private fun GeneratedModel.validateKotlinEnumConstantName(
   value: String,
   explicitName: String?,
 ) {
+  if (constantName == "Companion") {
+    genError(
+      "Kotlin enum '$name' constant name 'Companion' is reserved for the generated companion object. " +
+        "Use x-enum-varnames to give value '$value' a different Kotlin enum constant name.",
+    )
+  }
   if (!kotlinEnumConstantIdentifierRegex.matches(constantName)) {
     if (explicitName != null) {
       genError(

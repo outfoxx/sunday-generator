@@ -83,4 +83,58 @@ class KotlinEnumNamingTest {
       }
     }
   }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `explicit names avoid companion collisions and preserve wire values`(companionIsFallback: Boolean) {
+    val original = enumNamingApi("openapi")
+    val api =
+      original.copy(
+        models =
+          original.models.map { model ->
+            model.copy(
+              values = listOf("COMPANION", "UNKNOWN_VALUE"),
+              enumValueNames = listOf("CompanionValue", "UnknownValue"),
+              unknownValue =
+                model.unknownValue?.let { if (companionIsFallback) "COMPANION" else "UNKNOWN_VALUE" },
+            )
+          },
+      )
+    for (mode in listOf(GenerationMode.Client, GenerationMode.Server)) {
+      val registry =
+        KotlinTypeRegistry(
+          null,
+          mode,
+          setOf(KotlinTypeRegistry.Option.JacksonAnnotations),
+          problemLibrary = KotlinProblemLibrary.ZALANDO,
+          problemRfc = KotlinProblemRfc.RFC7807,
+        )
+      if (mode == GenerationMode.Client) {
+        KotlinSundayIrGenerator(api, registry, kotlinSundayTestOptions).generateServiceTypes()
+      } else {
+        KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+      }
+      val compilation = compileTypesResult(registry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, compilation.exitCode)
+      compilation.classLoader.use { loader ->
+        for (name in listOf("JobKind", "TolerantKind")) {
+          val type = loader.loadClass("io.test.$name")
+          val fromValue = type.getMethod("fromValue", String::class.java)
+          val mapper = jacksonObjectMapper()
+          val member = fromValue.invoke(null, "COMPANION")
+          assertEquals("COMPANION", member.toString())
+          assertEquals("\"COMPANION\"", mapper.writeValueAsString(member))
+          assertEquals(member, mapper.readValue("\"COMPANION\"", type))
+          if (name == "JobKind") {
+            assertEquals("CompanionValue", (member as Enum<*>).name)
+          } else {
+            assertEquals("CompanionValue", member.javaClass.simpleName)
+            val future = fromValue.invoke(null, "future-value")
+            assertEquals("future-value", future.toString())
+            assertEquals(if (companionIsFallback) "CompanionValue" else "UnknownValue", future.javaClass.simpleName)
+          }
+        }
+      }
+    }
+  }
 }

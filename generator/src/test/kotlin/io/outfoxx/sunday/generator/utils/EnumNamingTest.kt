@@ -75,4 +75,24 @@ class EnumNamingTest {
       model.copy(enumValueNames = listOf("LEGACY_TASK", "currentTask")).kotlinEnumEntries().map { it.name },
     )
   }
+
+  @Test
+  fun `rejects Companion including explicit names and unknown value sentinels`() {
+    for (unknownValue in listOf(null, "UNKNOWN", "COMPANION")) {
+      for (explicitNames in listOf(emptyList(), listOf("Companion", "Unknown"))) {
+        val model =
+          GeneratedModel(
+            name = "JobKind",
+            kind = GeneratedModel.Kind.ENUM,
+            values = listOf("COMPANION", "UNKNOWN"),
+            enumValueNames = explicitNames,
+            unknownValue = unknownValue,
+            source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+          )
+        val error = assertThrows(GenerationException::class.java) { model.kotlinEnumEntries() }
+        assertTrue(error.message!!.contains("constant name 'Companion' is reserved for the generated companion object"))
+        assertTrue(error.message!!.contains("x-enum-varnames"))
+      }
+    }
+  }
 }

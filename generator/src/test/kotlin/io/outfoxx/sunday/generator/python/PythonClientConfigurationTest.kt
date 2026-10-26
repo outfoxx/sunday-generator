@@ -63,6 +63,65 @@ class PythonClientConfigurationTest : PythonTest() {
   }
 
   @Test
+  fun `security alternative names do not shadow generated methods`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("matches.yaml")
+    Files.writeString(
+      source,
+      """
+      openapi: 3.2.0
+      info: {title: Example API, version: '1'}
+      servers: [{url: 'https://api.example'}]
+      paths:
+        /test:
+          get:
+            operationId: test
+            security: [{matches: []}, {token: []}]
+            responses: {'204': {description: Success}}
+      components:
+        securitySchemes:
+          matches:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              client: {provider: matches, flow: static}
+          token:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              client: {provider: token, flow: static}
+      """.trimIndent(),
+    )
+    val api = OpenApiToGeneratedApi().convert(source.toUri())
+    val service = api.services.single()
+    val modules =
+      PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("example_api")))
+        .generateModules(GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()))
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        importModules = listOf("example_api.${service.pythonServiceModuleName}"),
+        smokeCode =
+          """
+          from example_api.${service.pythonServiceModuleName} import ${service.pythonServiceBaseName.pythonTypeName}SecurityAlternative as Alternative
+          from sunday import SecurityBinding, SecurityTransport
+
+          assert list(Alternative.__members__) == ["matches_", "token"]
+          assert Alternative.matches_.value == (("matches", ()),)
+          binding = SecurityBinding(scheme="matches", provider="matches", flow="static", scopes=(),
+              transport=SecurityTransport(location="header", name="Authorization", prefix="bearer"))
+          assert Alternative.matches_.matches([binding])
+          assert not Alternative.token.matches([binding])
+          assert not Alternative.matches_.matches([])
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @Test
   fun `credential field collisions fail before emitting source`(
     @TempDir directory: Path,
   ) {
