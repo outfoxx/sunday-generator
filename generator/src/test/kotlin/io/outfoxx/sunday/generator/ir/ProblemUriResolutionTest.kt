@@ -340,8 +340,9 @@ class ProblemUriResolutionTest {
     val resource = requireNotNull(javaClass.getResource("/openapi/ir/about-blank-problems.yaml")).readText()
     source.writeText(
       resource
-        .replaceFirst("about:blank", "missing")
-        .replace("about:blank", "https://example.com/problems/missing") +
+        .replace("required: [title, status]", "required: [type, title, status]")
+        .replaceFirst("const: 'about:blank'", "const: 'missing'")
+        .replace("const: 'about:blank'", "const: 'https://example.com/problems/missing'") +
         "\nx-sunday-problemBaseUri: https://example.com/problems/\n",
     )
     val api = GeneratedApiIrExporter().export(source.toUri())

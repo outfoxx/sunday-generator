@@ -28,12 +28,11 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 
-@RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
+@RequiresPythonRuntime(PythonRuntimeProfile.HTTPX_LITESTAR)
 @Tag("models")
 @Tag("responses")
 class PythonAboutBlankProblemTest : PythonTest() {
@@ -52,7 +51,7 @@ class PythonAboutBlankProblemTest : PythonTest() {
               properties =
                 model.properties.map { property ->
                   if (property.name == "type" && property.allowedValues != null) {
-                    property.copy(allowedValues = listOf("urn:example:shared"))
+                    property.copy(required = true, defaultValue = null, allowedValues = listOf("urn:example:shared"))
                   } else {
                     property
                   }
@@ -82,8 +81,10 @@ class PythonAboutBlankProblemTest : PythonTest() {
     }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(strings = ["sunday", "litestar"])
   fun `standard status models retain constraints while HTTP errors use generic problems`(
+    target: String,
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
     compiler: PythonCompiler,
   ) {
@@ -92,7 +93,17 @@ class PythonAboutBlankProblemTest : PythonTest() {
     assertTrue(
       compileModules(
         compiler,
-        PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api"))).generateModules(),
+        if (target == "litestar") {
+          PythonLitestarIrGenerator(
+            api,
+            PythonGeneratorOptions(placement = pythonPlacement("test_api")),
+          ).generateModules()
+        } else {
+          PythonSundayIrGenerator(
+            api,
+            PythonGeneratorOptions(placement = pythonPlacement("test_api")),
+          ).generateModules()
+        },
         smokeCode =
           """
           import asyncio
@@ -100,12 +111,13 @@ class PythonAboutBlankProblemTest : PythonTest() {
           from pydantic import ValidationError
           from sunday import Problem
           from sunday.httpx import HttpxTransport
-          from test_api.example import ExampleClient
-          from test_api.models_problems import BadRequestProblem, NotFoundProblem
+          from test_api.models_problems import BadRequestProblem, NotFoundProblem, FlexibleProblem, CustomProblem, RequiredProblem
           for cls, status, title in [(BadRequestProblem, 400, 'Bad Request'), (NotFoundProblem, 404, 'Not Found')]:
               value = cls(detail='Details', traceId='trace')
               assert value.status == status and value.title == title and value.type == 'about:blank'
               raw = value.model_dump(mode='json', by_alias=True)
+              omitted = {key: val for key, val in raw.items() if key != 'type'}
+              assert cls.model_validate(omitted).type == 'about:blank'
               for field, invalid in [('status', 500), ('title', 'Wrong'), ('type', 'https://example.com/wrong')]:
                   try:
                       cls.model_validate(dict(raw, **{field: invalid}))
@@ -113,7 +125,22 @@ class PythonAboutBlankProblemTest : PythonTest() {
                       pass
                   else:
                       raise AssertionError(f'Accepted invalid {field}')
+          omitted = dict(title='Error', status=400)
+          assert FlexibleProblem.model_validate(omitted).type == 'about:blank'
+          custom = dict(omitted, type='https://example.com/problems/custom')
+          assert FlexibleProblem.model_validate(custom).type == custom['type']
+          assert CustomProblem.model_validate(custom).type == custom['type']
+          assert CustomProblem(title='Error', status=400).type == custom['type']
+          assert RequiredProblem.model_validate(custom).type == custom['type']
+          for cls, raw in [(CustomProblem, omitted), (RequiredProblem, omitted), (FlexibleProblem, dict(omitted, type=None))]:
+              try:
+                  cls.model_validate(raw)
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError(f'Accepted invalid problem type: {cls.__name__} {raw}')
           async def check():
+              from test_api.example import ExampleClient
               for status, title in [(400, 'Bad Request'), (404, 'Not Found'), (503, 'Service Unavailable')]:
                   for explicit in [False, True]:
                       raw = dict(status=status, title=title, detail='Details', traceId='trace', extra={'nested': [1, 2]})
@@ -134,7 +161,8 @@ class PythonAboutBlankProblemTest : PythonTest() {
                                   assert encoded['traceId'] == 'trace' and encoded['extra'] == {'nested': [1, 2]}
                               else:
                                   raise AssertionError('Expected generic HTTP problem')
-          asyncio.run(check())
+          if "$target" == "sunday":
+              asyncio.run(check())
           """.trimIndent(),
       ),
     )

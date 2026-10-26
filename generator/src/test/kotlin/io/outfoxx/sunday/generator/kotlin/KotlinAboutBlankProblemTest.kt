@@ -80,8 +80,8 @@ class KotlinAboutBlankProblemTest {
             model.copy(
               properties =
                 model.properties.map { property ->
-                  if (property.name == "type" && property.allowedValues != null) {
-                    property.copy(allowedValues = listOf(typeUri))
+                  if (target.contains("custom") && property.name == "type" && property.allowedValues != null) {
+                    property.copy(required = true, defaultValue = null, allowedValues = listOf(typeUri))
                   } else {
                     property
                   }
@@ -204,6 +204,9 @@ class KotlinAboutBlankProblemTest {
       assertEquals(if (index == 0) 400 else 404, raw["status"].asInt())
       assertEquals(if (index == 0) "Bad Request" else "Not Found", raw["title"].asText())
       assertEquals("trace", raw["traceId"].asText())
+      val omitted = raw.deepCopy<ObjectNode>().apply { remove("type") }
+      val decoded = mapper.readValue(omitted.toString(), requireNotNull(value).javaClass)
+      assertEquals("about:blank", mapper.readTree(mapper.writeValueAsBytes(decoded))["type"].asText())
       for (invalid in listOf(
         raw.deepCopy<ObjectNode>().put("status", 500),
         raw.deepCopy<ObjectNode>().put("title", "Wrong"),
@@ -213,6 +216,25 @@ class KotlinAboutBlankProblemTest {
           JsonMappingException::class.java,
         ) { mapper.readValue(invalid.toString(), requireNotNull(value).javaClass) }
       }
+    }
+    val generic = result.classLoader.loadClass("io.test.blank.FlexibleProblem")
+    val custom = result.classLoader.loadClass("io.test.blank.CustomProblem")
+    val required = result.classLoader.loadClass("io.test.blank.RequiredProblem")
+    val omitted = """{"title":"Error","status":400}"""
+    val explicit = """{"type":"https://example.com/problems/custom","title":"Error","status":400}"""
+    for ((type, raw, expected) in listOf(
+      Triple(generic, omitted, "about:blank"),
+      Triple(generic, explicit, "https://example.com/problems/custom"),
+      Triple(custom, explicit, "https://example.com/problems/custom"),
+      Triple(required, explicit, "https://example.com/problems/custom"),
+    )) {
+      val decoded = mapper.readValue(raw, type)
+      assertEquals(expected, mapper.readTree(mapper.writeValueAsBytes(decoded))["type"].asText())
+    }
+    assertThrows(JsonMappingException::class.java) { mapper.readValue(omitted, custom) }
+    assertThrows(JsonMappingException::class.java) { mapper.readValue(omitted, required) }
+    assertThrows(JsonMappingException::class.java) {
+      mapper.readValue("""{"type":null,"title":"Error","status":400}""", generic)
     }
     if (target == "sunday") consumerClass.getMethod("httpProblems").invoke(null)
   }

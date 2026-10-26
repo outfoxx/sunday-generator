@@ -298,9 +298,22 @@ Python keeps the Pydantic payloads in their model module and adds catchable exce
 companions in a module with `_problems` appended (for example,
 `api.models_problems.QueuedProblem` wraps `api.models.QueuedProblem`). Python
 exception companions inherit from their parent exceptions and expose typed extension
-properties through `payload` and read-only accessors. A nullable or absent payload
+properties through `payload` and read-only accessors. An explicitly nullable payload
 `type` is preserved in Python; the exception's `type` accessor returns `about:blank`
 when no URI is present.
+
+An optional schema `type` must explicitly declare `default: about:blank`, and that
+value must satisfy its constraints. Generation fails otherwise, including for
+unreferenced models and model/problem-only output. Decoders apply this default only
+when the field is absent; an explicit value is still validated against the schema.
+Explicit null is rejected when the property is nonnullable. These rules apply to
+Kotlin, Swift, TypeScript, and Python, for both client and server generators.
+
+A reusable base Problem can therefore declare an optional `type` with that default.
+Status-based descendants can inherit it, optionally restricting the URI to
+`about:blank`. A custom descendant that restricts `type` to another URI must make
+`type` required. A default or constant does not permit omission of a required wire
+field, even when its constructor supplies that value as a convenience.
 
 A fixed custom `type` URI enables automatic Sunday client registration. Standard
 `about:blank` problems are not registered to one schema globally: their semantics

@@ -62,6 +62,11 @@ class SwiftAboutBlankProblemTest {
             XCTAssertEqual(value.type.absoluteString, "about:blank")
             XCTAssertEqual(value.status, status)
             XCTAssertEqual(value.title, title)
+            let omitted = Data("{\"title\":\"\(title)\",\"status\":\(status)}".utf8)
+            let decoded: any Sunday.Problem = status == 400
+              ? try Foundation.JSONDecoder().decode(BadRequestProblem.self, from: omitted)
+              : try Foundation.JSONDecoder().decode(NotFoundProblem.self, from: omitted)
+            XCTAssertEqual(decoded.type.absoluteString, "about:blank")
             var raw = try XCTUnwrap(JSONSerialization.jsonObject(with: Foundation.JSONEncoder().encode(value)) as? [String: Any])
             for (field, invalid) in [("status", 500 as Any), ("title", "Wrong"), ("type", "https://example.com/wrong")] {
               let saved = raw[field]
@@ -76,6 +81,22 @@ class SwiftAboutBlankProblemTest {
             }
           }
         }
+        func testOptionalBaseAndRequiredCustomType() throws {
+          let decoder = Foundation.JSONDecoder()
+          let omitted = Data(#"{"title":"Error","status":400}"#.utf8)
+          XCTAssertEqual(try decoder.decode(FlexibleProblem.self, from: omitted).type.absoluteString, "about:blank")
+          let custom = Data(#"{"type":"https://example.com/problems/custom","title":"Error","status":400}"#.utf8)
+          XCTAssertEqual(try decoder.decode(FlexibleProblem.self, from: custom).type.absoluteString,
+                         "https://example.com/problems/custom")
+          XCTAssertEqual(try decoder.decode(CustomProblem.self, from: custom).type.absoluteString,
+                         "https://example.com/problems/custom")
+          XCTAssertThrowsError(try decoder.decode(CustomProblem.self, from: omitted))
+          XCTAssertThrowsError(try decoder.decode(RequiredProblem.self, from: omitted))
+          XCTAssertEqual(try decoder.decode(RequiredProblem.self, from: custom).type.absoluteString,
+                         "https://example.com/problems/custom")
+          let explicitNull = Data(#"{"type":null,"title":"Error","status":400}"#.utf8)
+          XCTAssertThrowsError(try decoder.decode(FlexibleProblem.self, from: explicitNull))
+        }
         func testGenericHTTPProblems() async throws {
           for (status, title) in [(400, "Bad Request"), (404, "Not Found"), (503, "Service Unavailable")] {
             for explicit in [false, true] {
@@ -89,7 +110,7 @@ class SwiftAboutBlankProblemTest {
               do {
                 try await client.getExample().execute()
                 XCTFail("Expected generic HTTP problem")
-              } catch let problem as GenericProblem {
+              } catch let problem as Sunday.GenericProblem {
                 XCTAssertEqual(problem.type.absoluteString, "about:blank")
                 XCTAssertEqual(problem.status, status)
                 XCTAssertEqual(problem.title, title)

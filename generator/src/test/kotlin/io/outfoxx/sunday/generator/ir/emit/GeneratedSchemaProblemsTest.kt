@@ -27,10 +27,71 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
+import java.nio.file.Path
+import kotlin.io.path.writeText
 
 @ExtendWith(ResourceExtension::class)
 class GeneratedSchemaProblemsTest {
+  @TempDir
+  lateinit var directory: Path
+
+  @ParameterizedTest
+  @ValueSource(strings = ["3.0.3", "3.1.0"])
+  fun `optional problem types require an explicit compatible about blank default`(version: String) {
+    for ((schema, expected) in listOf(
+      "type: string" to "default of 'about:blank'",
+      "type: string, default: 'https://example.com/custom'" to "default of 'about:blank'",
+      "type: string, enum: ['about:blank']" to "default of 'about:blank'",
+      "type: string, default: 'about:blank', enum: ['https://example.com/custom']" to "constraints",
+      "type: string, default: 'about:blank', pattern: '^https:'" to "constraints",
+      "type: string, default: 'about:blank', minLength: 12" to "constraints",
+      "type: string, default: 'about:blank', maxLength: 10" to "constraints",
+    )) {
+      val source = directory.resolve("problem.yaml")
+      source.writeText(
+        """
+        openapi: $version
+        info: {title: Problems, version: '1'}
+        paths: {}
+        components:
+          schemas:
+            Problem:
+              type: object
+              required: [title, status]
+              properties:
+                type: {$schema}
+                title: {type: string}
+                status: {type: integer}
+        """.trimIndent(),
+      )
+      val api = GeneratedApiIrExporter().export(source.toUri())
+      val error =
+        assertThrows(IllegalArgumentException::class.java) { GeneratedApiIndex(api).validateSchemaProblemResponses() }
+      assertTrue(error.message.orEmpty().contains("Problem.type"), error.message)
+      assertTrue(error.message.orEmpty().contains(expected), error.message)
+    }
+  }
+
+  @Test
+  fun `optional base types retain defaults while custom descendants can require type`(
+    @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(source)
+    val index = GeneratedApiIndex(api)
+    index.validateSchemaProblemResponses()
+    val properties = GeneratedModelProperties(index::modelOrNull)
+    for (name in listOf("HttpProblem", "FlexibleProblem", "BadRequestProblem", "NotFoundProblem", "CustomProblem")) {
+      val model = api.models.single { it.name == name }
+      val type = properties.fields(model).single { it.wireName == "type" }.effective
+      assertEquals(name == "CustomProblem", type.required, name)
+      if (!type.required) assertEquals("about:blank", type.defaultValue, name)
+    }
+  }
+
   @Test
   fun `standard status problems never register a global about blank subtype`(
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,

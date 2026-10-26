@@ -102,8 +102,13 @@ internal class PythonSchemaProblemRenderer(
               }
             ) + accessors
           val defaults =
-            problems.properties.fields(model).map { it.effective }.filter {
-              it.defaultValue != null && it.allowedValues?.size != 1
+            problems.properties.fields(model).mapNotNull { field ->
+              val property = field.effective
+              if (field.wireName == "type" && property.required && property.allowedValues?.size == 1) {
+                property.copy(defaultValue = property.allowedValues.single() as? String)
+              } else {
+                property.takeIf { it.defaultValue != null && it.allowedValues?.size != 1 }
+              }
             }
           val constructorDefaults =
             if (defaults.isEmpty()) {

@@ -51,6 +51,9 @@ class TypeScriptAboutBlankProblemTest {
             import {createAPI} from './api';
             import {BadRequestProblem, BadRequestProblemSchema} from './bad-request-problem';
             import {NotFoundProblem, NotFoundProblemSchema} from './not-found-problem';
+            import {FlexibleProblemSchema} from './flexible-problem';
+            import {CustomProblemSchema} from './custom-problem';
+            import {RequiredProblemSchema} from './required-problem';
             function ok(value: boolean): void { if (!value) throw new Error('Assertion failed'); }
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601,
               numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
@@ -62,10 +65,24 @@ class TypeScriptAboutBlankProblemTest {
               const schema = runtime.resolveSchema(definition);
               const raw = {type: 'about:blank', status, title, detail: 'Details', traceId: 'trace'};
               ok(schema.safeParse(raw).success);
+              const omitted = schema.parse({status, title, detail: 'Details', traceId: 'trace'});
+              ok(omitted.type.href === 'about:blank');
               for (const [field, invalid] of [['status', 500], ['title', 'Wrong'], ['type', 'https://example.com/wrong']]) {
                 ok(!schema.safeParse({...raw, [field]: invalid}).success);
               }
             }
+            const generic = runtime.resolveSchema(FlexibleProblemSchema);
+            const custom = runtime.resolveSchema(CustomProblemSchema);
+            const required = runtime.resolveSchema(RequiredProblemSchema);
+            const omitted = {title: 'Error', status: 400};
+            const explicit = {...omitted, type: 'https://example.com/problems/custom'};
+            ok(generic.parse(omitted).type.href === 'about:blank');
+            ok(generic.parse(explicit).type.href === explicit.type);
+            ok(custom.parse(explicit).type.href === explicit.type);
+            ok(!custom.safeParse(omitted).success);
+            ok(!required.safeParse(omitted).success);
+            ok(required.parse(explicit).type.href === explicit.type);
+            ok(!generic.safeParse({...omitted, type: null}).success);
             async function check(): Promise<void> {
               for (const [status, title] of [[400, 'Bad Request'], [404, 'Not Found'], [503, 'Service Unavailable']] as const) {
                 for (const explicit of [false, true]) {

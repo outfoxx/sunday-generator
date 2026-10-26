@@ -28,6 +28,35 @@ import org.junit.jupiter.api.Test
 
 class GeneratedModelPropertiesTest {
   @Test
+  fun `local refinements preserve inherited presence requirements and defaults`() {
+    val source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory")
+    val property = GeneratedModelProperty("type", GeneratedTypeRef.scalar("string"), defaultValue = "about:blank")
+    for (required in listOf(false, true)) {
+      val parent =
+        GeneratedModel(
+          "Problem",
+          GeneratedModel.Kind.OBJECT,
+          source,
+          properties = listOf(property.copy(required = required)),
+        )
+      val child =
+        GeneratedModel(
+          "StatusProblem",
+          GeneratedModel.Kind.OBJECT,
+          source,
+          inherits = listOf(GeneratedTypeRef.named(parent.name)),
+          properties = listOf(property.copy(defaultValue = null, allowedValues = listOf("about:blank"))),
+        )
+      val models = listOf(parent, child).associateBy { it.name }
+      val field = GeneratedModelProperties { models[it.name] }.fields(child).single()
+      assertEquals(required, field.effective.required)
+      assertEquals("about:blank", field.effective.defaultValue)
+      assertEquals(listOf("about:blank"), field.effective.allowedValues)
+      assertEquals(parent.properties.single(), field.declaration)
+    }
+  }
+
+  @Test
   fun `nullability follows aliases and unions but not collection contents`() {
     val nullableString = GeneratedTypeRef.scalar("string").copy(nullable = true)
     val models =

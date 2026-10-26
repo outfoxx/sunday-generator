@@ -80,7 +80,7 @@ class PythonInheritedProblemTest : PythonTest() {
           from test_api.models_problems import ChildProblem as ChildError
           expected = 'https://example.com/problems/missing'
           for cls in [Problem, ChildProblem]:
-              value = cls()
+              value = cls(type=expected)
               assert value.model_dump(mode='json', by_alias=True)['type'] == expected
               assert value.model_dump(mode='json', by_alias=True)['code'] == 'missing'
               assert cls.model_validate(value.model_dump()).model_dump() == value.model_dump()
@@ -267,7 +267,11 @@ class PythonInheritedProblemTest : PythonTest() {
                       ) {
                         property
                       } else {
-                        property.copy(required = false, type = property.type.copy(nullable = true))
+                        property.copy(
+                          required = false,
+                          defaultValue = "about:blank",
+                          type = property.type.copy(nullable = true),
+                        )
                       }
                     },
                 )
@@ -300,7 +304,7 @@ class PythonInheritedProblemTest : PythonTest() {
           raw = json.loads('''$INHERITED_PROBLEM_JSON''')
           if "$nullableType" == "true":
               from test_api.models_problems import Problem as BaseProblem
-              base = BaseProblem(title="Failure", status=400)
+              base = BaseProblem(type=None, title="Failure", status=400)
               assert base.type == "about:blank"
               assert base.payload.type is None
               assert base.model_dump(mode='json')['type'] is None
@@ -342,7 +346,7 @@ class PythonInheritedProblemTest : PythonTest() {
           assert QueuedProblem.model_validate(raw).model_dump(mode='json', by_alias=True) == raw
           for invalid in [dict(raw, resourceKey=''), dict(raw, retryAfterSeconds=2), dict(raw, queuePosition=0),
               dict(raw, type='https://example.com/wrong'), dict(raw, detail=None),
-              *[{k: v for k, v in raw.items() if k != field} for field in ['nullableChild', 'resourceKey', 'queuePosition']]]:
+              *[{k: v for k, v in raw.items() if k != field} for field in ['type', 'nullableChild', 'resourceKey', 'queuePosition']]]:
               try:
                   QueuedProblem.model_validate(invalid)
               except ValidationError:

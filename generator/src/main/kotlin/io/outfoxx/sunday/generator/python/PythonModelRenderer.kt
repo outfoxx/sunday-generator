@@ -542,7 +542,7 @@ class PythonModelRenderer(
   private fun GeneratedModel.renderConstantConstructor(): PythonCodeBlock? {
     if (patchable) return null
     val fields = effectiveModelProperties()
-    val constants = fields.filter { it.allowedValues?.size == 1 }
+    val constants = fields.filter { it.allowedValues?.size == 1 && !it.isRequiredProblemType(this) }
     if (constants.isEmpty()) return null
     val names = NameAllocator(preallocateKeywords = false)
     val parameterNames =
@@ -1660,6 +1660,11 @@ class PythonModelRenderer(
     }
   }
 
+  private fun GeneratedModelProperty.isRequiredProblemType(model: GeneratedModel): Boolean =
+    required &&
+      (serializationName ?: name) == "type" &&
+      PythonProblemModels(modelIndex.values.toList()).isProblem(model)
+
   private fun GeneratedModelProperty.renderProperty(model: GeneratedModel): PythonCodeBlock {
     val patchField = model.patchable && !patchDiscriminator
     val propertyName = name.pythonIdentifierName
@@ -1699,10 +1704,17 @@ class PythonModelRenderer(
       fieldArguments += PythonCodeBlock.of("default_factory=lambda: %T", PythonSymbol("sunday", "UNSET"))
       fieldArguments += PythonCodeBlock.of("exclude_if=%T", PythonSymbol("sunday", "is_unset"))
     } else if (constant != null) {
+      // Exception constructors supply fixed type URIs; wire payloads must still require them.
       fieldArguments +=
-        PythonCodeBlock.of("default=%C", constant.single()?.renderPythonValue() ?: PythonCodeBlock.of("None"))
+        if (isRequiredProblemType(model)) {
+          PythonCodeBlock.of("default=...")
+        } else {
+          PythonCodeBlock.of("default=%C", constant.single()?.renderPythonValue() ?: PythonCodeBlock.of("None"))
+        }
       fieldArguments += PythonCodeBlock.of("frozen=True")
       fieldArguments += PythonCodeBlock.of("validate_default=True")
+    } else if (isRequiredProblemType(model)) {
+      fieldArguments += PythonCodeBlock.of("default=...")
     } else if (!required) {
       fieldArguments +=
         PythonCodeBlock.of(

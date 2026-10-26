@@ -207,7 +207,15 @@ internal fun addModelDecodingDefaults(
         }.returns(name)
         .apply {
           addCode(
-            KotlinModelConstraints.initializer(constants.values.toList(), properties, typeName = typeName),
+            KotlinModelConstraints.initializer(
+              constants.values.toList(),
+              properties,
+              nonNullableParameters =
+                decodedParameters.filterNot { it.type.isNullable }.mapTo(
+                  mutableSetOf(),
+                ) { it.name },
+              typeName = typeName,
+            ),
           )
         }.addStatement(
           "return %T(%L)",
