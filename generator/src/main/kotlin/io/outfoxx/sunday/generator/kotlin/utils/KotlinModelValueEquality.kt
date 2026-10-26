@@ -72,11 +72,12 @@ internal fun addModelValueEquality(
         .addKdoc("Compares retained values of the same runtime type. Do not mutate values used as hash keys.\n")
         .addParameter("other", ANY.copy(nullable = true))
         .returns(BOOLEAN)
-        .addStatement("if (this === other) return true")
-        .addStatement("if (other !is %T || this::class != other::class) return false", name)
+        // KotlinPoet's non-breaking spaces keep return values attached when long guards wrap.
+        .addStatement("if (this === other) return·true")
+        .addStatement("if (other !is %T || this::class != other::class) return·false", name)
         .apply {
           fields.forEach { field ->
-            addStatement("if (!%N.same(this.%N, other.%N)) return false", helper, field, field)
+            addStatement("if (!%N.same(this.%N, other.%N)) return·false", helper, field, field)
           }
         }.addStatement("return true")
         .build(),
@@ -117,13 +118,13 @@ private fun valueEqualityHelper(
         .apply {
           if (patchValues) {
             addStatement(
-              "if (left is %1T<*> && right is %1T<*>) return same(left.value, right.value)",
+              "if (left is %1T<*> && right is %1T<*>) return·same(left.value, right.value)",
               PATCH_SET_OP,
             )
           }
         }.addCode(
           """
-          if (left === right) return true
+          if (left === right) return·true
           return when {
             left is %T<*> && right is %T<*> ->
               left.size == right.size && left.indices.all { same(left[it], right[it]) }
@@ -148,7 +149,7 @@ private fun valueEqualityHelper(
         .addParameter("value", ANY.copy(nullable = true))
         .returns(INT)
         .apply {
-          if (patchValues) addStatement("if (value is %T<*>) return hash(value.value)", PATCH_SET_OP)
+          if (patchValues) addStatement("if (value is %T<*>) return·hash(value.value)", PATCH_SET_OP)
         }.addCode(
           """
           return when (value) {
