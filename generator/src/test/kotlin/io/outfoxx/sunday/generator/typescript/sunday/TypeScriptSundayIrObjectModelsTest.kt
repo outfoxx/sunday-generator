@@ -187,7 +187,11 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
-                  GeneratedModelProperty("type", GeneratedTypeRef.scalar("string", format = "uri")),
+                  GeneratedModelProperty(
+                    "type",
+                    GeneratedTypeRef.scalar("string", format = "uri"),
+                    defaultValue = "about:blank",
+                  ),
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string")),
                   GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer")),
                   GeneratedModelProperty(
@@ -259,6 +263,7 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
             if (!rejected) throw new Error('constructor bypassed native schema constraints');
             const dynamic = {nested: [null, true, {value: 'future'}]};
             const problem = schema.parse({detail: 'before', validation: {name: 'bad'}, future: dynamic, additionalProperties: {wire: true}});
+            if (problem.type.href !== 'about:blank') throw new Error('missing type did not use its declared default');
             const copied = problem.copy({detail: 'after'});
             const output = schema.encode(copied) as Record<string, unknown>;
             if (output.detail !== 'after' || problem.detail !== 'before') throw new Error('copy changed declared fields');
@@ -286,7 +291,11 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
       httpProblemOutput.contains("export class HttpProblem extends Problem implements HttpProblemSpec"),
       httpProblemOutput,
     )
-    assertTrue(httpProblemOutput.contains("type: init.type ?? Problem.BLANK_URL"), httpProblemOutput)
+    assertTrue(
+      httpProblemOutput.contains("type: init.type === undefined ? new URL('about:blank') : init.type"),
+      httpProblemOutput,
+    )
+    assertTrue(httpProblemOutput.contains("type: values.type ?? Problem.BLANK_URL"), httpProblemOutput)
     assertTrue(httpProblemOutput.contains("detail: string;"), httpProblemOutput)
     assertFalse(httpProblemOutput.contains("type: URL | null | undefined;"), httpProblemOutput)
     assertTrue(

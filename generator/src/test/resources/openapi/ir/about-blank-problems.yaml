@@ -22,7 +22,7 @@ components:
       type: object
       required: [title, status]
       properties:
-        type: {type: string, format: uri}
+        type: {type: string, format: uri, default: 'about:blank'}
         title: {type: string}
         status: {type: integer}
         detail: {type: string}
@@ -43,3 +43,19 @@ components:
             type: {type: string, format: uri, const: 'about:blank'}
             title: {type: string, const: Not Found}
             status: {type: integer, const: 404}
+    FlexibleProblem:
+      allOf:
+        - $ref: '#/components/schemas/HttpProblem'
+        - type: object
+    CustomProblem:
+      allOf:
+        - $ref: '#/components/schemas/HttpProblem'
+        - type: object
+          required: [type]
+          properties:
+            type: {type: string, format: uri, const: 'https://example.com/problems/custom'}
+    RequiredProblem:
+      allOf:
+        - $ref: '#/components/schemas/HttpProblem'
+        - type: object
+          required: [type]

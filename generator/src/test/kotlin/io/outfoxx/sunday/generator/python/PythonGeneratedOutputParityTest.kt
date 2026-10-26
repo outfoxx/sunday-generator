@@ -195,6 +195,11 @@ class PythonGeneratedOutputParityTest : PythonTest() {
               assert AddFactOp.model_validate({'op': 'addFact', 'value': 'fact'}).op == 'addFact'
               assert issubclass(BadRequestProblem, HttpProblem)
               assert BadRequestProblem.model_validate({}).detail == 'Invalid request'
+              for model in (HttpProblem, BadRequestProblem):
+                  assert str(model.model_validate({}).type) == 'about:blank'
+                  assert str(model.model_validate({'type': 'https://example.com/problems/custom'}).type) == \
+                      'https://example.com/problems/custom'
+                  assert model.model_validate({'type': None}).type is None
               defaults = ScalarRestrictions.model_validate({'value': 'present'})
               assert defaults.zero == 0 and defaults.flag is False and str(defaults.mode) == 'character'
               for choice in (None, 0, False):

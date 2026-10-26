@@ -10,6 +10,7 @@ components:
       default: missing
     Problem:
       type: object
+      required: [type]
       properties:
         type: {$ref: '#/components/schemas/ProblemType'}
         title: {type: string, default: Missing}

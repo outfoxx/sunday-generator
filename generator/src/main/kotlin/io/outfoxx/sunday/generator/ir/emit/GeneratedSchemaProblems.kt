@@ -41,18 +41,7 @@ fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<Str
 private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): List<Pair<String, GeneratedModel>> {
   val properties = GeneratedModelProperties(index::modelOrNull)
 
-  fun root(model: GeneratedModel): GeneratedModel =
-    model.inherits
-      .firstOrNull()
-      ?.let(index::modelOrNull)
-      ?.let(::root) ?: model
-
-  fun isProblem(model: GeneratedModel): Boolean =
-    model.kind == GeneratedModel.Kind.OBJECT &&
-      root(model).let { root ->
-        root.name.endsWith("Problem") &&
-          root.properties.map { it.serializationName ?: it.name }.containsAll(listOf("type", "title", "status"))
-      }
+  fun isProblem(model: GeneratedModel): Boolean = index.isSchemaProblem(model)
 
   fun typeUri(model: GeneratedModel): String? =
     properties
@@ -126,7 +115,43 @@ private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): L
     .mapNotNull { model -> typeUri(model)?.let { it to model } }
 }
 
-/** Validates HTTP Problem response shapes and custom URI uniqueness for every emitter and output selection. */
+/** Validates HTTP Problem type defaults, response shapes, and URI uniqueness for every emitter and output selection. */
 fun GeneratedApiIndex.validateSchemaProblemResponses() {
+  val properties = GeneratedModelProperties(::modelOrNull)
+  api.models.filter(::isSchemaProblem).forEach { model ->
+    val type = properties.fields(model).single { it.wireName == "type" }.effective
+    if (!type.required) {
+      val context = "HTTP Problem property '${model.name}.type'"
+      require(type.defaultValue == "about:blank") {
+        "$context is optional and must declare a default of 'about:blank'; add that default or make 'type' required"
+      }
+      val declaration = properties.declarationType(type.type)
+      val fallback = "about:blank"
+      require(
+        declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
+          declaration.name == "string" &&
+          (type.allowedValues == null || fallback in type.allowedValues) &&
+          (type.validation["minLength"]?.toInt()?.let { fallback.length >= it } != false) &&
+          (type.validation["maxLength"]?.toInt()?.let { fallback.length <= it } != false) &&
+          properties.patterns(type).all { Regex(it).containsMatchIn(fallback) },
+      ) {
+        "$context has a default of 'about:blank' that violates its constraints; allow 'about:blank' or make 'type' required"
+      }
+    }
+  }
   api.services.forEach { it.referencedSchemaProblems(this) }
+}
+
+private fun GeneratedApiIndex.isSchemaProblem(model: GeneratedModel): Boolean {
+  fun root(model: GeneratedModel): GeneratedModel =
+    model.inherits
+      .firstOrNull()
+      ?.let(::modelOrNull)
+      ?.let(::root) ?: model
+
+  return model.kind == GeneratedModel.Kind.OBJECT &&
+    root(model).let { root ->
+      root.name.endsWith("Problem") &&
+        root.properties.map { it.serializationName ?: it.name }.containsAll(listOf("type", "title", "status"))
+    }
 }

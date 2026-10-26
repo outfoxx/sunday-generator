@@ -341,7 +341,11 @@ internal class GeneratedModelProperties(
           } else {
             Field(
               parent.declaration,
-              property.copy(allowedValues = property.allowedValues ?: parent.effective.allowedValues),
+              property.copy(
+                required = property.required || parent.effective.required,
+                defaultValue = property.defaultValue ?: parent.effective.defaultValue,
+                allowedValues = property.allowedValues ?: parent.effective.allowedValues,
+              ),
               true,
             )
           }

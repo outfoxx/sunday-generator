@@ -144,7 +144,7 @@ object OpenApiReferenceDocuments {
     HttpProblem:
       type: object
       properties:
-        type: {type: string, format: uri, nullable: true}
+        type: {type: string, format: uri, nullable: true, default: 'about:blank'}
         title: {type: string, nullable: true}
         status: {type: integer, nullable: true}
         detail: {type: string, nullable: true}

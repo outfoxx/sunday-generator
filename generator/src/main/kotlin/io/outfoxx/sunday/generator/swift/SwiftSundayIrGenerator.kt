@@ -5158,8 +5158,18 @@ class SwiftSundayIrGenerator(
             } else {
               property.swiftTypeName().makeNonOptional()
             }
+          // Runtime Problem storage is nonoptional; absence still follows the authored wire contract.
+          val required =
+            if (model.isProblemModel) {
+              modelProperties
+                .fields(model)
+                .first { it.wireName == property.wireName }
+                .effective.required
+            } else {
+              property.required
+            }
           val default =
-            if (!patchable && !property.required) {
+            if (!patchable && !required) {
               decodingDefaultNames[model to property.wireName]?.let { CodeBlock.of("Self.%N", it) }
                 ?: property.swiftDecodingDefault(model)
             } else {
