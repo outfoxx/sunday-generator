@@ -37,6 +37,77 @@ import kotlin.io.path.writeText
 class SwiftProtocolUnionTest {
   @ParameterizedTest
   @CsvSource(
+    "openapi,FooRef,AnyFoo,AnyFooRef_,false",
+    "asyncapi,FooRef,AnyFoo,AnyFooRef_,false",
+    "raml,FooRef,AnyFoo,AnyFooRef_,false",
+    "composed,FooRef,AnyFoo,AnyFooRef_,false",
+    "openapi,FooRefValidation,AnyFoo,AnyFooRefValidation_,false",
+    "openapi,Foo,Pet,AnyFoo_,true",
+  )
+  fun `protocol implementations avoid reference and validation helper names`(
+    frontend: String,
+    parentName: String,
+    protocolName: String,
+    implementationName: String,
+    validationCollision: Boolean,
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = SwiftTypeRegistry(emptySet())
+    val api =
+      protocolUnionApi(
+        frontend,
+        directory,
+        collision = validationCollision,
+        typeNames =
+          mapOf(
+            "CollectionProblem" to parentName,
+            "Pet" to protocolName,
+            "AnyBaseProblem" to "AnyFooValidation",
+          ),
+      )
+    SwiftSundayIrGenerator(
+      api,
+      registry,
+      SwiftSundayOptions("https://example.org/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
+    registry.generateFiles(GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    compiler.testsDir.resolve("HelperCollisionTests.swift").writeText(
+      """
+      import Foundation
+      import XCTest
+      import Sunday
+      @testable import SundayGenTest
+      final class HelperCollisionTests: XCTestCase {
+        func testIndependentParentAndDiscriminatedValues() throws {
+          let decoder = JSONDecoder()
+          let parent = Data(#"{"type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"}"#.utf8)
+          let choice = try decoder.decode(CollectionChoice.self, from: parent)
+          guard case .${parentName.replaceFirstChar(
+        Char::lowercaseChar,
+      )}(let payload) = choice else { return XCTFail("Expected parent") }
+          let _: $implementationName = payload
+          let _: any $parentName = payload
+          XCTAssertTrue(choice.isValid(.response))
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(choice)) as? NSDictionary,
+            try JSONSerialization.jsonObject(with: parent) as? NSDictionary)
+          let response = try decoder.decode(Response.self, from: Data(#"{"kind":"cat","lives":9}"#.utf8))
+          guard case .${protocolName.replaceFirstChar(
+        Char::lowercaseChar,
+      )}(let pet) = response else { return XCTFail("Expected pet") }
+          let _: ${protocolName}Ref = pet
+          XCTAssertTrue(response.isValid(.response))
+          XCTAssertNoThrow(try JSONEncoder().encode(response))
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @ParameterizedTest
+  @CsvSource(
     "openapi,true,false",
     "asyncapi,true,false",
     "raml,true,false",

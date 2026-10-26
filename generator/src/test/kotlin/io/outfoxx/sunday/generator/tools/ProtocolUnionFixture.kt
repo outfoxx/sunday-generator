@@ -27,6 +27,7 @@ internal fun protocolUnionApi(
   frontend: String,
   directory: Path,
   collision: Boolean = false,
+  typeNames: Map<String, String> = emptyMap(),
 ): GeneratedApi {
   val schemas =
     """
@@ -137,14 +138,16 @@ internal fun protocolUnionApi(
       Response: Pet | BaseProblem
     """.trimIndent()
   val source = directory.resolve(if (frontend == "raml") "protocols.raml" else "protocols.yaml")
-  source.writeText(
+  val sourceText =
     if (frontend ==
       "raml"
     ) {
       raml
     } else {
       "$header\ncomponents:\n  schemas:\n" + (schemas + collisionSchema).prependIndent("    ")
-    },
+    }
+  source.writeText(
+    Regex("\\b[A-Za-z][A-Za-z0-9]*\\b").replace(sourceText) { typeNames[it.value] ?: it.value },
   )
   val sources = mutableListOf(source.toUri())
   if (frontend == "composed") {

@@ -920,17 +920,43 @@ class SwiftSundayIrGenerator(
 
   private val protocolImplementationTypeNames by lazy {
     val allocators = mutableMapOf<String, NameAllocator>()
+    val reservedTypes =
+      buildSet {
+        addAll(reservedHelperTypes)
+        api.models.forEach { model ->
+          add(model.swiftDeclaredTypeName())
+          add(SwiftModelValidation.name(model.swiftValidationTypeName()))
+          if (model.hasSwiftReferenceType) {
+            val reference = model.swiftReferenceTypeName()
+            add(reference)
+            add(SwiftModelValidation.name(reference))
+          }
+        }
+        discriminatorFallbacks.forEach { (model, fallback) ->
+          val type = model.swiftFallbackTypeName(fallback)
+          add(type)
+          add(SwiftModelValidation.name(type))
+        }
+      }.toMutableSet()
 
     fun allocator(type: DeclaredTypeName) =
       allocators.getOrPut(type.enclosingTypeName()?.toString() ?: type.moduleName) { NameAllocator() }
-    (api.models.map { it.swiftDeclaredTypeName() } + reservedHelperTypes).distinct().forEach { type ->
+    reservedTypes.forEach { type ->
       allocator(type).newName(type.simpleName, type)
     }
     protocolImplementations.entries.associate { (parent, implementation) ->
       val type = parent.swiftDeclaredTypeName()
-      val name = allocator(type).newName("Any${type.simpleName}", implementation)
-      implementation to
-        (type.enclosingTypeName()?.nestedType(name) ?: DeclaredTypeName.typeName("${type.moduleName}.$name"))
+      var implementationType: DeclaredTypeName
+      // The implementation and its validator must both fit without renaming existing declarations.
+      do {
+        val name = allocator(type).newName("Any${type.simpleName}")
+        implementationType = type.peerType(name)
+      } while (SwiftModelValidation.name(implementationType) in reservedTypes)
+      val validator = SwiftModelValidation.name(implementationType)
+      reservedTypes.add(implementationType)
+      reservedTypes.add(validator)
+      allocator(validator).newName(validator.simpleName, validator)
+      implementation to implementationType
     }
   }
 
