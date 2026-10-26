@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.tools.directionalToleranceApi
 import io.outfoxx.sunday.generator.tools.objectUnionValidationApi
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
@@ -34,6 +35,56 @@ import java.nio.file.Path
 @Tag("models")
 @Tag("validation")
 class TypeScriptDirectionalToleranceTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `object oneOf rejects overlap while anyOf keeps overlapping branches`(
+    frontend: String,
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val api = objectUnionValidationApi(frontend, directory)
+    val choice = api.models.single { it.name == "Choice" }
+    val registry = TypeScriptTypeRegistry(emptySet())
+    TypeScriptSundayIrGenerator(
+      api.copy(models = api.models + choice.copy(name = "AnyChoice", unionMode = GeneratedModel.UnionMode.ANY_OF)),
+      registry,
+      TypeScriptSundayOptions("http://example.com/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("OneOfCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {ChoiceSchema} from './choice';
+            import {AnyChoiceSchema} from './any-choice';
+            import {HolderSchema} from './holder';
+            const root = createSchemaRuntime({format:'json',dateEncoding:DateEncoding.ISO8601,numericDateDecoding:0,arrayBufferEncoding:ArrayBufferEncoding.BASE64});
+            for (const runtime of [root, root.forMode('request')]) {
+              const schema = runtime.resolveSchema(ChoiceSchema);
+              for (const value of [1, 9]) {
+                const raw = {value};
+                if (JSON.stringify(schema.encode(schema.parse(raw))) !== JSON.stringify(raw)) throw new Error('Round trip failed');
+              }
+              runtime.resolveSchema(AnyChoiceSchema).parse({value:2});
+              for (const value of [${if (frontend == "raml") "0, 10" else "0, 2, 10"}]) {
+                if (schema.safeParse({value}).success) throw new Error('Invalid union accepted: ' + value);
+                if (runtime.resolveSchema(HolderSchema).safeParse({choice:{value}}).success) throw new Error('Nested invalid union accepted');
+              }
+            }
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("OneOfCheck", "!one-of-check") to check),
+        "one-of-check",
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["openapi", "asyncapi", "composed"])
   fun `union common constraints retain independent payload schemas`(

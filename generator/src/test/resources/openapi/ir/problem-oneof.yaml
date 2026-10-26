@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: {title: Problem oneOf decoding, version: '1'}
+info: {title: Problem unions, version: '1'}
 paths:
   /items:
     get:
@@ -43,6 +43,10 @@ components:
             type: {type: string, format: uri, const: 'https://example.org/problems/item-missing'}
             title: {type: string, const: Item missing}
             status: {type: integer, const: 404}
+    Problems:
+      oneOf:
+        - {$ref: '#/components/schemas/CollectionMissingProblem'}
+        - {$ref: '#/components/schemas/ItemMissingProblem'}
     ReversedProblems:
       oneOf:
         - {$ref: '#/components/schemas/ItemMissingProblem'}
@@ -56,10 +60,14 @@ components:
         mapping:
           https://example.org/problems/collection-missing: '#/components/schemas/CollectionMissingProblem'
           https://example.org/problems/item-missing: '#/components/schemas/ItemMissingProblem'
+    DuplicateCollectionMissingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/CollectionProblem'}
+        - type: object
     AmbiguousProblems:
       oneOf:
         - {$ref: '#/components/schemas/CollectionMissingProblem'}
-        - {$ref: '#/components/schemas/CollectionProblem'}
+        - {$ref: '#/components/schemas/DuplicateCollectionMissingProblem'}
     ShortDetailProblem:
       allOf:
         - {$ref: '#/components/schemas/CollectionProblem'}

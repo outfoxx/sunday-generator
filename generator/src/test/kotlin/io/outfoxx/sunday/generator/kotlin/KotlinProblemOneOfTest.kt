@@ -25,14 +25,18 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.kotlinPlacement
+import io.outfoxx.sunday.generator.tools.problemOneOfCases
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.quarkus.jackson.ObjectMapperCustomizer
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.zalando.problem.jackson.ProblemModule
 import java.net.URI
 
 @KotlinTest
@@ -41,24 +45,41 @@ import java.net.URI
 @Tag("responses")
 @Tag("validation")
 class KotlinProblemOneOfTest {
+  companion object {
+    @JvmStatic
+    fun targets(): List<Arguments> =
+      buildList {
+        for (target in listOf("sunday", "client", "server", "quarkus-client", "quarkus")) {
+          for (library in KotlinProblemLibrary.entries) {
+            if (library == KotlinProblemLibrary.QUARKUS && !target.startsWith("quarkus")) continue
+            for (namespace in if (target.startsWith("quarkus")) listOf("jakarta") else listOf("javax", "jakarta")) {
+              for (validation in listOf(false, true)) add(Arguments.of(target, library, namespace, validation))
+            }
+          }
+        }
+      }
+  }
+
   @ParameterizedTest
-  @CsvSource("sunday,false", "sunday,true", "client,false", "client,true", "server,false", "server,true")
+  @MethodSource("targets")
   fun `problem unions select constants before decoding and reject ambiguous matches`(
     target: String,
+    library: KotlinProblemLibrary,
+    namespace: String,
     validation: Boolean,
     @ResourceUri("openapi/ir/problem-oneof.yaml") source: URI,
   ) {
     val registry =
       KotlinTypeRegistry(
         null,
-        if (target == "server") GenerationMode.Server else GenerationMode.Client,
+        if (target in setOf("server", "quarkus")) GenerationMode.Server else GenerationMode.Client,
         buildSet {
           add(KotlinTypeRegistry.Option.ImplementModel)
           add(KotlinTypeRegistry.Option.JacksonAnnotations)
-          add(KotlinTypeRegistry.Option.UseJakartaPackages)
+          if (namespace == "jakarta") add(KotlinTypeRegistry.Option.UseJakartaPackages)
           if (validation) add(KotlinTypeRegistry.Option.ValidationConstraints)
         },
-        problemLibrary = KotlinProblemLibrary.SUNDAY,
+        problemLibrary = library,
       )
     val api = GeneratedApiIrExporter().export(source)
     if (target == "sunday") {
@@ -87,77 +108,68 @@ class KotlinProblemOneOfTest {
           defaultProblemBaseUri = "https://example.org/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
-          quarkus = false,
+          quarkus = target.startsWith("quarkus"),
         ),
       ).generateServiceTypes()
     }
     val result = compileTypesResult(registry.buildTypes())
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-    withNativeBeanValidation("jakarta", result.classLoader) {
+    withNativeBeanValidation(namespace, result.classLoader) {
       val mapper = jacksonObjectMapper()
-      for (name in listOf("APIGetItemResponseBody", "ReversedProblems", "TaggedProblems")) {
-        val union = result.classLoader.loadClass("io.test.$name")
-        for ((kind, title) in listOf("item" to "Item", "collection" to "Collection")) {
-          val raw =
-            mapper
-              .createObjectNode()
-              .put("type", "https://example.org/problems/$kind-missing")
-              .put("title", "$title missing")
-              .put("status", 404)
-              .put("detail", "No matching resource")
-          val decoded = mapper.readValue(raw.toString(), union)
-          assertEquals("${title}MissingProblem", decoded.javaClass.simpleName)
-          assertEquals(
-            decoded.javaClass,
-            mapper.readValue(raw.deepCopy().put("status", 404.0).toString(), union).javaClass,
-          )
-          assertEquals(raw, mapper.readTree(mapper.writeValueAsString(decoded)))
-          for ((field, value) in listOf(
-            "type" to "https://example.org/problems/unknown",
-            "title" to "Wrong",
-            "detail" to "x",
+      when (library) {
+        KotlinProblemLibrary.SUNDAY -> Unit
+        KotlinProblemLibrary.ZALANDO -> {
+          mapper.registerModule(ProblemModule())
+          for (name in listOf(
+            "ItemMissingProblem",
+            "CollectionMissingProblem",
+            "DuplicateCollectionMissingProblem",
+            "ShortDetailProblem",
+            "LongDetailProblem",
           )) {
-            val invalid = raw.deepCopy().put(field, value)
-            assertThrows(
-              JsonMappingException::class.java,
-              { mapper.readValue(invalid.toString(), union) },
-              "$name: $invalid",
+            mapper.registerSubtypes(
+              com.fasterxml.jackson.databind.jsontype.NamedType(
+                result.classLoader.loadClass("io.test.$name"),
+                "https://example.org/problems/${if (name == "ItemMissingProblem") "item" else "collection"}-missing",
+              ),
             )
-          }
-          for (invalid in listOf(
-            raw.deepCopy().put("status", 400),
-            raw.deepCopy().put("status", "404"),
-            raw.deepCopy().putNull("type"),
-            raw.deepCopy().apply { remove("detail") },
-          )) {
-            assertThrows(
-              JsonMappingException::class.java,
-              { mapper.readValue(invalid.toString(), union) },
-              "$name: $invalid",
-            )
-          }
-          if (kind == "collection") {
-            val ambiguous = result.classLoader.loadClass("io.test.AmbiguousProblems")
-            val ambiguity =
-              assertThrows(JsonMappingException::class.java) { mapper.readValue(raw.toString(), ambiguous) }
-            assertTrue(ambiguity.message.orEmpty().contains("multiple branches matched"))
-            val constrained = result.classLoader.loadClass("io.test.ConstrainedProblems")
-            for ((detail, expectedType) in listOf(
-              "short" to "ShortDetailProblem",
-              "Long detail" to "LongDetailProblem",
-            )) {
-              val value = mapper.readValue(raw.deepCopy().put("detail", detail).toString(), constrained)
-              assertEquals(expectedType, value.javaClass.simpleName)
-            }
-            val failure =
-              assertThrows(JsonMappingException::class.java) {
-                mapper.readValue(raw.deepCopy().put("detail", "x").toString(), constrained)
-              }
-            assertEquals(2, failure.suppressed.size)
           }
         }
-        for (invalid in listOf("[]", "{}")) {
-          assertThrows(JsonMappingException::class.java) { mapper.readValue(invalid, union) }
+        KotlinProblemLibrary.QUARKUS -> {
+          val registrar =
+            Class
+              .forName("io.quarkiverse.resteasy.problem.jackson.JacksonProblemModuleRegistrar")
+              .getDeclaredConstructor()
+              .apply { isAccessible = true }
+              .newInstance() as ObjectMapperCustomizer
+          registrar.customize(mapper)
+        }
+      }
+      val cases = mapper.readTree(problemOneOfCases).toList()
+      val inlineCases =
+        cases.filter { it["union"].asText() == "Problems" }.map {
+          it.deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>().put("union", "APIGetItemResponseBody")
+        }
+      for (case in cases + inlineCases) {
+        val union = result.classLoader.loadClass("io.test.${case["union"].asText()}")
+        val raw = case["wire"]
+        if (case["expected"].isNull) {
+          val failure =
+            assertThrows(JsonMappingException::class.java, { mapper.readValue(raw.toString(), union) }, case.toString())
+          if (case["error"].asText() == "ambiguous") {
+            assertTrue(failure.message.orEmpty().contains("multiple branches matched"))
+          }
+          if (case["error"].asText() == "constraints") assertEquals(2, failure.suppressed.size)
+        } else {
+          val decoded = mapper.readValue(raw.toString(), union)
+          assertEquals(case["expected"].asText(), decoded.javaClass.simpleName, case.toString())
+          val encoded = mapper.readTree(mapper.writeValueAsString(decoded))
+          // JSON numbers compare by value, including the deliberately floating-point spelling of status.
+          assertEquals(
+            raw["status"].decimalValue().stripTrailingZeros(),
+            encoded["status"].decimalValue().stripTrailingZeros(),
+          )
+          assertEquals(mapper.readTree(raw.toString().replace("404.0", "404")), encoded)
         }
       }
     }
