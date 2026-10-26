@@ -97,9 +97,58 @@ class SwiftPolymorphicPatchTest {
           let wire = try JSONSerialization.jsonObject(with: encoder.encode(merged)) as! NSDictionary
           var expectedMerge = try JSONSerialization.jsonObject(with: expected) as! [String: Any]
           expectedMerge["byName"] = ["first": ["kind": "cat", "name": "Misty"]]
+          expectedMerge["nullableAnimals"] = NSNull()
           XCTAssertEqual(wire, expectedMerge as NSDictionary)
           XCTAssertEqual(original.requiredAnimals.count, 0)
           XCTAssertNotNil(original.byName?["removed"])
+        }
+        func testAliasesPreserveProtocolValuesAndNestedNulls() throws {
+          let decoder = JSONDecoder()
+          let encoder = JSONEncoder()
+          let cat: any Animal = try decoder.decode(Cat.self, from: Data(#"{"kind":"cat","name":"Misty"}"#.utf8))
+          var patch = ZooPatch()
+          patch.choice = .set(cat)
+          patch.nullableAnimals = .set([cat])
+          patch.nestedNullableAnimals = .set([[cat], nil, []])
+          let expected = Data(#"{"choice":{"kind":"cat","name":"Misty"},"nullableAnimals":[{"kind":"cat","name":"Misty"}],"nestedNullableAnimals":[[{"kind":"cat","name":"Misty"}],null,[]]}"#.utf8)
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: encoder.encode(patch)) as! NSDictionary,
+                         try JSONSerialization.jsonObject(with: expected) as! NSDictionary)
+          let decoded = try decoder.decode(ZooPatch.self, from: expected)
+          guard case .set(let choice) = decoded.choice,
+                case .set(let animals) = decoded.nullableAnimals,
+                case .set(let nested) = decoded.nestedNullableAnimals else {
+            return XCTFail("Expected decoded alias values")
+          }
+          XCTAssertTrue(choice is Cat)
+          XCTAssertTrue(animals[0] is Cat)
+          XCTAssertTrue(nested[0]?[0] is Cat)
+          XCTAssertNil(nested[1])
+          XCTAssertEqual(nested[2]?.count, 0)
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: encoder.encode(decoded)) as! NSDictionary,
+                         try JSONSerialization.jsonObject(with: expected) as! NSDictionary)
+          for json in ["{}", #"{"choice":null,"nullableAnimals":null}"#, #"{"nullableAnimals":[]}"#] {
+            let input = Data(json.utf8)
+            let value = try decoder.decode(ZooPatch.self, from: input)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: encoder.encode(value)) as! NSDictionary,
+                           try JSONSerialization.jsonObject(with: input) as! NSDictionary)
+          }
+          let original = try decoder.decode(Zoo.self, from: Data(#"{"requiredAnimals":[]}"#.utf8))
+          let merged = try original.merge(decoded)
+          let mergedJSON = try JSONSerialization.jsonObject(with: encoder.encode(merged)) as! [String: Any]
+          var expectedMerged = try JSONSerialization.jsonObject(with: expected) as! [String: Any]
+          expectedMerged["requiredAnimals"] = []
+          XCTAssertEqual(mergedJSON as NSDictionary, expectedMerged as NSDictionary)
+          var deletion = ZooPatch()
+          deletion.choice = .delete
+          deletion.nullableAnimals = .delete
+          let deleted = try merged.merge(deletion)
+          XCTAssertNil(deleted.choice)
+          XCTAssertNil(deleted.nullableAnimals)
+          for json in [#"{"choice":{"kind":"unknown","name":"Invalid"}}"#,
+                       #"{"nullableAnimals":[{"kind":"cat"}]}"#,
+                       #"{"nestedNullableAnimals":[[{"kind":"unknown","name":"Invalid"}]]}"#] {
+            XCTAssertThrowsError(try decoder.decode(ZooPatch.self, from: Data(json.utf8)))
+          }
         }
         func testPresenceDeletionAndValidation() throws {
           let decoder = JSONDecoder()
@@ -133,5 +182,7 @@ class SwiftPolymorphicPatchTest {
     assertTrue(patch.contains("var animals: PatchOp<[any Animal]>"), patch)
     assertTrue(patch.contains("var requiredAnimals: UpdateOp<[any Animal]>"), patch)
     assertTrue(patch.contains("var favorite: PatchOp<any Animal>"), patch)
+    assertTrue(patch.contains("var choice: PatchOp<any Animal>"), patch)
+    assertTrue(patch.contains("var nullableAnimals: PatchOp<[any Animal]>"), patch)
   }
 }

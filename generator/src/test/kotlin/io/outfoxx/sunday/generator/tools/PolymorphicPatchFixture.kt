@@ -27,6 +27,20 @@ internal fun polymorphicPatchApi(
   directory: Path,
 ): GeneratedApi {
   val openapi = requireNotNull(GeneratedApi::class.java.getResource("/openapi/polymorphic-patches.yaml")).readText()
+  // AsyncAPI currently projects null unions at use sites; keep named aliases transparent there.
+  val asyncapiSchemas =
+    openapi
+      .substringAfter("  schemas:\n")
+      .replace(
+        "anyOf: [{${'$'}ref: '#/components/schemas/AnimalList'}, {type: 'null'}]",
+        "${'$'}ref: '#/components/schemas/AnimalList'",
+      ).replace(
+        "allOf: [{${'$'}ref: '#/components/schemas/NullableAnimalList'}]",
+        "${'$'}ref: '#/components/schemas/NullableAnimalList'",
+      ).replace(
+        "{${'$'}ref: '#/components/schemas/NullableAnimalListAlias'}",
+        "{anyOf: [{${'$'}ref: '#/components/schemas/NullableAnimalListAlias'}, {type: 'null'}]}",
+      )
   val asyncapi =
     """
     asyncapi: 3.0.0
@@ -43,7 +57,7 @@ internal fun polymorphicPatchApi(
         messages: [{${'$'}ref: '#/channels/zoo/messages/zoo'}]
     components:
       schemas:
-    """.trimIndent() + "\n" + openapi.substringAfter("  schemas:\n")
+    """.trimIndent() + "\n" + asyncapiSchemas
   val source = directory.resolve(if (frontend == "raml") "zoo.raml" else "zoo.yaml")
   source.writeText(
     when (frontend) {
@@ -55,7 +69,8 @@ internal fun polymorphicPatchApi(
   val sources = mutableListOf(source.toUri())
   if (frontend == "composed") {
     val events = directory.resolve("events.yaml")
-    events.writeText(asyncapi)
+    // These equivalent wire fields use different nullable alias declarations in the two frontends.
+    events.writeText(asyncapi.replace("NullableAnimalList", "EventNullableAnimalList").replace("Zoo", "EventZoo"))
     sources += events.toUri()
   }
   return GeneratedApiIrExporter().export(sources)

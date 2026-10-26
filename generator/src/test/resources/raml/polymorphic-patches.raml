@@ -21,11 +21,16 @@ types:
     properties:
       trained?: boolean
   AnimalList: Animal[]
+  NullableAnimalList: AnimalList | nil
+  NullableAnimalListAlias: NullableAnimalList
   Zoo:
     type: object
     (sunday.patchable): true
     properties:
       requiredAnimals: Animal[]
+      choice?: Animal
+      nullableAnimals?: NullableAnimalListAlias
+      nestedNullableAnimals?: NullableAnimalListAlias[]
       favorite?: Animal
       animals?: Animal[]
       aliasedAnimals?: AnimalList

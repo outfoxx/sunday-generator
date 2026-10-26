@@ -1913,6 +1913,8 @@ class SwiftSundayIrGenerator(
                     property.name == model.discriminatorNameOrNull() ->
                       property.copy(required = true, type = property.type.copy(nullable = false))
                     model.isProblemModel -> property.normalizedSwiftBaseProblemProperty()
+                    model.patchable && property.type.hasSwiftPatchReferenceValue ->
+                      property.copy(type = property.type.swiftPatchReferenceType())
                     else -> property
                   }
                 },
@@ -5322,7 +5324,10 @@ class SwiftSundayIrGenerator(
                 CodeBlock.of(
                   "%L.map { value in %L }",
                   decode,
-                  property.type.copy(nullable = false).swiftPatchReferenceValue(CodeBlock.of("value"), wrap = false),
+                  property.type
+                    .swiftPatchReferenceType()
+                    .copy(nullable = false)
+                    .swiftPatchReferenceValue(CodeBlock.of("value"), wrap = false),
                 )
               } else {
                 decode
@@ -5386,7 +5391,10 @@ class SwiftSundayIrGenerator(
             addStatement(
               "try container.encode(self.%N.map { value in %L }, forKey: .%N)",
               property.name.swiftIdentifierName,
-              property.type.copy(nullable = false).swiftPatchReferenceValue(CodeBlock.of("value"), wrap = true),
+              property.type
+                .swiftPatchReferenceType()
+                .copy(nullable = false)
+                .swiftPatchReferenceValue(CodeBlock.of("value"), wrap = true),
               property.name.swiftIdentifierName,
             )
           } else if (property.type.containsFreeformMap()) {
@@ -5647,6 +5655,28 @@ class SwiftSundayIrGenerator(
   private val GeneratedTypeRef.hasSwiftPatchReferenceValue: Boolean
     get() = swiftPublicTypeName() != swiftStoredTypeName()
 
+  // Resolve alias nullability before removing the operation's outer optional; collection elements keep theirs.
+  private fun GeneratedTypeRef.swiftPatchReferenceType(): GeneratedTypeRef {
+    if (!hasSwiftPatchReferenceValue) return this
+    val resolved =
+      if (kind == GeneratedTypeRef.Kind.NAMED) {
+        val model = requireNotNull(modelOrNull(apiIndex))
+        when {
+          !model.isAliasLike -> this
+          model.kind == GeneratedModel.Kind.ARRAY || model.kind == GeneratedModel.Kind.MAP ->
+            GeneratedTypeRef(
+              if (model.kind == GeneratedModel.Kind.ARRAY) GeneratedTypeRef.Kind.ARRAY else GeneratedTypeRef.Kind.MAP,
+              "collection",
+              arguments = model.aliases,
+            ).swiftPatchReferenceType()
+          else -> model.aliases.first().swiftPatchReferenceType()
+        }
+      } else {
+        copy(arguments = arguments.map { it.swiftPatchReferenceType() })
+      }
+    return resolved.copy(nullable = nullable || resolved.nullable)
+  }
+
   // Patch storage exposes protocol values; coding uses concrete references only at the boundary.
   private fun GeneratedTypeRef.swiftPatchReferenceValue(
     value: CodeBlock,
@@ -5672,20 +5702,10 @@ class SwiftSundayIrGenerator(
       }
       GeneratedTypeRef.Kind.NAMED -> {
         val model = requireNotNull(modelOrNull(apiIndex))
-        when (model.kind) {
-          GeneratedModel.Kind.ARRAY, GeneratedModel.Kind.MAP ->
-            GeneratedTypeRef(
-              if (model.kind == GeneratedModel.Kind.ARRAY) GeneratedTypeRef.Kind.ARRAY else GeneratedTypeRef.Kind.MAP,
-              "collection",
-              arguments = model.aliases,
-            ).swiftPatchReferenceValue(value, wrap)
-          GeneratedModel.Kind.SCALAR_ALIAS -> model.aliases.single().swiftPatchReferenceValue(value, wrap)
-          else ->
-            if (wrap) {
-              CodeBlock.of("%T(value: %L)", model.swiftReferenceTypeName(), value)
-            } else {
-              CodeBlock.of("%L.value", value)
-            }
+        if (wrap) {
+          CodeBlock.of("%T(value: %L)", model.swiftReferenceTypeName(), value)
+        } else {
+          CodeBlock.of("%L.value", value)
         }
       }
       else -> value
