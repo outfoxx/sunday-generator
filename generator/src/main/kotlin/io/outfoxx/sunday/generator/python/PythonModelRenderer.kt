@@ -1216,19 +1216,20 @@ class PythonModelRenderer(
   ): PythonCodeBlock {
     val alternativesName = "_${name.pythonTypeName}Alternatives"
     val validatorName = "_validate_${name.pythonIdentifierName}_one_of"
-    // Check the original input: a normal Pydantic union selects a match without rejecting overlapping branches.
+    // Check original presence before defaults, accepting both generated input names.
+    // The branch adapter still owns alias precedence, constraints, and value conversion.
     return PythonCodeBlock.join(
       listOf(
         renderStandardUnionAlias(aliases, unionType, alternativesName),
         PythonCodeBlock.of(
           """
           def %L(value: object, info: %T) -> object:
-              adapters: tuple[tuple[%T[%T], tuple[str, ...]], ...] = (
+              adapters: tuple[tuple[%T[%T], tuple[tuple[str, ...], ...]], ...] = (
           %C
               )
               matches = 0
               for adapter, required in adapters:
-                  if isinstance(value, dict) and any(key not in value for key in required):
+                  if isinstance(value, dict) and any(not any(key in value for key in names) for names in required):
                       continue
                   try:
                       if info.mode == "json":
@@ -1248,12 +1249,24 @@ class PythonModelRenderer(
           PythonSymbol("typing", "Any"),
           PythonCodeBlock.join(
             aliases.map { alias ->
+              val model = modelIndex[alias.name]
               val required =
-                modelIndex[alias.name]
+                model
                   ?.let(modelProperties::fields)
                   .orEmpty()
                   .filter { it.effective.required }
-                  .map { it.wireName }
+                  .map { field ->
+                    val names =
+                      if (model?.targets?.get("python")?.typeName != null) {
+                        listOf(field.wireName)
+                      } else {
+                        listOf(field.wireName, field.effective.name.pythonIdentifierName).distinct()
+                      }
+                    PythonCodeBlock.of(
+                      if (names.size == 1) "(%C,)" else "(%C)",
+                      PythonCodeBlock.join(names.map { PythonCodeBlock.of("%S", it) }, ", "),
+                    )
+                  }
               PythonCodeBlock.of(
                 "        (\n            %T(%C),\n            %C,\n        ),",
                 PythonSymbol("pydantic", "TypeAdapter"),
@@ -1261,11 +1274,11 @@ class PythonModelRenderer(
                 if (required.isEmpty()) {
                   PythonCodeBlock.of("()")
                 } else if (required.size == 1) {
-                  PythonCodeBlock.of("(%S,)", required.single())
+                  PythonCodeBlock.of("(%C,)", required.single())
                 } else {
                   PythonCodeBlock.of(
                     "(\n%C\n            )",
-                    PythonCodeBlock.join(required.map { PythonCodeBlock.of("                %S,", it) }, "\n"),
+                    PythonCodeBlock.join(required.map { PythonCodeBlock.of("                %C,", it) }, "\n"),
                   )
                 },
               )
