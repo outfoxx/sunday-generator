@@ -196,21 +196,20 @@ internal fun addOpenModelProperties(
       )
     }
     if (entry.second.build().superclass == SUNDAY_HTTP_PROBLEM) {
-      completed[type]?.let { storage ->
-        val binding = ClassName(type.packageName, bindingNames.newName("${type.simpleName}RuntimeExtensionBinding"))
-        entry.second.addSundayProblemExtensions(
-          type,
-          binding,
-          storage.setterName,
-          storage.fieldName,
-          setOf("type", "title", "status", "detail", "instance").filterTo(mutableSetOf()) { name ->
-            val field = properties.fields(entry.first).firstOrNull { it.wireName == name }?.effective
-            field == null || !field.required && !properties.acceptsNull(field.type)
-          },
-          modelTypes.keys.filter { it.enclosingClassName() == type }.mapTo(mutableSetOf()) { it.simpleName },
-          { name, binding -> register(entry.first, name, binding) },
-        )
-      }
+      val storage = completed[type]
+      val binding = ClassName(type.packageName, bindingNames.newName("${type.simpleName}RuntimeExtensionBinding"))
+      entry.second.addSundayProblemExtensions(
+        type,
+        binding,
+        storage?.setterName,
+        storage?.fieldName,
+        setOf("type", "title", "status", "detail", "instance").filterTo(mutableSetOf()) { name ->
+          val field = properties.fields(entry.first).firstOrNull { it.wireName == name }?.effective
+          field == null || !field.required && !properties.acceptsNull(field.type)
+        },
+        modelTypes.keys.filter { it.enclosingClassName() == type }.mapTo(mutableSetOf()) { it.simpleName },
+        { name, binding -> register(entry.first, name, binding) },
+      )
     }
   }
 }
@@ -242,7 +241,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   if (model.patternProperties.isNotEmpty() ||
     model.additionalProperties?.validation?.isNotEmpty() == true ||
     model.additionalProperties?.allowedValues != null ||
-    (!closed && !preserve) ||
+    (!preserve && model.additionalProperties?.type != null) ||
     (preserve && parent?.preserves == false) ||
     (closed && parent?.closed == false && parent.permitsName.isEmpty())
   ) {

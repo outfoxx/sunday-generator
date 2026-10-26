@@ -34,9 +34,18 @@ These are generation-time settings. Regenerate models to change the behavior.
 All three modes enforce closed schemas, pattern matches and dynamic-value
 constraints during decoding. Every matching pattern applies, including patterns
 matching declared properties. A closed schema can still permit pattern-matched
-keys. Implicitly permitted fields are discarded when preservation is disabled;
-explicitly declared additional fields are also discarded in `off` mode. Declared properties, aliases and discriminator fields retain their
-normal behavior.
+keys. Accepted fields are discarded when storage is disabled and a dynamic-value
+validation handler is required. Unconstrained Kotlin models without catch-all
+storage generate no `@JsonAnySetter`: Jackson's `FAIL_ON_UNKNOWN_PROPERTIES`
+setting determines whether unknown input fields fail or are ignored. This also
+applies to inherited models and masks Sunday's runtime problem catch-all when
+no generated handler is required. Other targets discard permitted fields when
+storage is disabled. Declared properties, aliases and discriminator fields retain
+their normal behavior.
+
+For example, Quarkus applications can enable strict handling with
+`quarkus.jackson.fail-on-unknown-properties=true`. Unknown fields then produce
+HTTP 400 responses for unconstrained models without storage.
 
 OpenAPI and AsyncAPI object schemas can also close unevaluated fields with
 `unevaluatedProperties: false`. An outer `allOf` closure includes inherited fields,

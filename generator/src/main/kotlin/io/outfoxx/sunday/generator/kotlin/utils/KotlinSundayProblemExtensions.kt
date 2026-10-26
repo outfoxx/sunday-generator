@@ -39,7 +39,7 @@ import com.squareup.kotlinpoet.UNIT
 internal fun TypeSpec.Builder.addSundayProblemExtensions(
   owner: ClassName,
   binding: ClassName,
-  setterName: String,
+  setterName: String?,
   fieldName: String?,
   omittedNullProperties: Set<String>,
   nestedModelNames: Set<String>,
@@ -122,6 +122,8 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
           .build(),
       ),
   )
+  // Without a generated handler, leave unknown-field decisions to Jackson instead of the runtime catch-all.
+  if (setterName == null) return
   addSuperclassConstructorParameter("extensions = %T()", storage)
   // Existing generated accessors and setters use this backing map. The runtime receives a guarded view
   // so its final extension() API cannot bypass declared-field or closed-descendant checks.

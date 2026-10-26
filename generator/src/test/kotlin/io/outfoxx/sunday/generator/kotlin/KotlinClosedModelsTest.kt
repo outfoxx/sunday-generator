@@ -157,12 +157,24 @@ class KotlinClosedModelsTest {
         }
         for (strict in listOf(false, true)) {
           val configured = mapper.copy().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, strict)
-          val open =
-            configured.readValue(
-              """{"name":"valid","extra":1}""",
-              result.classLoader.loadClass("io.test.OpenRecord"),
-            )
-          assertEquals(preserve, configured.readTree(configured.writeValueAsBytes(open)).has("extra"))
+          val openType = result.classLoader.loadClass("io.test.OpenRecord")
+          val wire = """{"name":"valid","extra":1}"""
+          if (strict && !preserve) {
+            assertThrows(JsonMappingException::class.java) { configured.readValue(wire, openType) }
+          } else {
+            val open = configured.readValue(wire, openType)
+            assertEquals(preserve, configured.readTree(configured.writeValueAsBytes(open)).has("extra"))
+          }
+          if (mode == UnknownFieldPreservation.Off) {
+            for (name in listOf("ExplicitRecord", "ExplicitChild", "ExplicitLeaf")) {
+              val type = result.classLoader.loadClass("io.test.$name")
+              if (strict) {
+                assertThrows(JsonMappingException::class.java) { configured.readValue(wire, type) }
+              } else {
+                configured.readValue(wire, type)
+              }
+            }
+          }
         }
       }
     }
