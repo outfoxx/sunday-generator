@@ -949,7 +949,12 @@ class KotlinSundayIrGeneratorTest {
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
-                  GeneratedModelProperty("type", GeneratedTypeRef.scalar("string", format = "uri"), required = false),
+                  GeneratedModelProperty(
+                    "type",
+                    GeneratedTypeRef.scalar("string", format = "uri"),
+                    required = false,
+                    defaultValue = "about:blank",
+                  ),
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = false),
                   GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer"), required = false),
                   GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = false),
@@ -995,7 +1000,7 @@ class KotlinSundayIrGeneratorTest {
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertContains(rootSource, "SundayHttpProblem(")
-    assertContains(rootSource, "type ?: URI.create(\"about:blank\")")
+    assertContains(rootSource, "type: URI = URI.create(\"about:blank\")")
     assertFalse(rootSource.contains("public val `type`"), rootSource)
     assertContains(rootSource, "public val code: String")
     assertContains(childSource, ": GraphProblem(")

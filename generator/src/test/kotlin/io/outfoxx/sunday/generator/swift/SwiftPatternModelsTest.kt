@@ -103,7 +103,11 @@ class SwiftPatternModelsTest {
         closed = true,
         properties =
           listOf(
-            GeneratedModelProperty("type", GeneratedTypeRef.scalar("string", format = "uri")),
+            GeneratedModelProperty(
+              "type",
+              GeneratedTypeRef.scalar("string", format = "uri"),
+              defaultValue = "about:blank",
+            ),
             GeneratedModelProperty(
               "title",
               GeneratedTypeRef.scalar("string"),
@@ -228,6 +232,9 @@ class SwiftPatternModelsTest {
             Data(#"{"type":"about:blank","title":"Bad request","status":400}"#.utf8))
           XCTAssertTrue(problem.isValid(.request))
           XCTAssertNoThrow(try problem.validate(.response))
+          let defaultedProblem = try JSONDecoder().decode(DynamicProblem.self, from:
+            Data(#"{"title":"Bad request","status":400}"#.utf8))
+          XCTAssertEqual(defaultedProblem.type.absoluteString, "about:blank")
           _ = try JSONDecoder().decode(PatternRecord.self, from:
             Data(#"{"problem-one":{"type":"about:blank","title":"Bad request","status":400}}"#.utf8))
           for raw in [#"{"problem-one":{"type":"about:blank","title":"no","status":400}}"#,

@@ -760,7 +760,11 @@ class KotlinJAXRSIrGeneratorTest {
             kind = GeneratedModel.Kind.OBJECT,
             properties =
               listOf(
-                GeneratedModelProperty("type", GeneratedTypeRef.scalar("string", format = "uri")),
+                GeneratedModelProperty(
+                  "type",
+                  GeneratedTypeRef.scalar("string", format = "uri"),
+                  defaultValue = "about:blank",
+                ),
                 GeneratedModelProperty("title", GeneratedTypeRef.scalar("string")),
                 GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer")),
                 GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string")),

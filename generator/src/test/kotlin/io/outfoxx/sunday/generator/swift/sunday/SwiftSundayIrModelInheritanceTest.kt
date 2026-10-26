@@ -659,7 +659,12 @@ class SwiftSundayIrModelInheritanceTest : SwiftSundayIrTestSupport() {
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
-                  GeneratedModelProperty("type", GeneratedTypeRef.scalar("string", format = "uri"), required = false),
+                  GeneratedModelProperty(
+                    "type",
+                    GeneratedTypeRef.scalar("string", format = "uri"),
+                    required = false,
+                    defaultValue = "about:blank",
+                  ),
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = false),
                   GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = false),
                   GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer"), required = false),
