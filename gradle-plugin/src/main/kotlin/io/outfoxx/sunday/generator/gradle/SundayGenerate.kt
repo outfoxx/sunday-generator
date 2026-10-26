@@ -215,9 +215,9 @@ abstract class SundayGenerate
     @get:Optional
     val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    /** Preserve permitted additional fields when generating implemented Jackson models. */
+    /** Preserve fields on implicitly open models. Disabled by default; explicit schema declarations take precedence. */
     @get:Input
-    val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
     /** Generates structural value equality for implemented Kotlin models. Enabled by default. */
     @get:Input

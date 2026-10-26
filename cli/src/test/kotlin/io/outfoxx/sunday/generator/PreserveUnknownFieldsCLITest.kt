@@ -28,10 +28,10 @@ import org.junit.jupiter.api.Test
 
 class PreserveUnknownFieldsCLITest {
   @Test
-  fun `all targets default to preservation and accept both explicit settings`() {
+  fun `all targets default to no implicit preservation and accept both explicit settings`() {
     val source = requireNotNull(javaClass.getResource("/empty.raml")).toURI()
     for ((flags, expected) in listOf(
-      emptyList<String>() to true,
+      emptyList<String>() to false,
       listOf("-preserve-unknown-fields") to true,
       listOf("-no-preserve-unknown-fields") to false,
       listOf("-no-preserve-unknown-fields", "-preserve-unknown-fields") to true,

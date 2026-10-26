@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
 import io.outfoxx.sunday.generator.tools.TEAM_NOT_FOUND_JSON
@@ -29,12 +30,81 @@ import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 
 @TypeScriptTest
 @Tag("models")
 @Tag("responses")
 class TypeScriptInheritedProblemTest {
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `problem child can introduce explicit storage while closed siblings reject extras`(
+    preserve: Boolean,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
+    compiler: TypeScriptCompiler,
+  ) {
+    val api = GeneratedApiIrExporter().export(listOf(source))
+    val models =
+      api.models.map { model ->
+        model.copy(
+          additionalProperties =
+            when (model.name) {
+              "QueuedProblem" -> GeneratedAdditionalProperties(allowed = true)
+              "DefaultedProblem" -> GeneratedAdditionalProperties(allowed = false)
+              else -> null
+            },
+        )
+      }
+    val registry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(
+      api.copy(models = models),
+      registry,
+      TypeScriptSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = preserve,
+      ),
+    ).generateServiceTypes()
+    val consumer =
+      ModuleSpec
+        .builder("StorageCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {QueuedProblem, QueuedProblemSchema} from './queued-problem';
+            import {DefaultedProblem, DefaultedProblemSchema} from './defaulted-problem';
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601,
+              numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            const schema = runtime.resolveSchema(QueuedProblemSchema);
+            const raw = {...$INHERITED_PROBLEM_JSON, future: {nested: null}};
+            const decoded = schema.parse(raw);
+            const copied = decoded.copy({});
+            const constructed = new QueuedProblem({nullableParent: null, nullableChild: null,
+              metadata: {region: 'west'}, additionalProperties: {future: {nested: null}}});
+            for (const value of [decoded, copied, constructed]) {
+              const encoded = schema.encode(value) as Record<string, unknown>;
+              if (JSON.stringify(encoded.future) !== JSON.stringify(raw.future)) throw new Error('explicit child storage lost');
+            }
+            const closed = runtime.resolveSchema(DefaultedProblemSchema);
+            const closedValue = new DefaultedProblem();
+            if (closed.safeParse({...closed.encode(closedValue), future: 1}).success) throw new Error('closed sibling accepted extra');
+            if (('additionalProperties' in closedValue) !== $preserve) throw new Error('closed sibling storage should only come from its ancestor');
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("StorageCheck", "!storage-check") to consumer),
+        "storage-check",
+      ),
+    )
+  }
+
   @Test
   fun `inherited problem fields survive construction decoding and encoding`(
     @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,

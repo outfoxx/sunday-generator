@@ -28,7 +28,7 @@ class TypeScriptSundayOptions(
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = false,
-  preserveUnknownFields: Boolean = true,
+  preserveUnknownFields: Boolean = false,
   profile: String? = null,
   defaultTolerance: Tolerance = Tolerance.Response,
   /** Generate server configurations and application-supplied transport factories. */

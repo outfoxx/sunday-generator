@@ -86,7 +86,10 @@ internal fun Map<*, *>.schemaType(): String? =
     is List<*> -> type.filterIsInstance<String>().firstOrNull { it != "null" }
     else ->
       when {
-        containsKey("properties") || containsKey("patternProperties") || containsKey("additionalProperties") -> "object"
+        containsKey("properties") ||
+          containsKey("patternProperties") ||
+          containsKey("additionalProperties") ||
+          containsKey("unevaluatedProperties") -> "object"
         containsKey("items") -> "array"
         containsKey("enum") || containsKey("const") -> "string"
         else -> null
@@ -97,3 +100,7 @@ internal fun Map<*, *>.isUnconstrainedSchema(): Boolean =
   keys.all { key ->
     key is String && key != "\$ref" && (key == "nullable" || !OpenApiSchemaKeywords.isAssertion(key))
   }
+
+/** Projects unevaluated closure only when no additional-property applicator already evaluates every remaining key. */
+internal fun Map<*, *>.effectiveAdditionalProperties(): Any? =
+  this["additionalProperties"] ?: false.takeIf { this["unevaluatedProperties"] == false }

@@ -25,17 +25,17 @@ import org.junit.jupiter.api.Test
 
 class SundayPreservationOptionsTest {
   @Test
-  fun `task and DSL default to preservation and allow disabling it`() {
+  fun `task and DSL default to no implicit preservation and allow enabling it`() {
     val project = ProjectBuilder.builder().build()
     project.pluginManager.apply("java")
     project.pluginManager.apply("io.outfoxx.sunday-generator")
     @Suppress("UNCHECKED_CAST")
     val generations = project.extensions.getByName("sundayGenerations") as SundayGenerations
     val generation = generations.create("client")
-    assertTrue(generation.preserveUnknownFields.get())
+    assertFalse(generation.preserveUnknownFields.get())
     val task = project.tasks.named("sundayGenerate_client", SundayGenerate::class.java).get()
-    assertTrue(task.preserveUnknownFields.get())
-    generation.preserveUnknownFields.set(false)
     assertFalse(task.preserveUnknownFields.get())
+    generation.preserveUnknownFields.set(true)
+    assertTrue(task.preserveUnknownFields.get())
   }
 }

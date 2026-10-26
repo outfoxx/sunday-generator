@@ -1,24 +1,30 @@
 # Dynamic model fields
 
-All generation targets preserve schema-permitted dynamic fields by default:
-Kotlin Sunday and JAX-RS, Swift Sunday, TypeScript Sunday, and Python Sunday and
-Litestar. This includes fields matching `patternProperties` and other fields
-allowed by `additionalProperties`. The policy applies to generated model
-objects; ordinary map/dictionary entries remain part of their declared data.
+All generation targets use the schema to choose dynamic field storage: Kotlin
+Sunday and JAX-RS, Swift Sunday, TypeScript Sunday, and Python Sunday and Litestar.
+
+| Schema declaration | Catch-all storage |
+| --- | --- |
+| `additionalProperties: true` | Enabled |
+| `additionalProperties: { ... }` | Enabled, with the declared value constraints |
+| `additionalProperties: false` | Disabled for unmatched keys |
+| `additionalProperties` omitted | Follows `preserveUnknownFields`, which defaults to `false` |
+
+Declared `patternProperties` always retain matching fields, including when other
+additional properties are forbidden. Ordinary map/dictionary entries remain part
+of their declared data and are unaffected by this option.
 
 ## Configuration
 
-- CLI: preservation is enabled without a flag. `-preserve-unknown-fields`
-  explicitly enables it; `-no-preserve-unknown-fields` disables it.
-- Kotlin Gradle plugin: `preserveUnknownFields` defaults to `true` on both the
-  generation DSL and the task. Set `preserveUnknownFields.set(false)` to disable.
-- Generator API: the language generation options expose
-  `preserveUnknownFields: Boolean = true`. Python's model renderer accepts the
-  same default-enabled argument. Use `false` for an explicit override.
+- CLI: `-preserve-unknown-fields` enables storage for implicitly open schemas;
+  `-no-preserve-unknown-fields` selects the default disabled behavior.
+- Kotlin Gradle plugin: `preserveUnknownFields` defaults to `false` on both the
+  generation DSL and task. Set `preserveUnknownFields.set(true)` to enable it.
+- Generator API: language options expose `preserveUnknownFields: Boolean = false`.
+  Python's model renderer uses the same default.
 - The existing `KotlinTypeRegistry.Option.PreserveUnknownFields` remains source
-  compatible. Preservation now follows the generation options, so an explicit
-  `preserveUnknownFields = false` takes precedence, and omission from a registry
-  option set no longer disables preservation.
+  compatible. The generation option controls the default for implicitly open
+  models; explicit schema declarations take precedence.
 
 These are generation-time settings. Regenerate models to change the behavior.
 
@@ -27,9 +33,18 @@ These are generation-time settings. Regenerate models to change the behavior.
 Both settings enforce closed schemas, pattern matches and dynamic-value
 constraints during decoding. Every matching pattern applies, including patterns
 matching declared properties. A closed schema can still permit pattern-matched
-keys. With preservation disabled, accepted dynamic fields are discarded after
-validation. Declared properties, aliases and discriminator fields retain their
+keys. Implicitly permitted fields are discarded when preservation is disabled;
+explicitly declared dynamic fields are retained. Declared properties, aliases and discriminator fields retain their
 normal behavior.
+
+OpenAPI and AsyncAPI object schemas can also close unevaluated fields with
+`unevaluatedProperties: false`. An outer `allOf` closure includes inherited fields,
+so they do not need to be redeclared beside the closing keyword. Explicit
+`additionalProperties: true` or a value schema already evaluates remaining keys
+and keeps those keys allowed. Schema-valued `unevaluatedProperties` is not mapped
+to dynamic-value validation.
+
+Models selected for storage expose the following language APIs.
 
 Kotlin Jackson models expose a read-only `additionalProperties` map and
 `setAdditionalProperty` method. Data-class copies retain these fields with
@@ -50,23 +65,30 @@ prototype-like keys are handled as own data properties.
 
 Python models use Pydantic's extra-field storage, accessible through
 `model_extra`; normal construction and `model_validate` populate it, and
-`model_dump` and `model_copy` retain it. Disabled preservation uses validated
-input followed by ignoring extras. Closed models continue to forbid extras.
+`model_dump` and `model_copy` retain it. Implicitly open models without storage
+ignore extras after validation. Closed models continue to forbid extras.
 
 Generated storage names receive a suffix when a schema property would collide.
 Dynamic data never replaces declared fields when encoding. Unknown discriminator
 fallback bodies remain the explicit raw payload of that fallback variant.
 
-## Migration
+## Inheritance and migration
 
-Regenerated SDKs may now emit permitted fields that older SDKs silently discarded.
-Models may gain storage/accessor members and defaulted constructor parameters.
-Use the disabling option when deliberately retaining the previous lossy behavior;
-invalid dynamic fields and forbidden keys are still rejected.
+A child can introduce storage with `additionalProperties: true` even when its
+parent has none. A closed class does not introduce catch-all storage. If an
+ancestor already declares storage, the inherited member remains part of the
+class API; closed descendants still reject unknown input keys. Closing a child
+does not change the generated API of independently used ancestors.
+
+Regenerating with the new default removes catch-all members and initializer
+parameters from implicitly open models. Enable `preserveUnknownFields` to retain
+that storage, or opt in on selected schemas with `additionalProperties: true`.
+Explicitly closed models no longer introduce storage even with the option enabled.
+These changes can require updates to code that accesses catch-all members.
 
 Compile-backed runtime tests cover RAML, OpenAPI, AsyncAPI and composed sources,
-with preservation enabled by default and explicitly disabled. Additional
-OpenAPI 3.1 tests cover closed schemas with patterns and overlapping constraints.
+with preservation enabled and disabled. Additional OpenAPI 3.1 tests cover closed
+schemas with patterns and overlapping constraints.
 
 ## Freeform object schemas
 

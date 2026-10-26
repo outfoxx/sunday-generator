@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
@@ -92,15 +92,39 @@ class TypeScriptClosedModelsTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @CsvSource(
+    "raml,false",
+    "raml,true",
+    "openapi,false",
+    "openapi,true",
+    "asyncapi,false",
+    "asyncapi,true",
+    "composed,false",
+    "composed,true",
+    "openapi-unevaluated,false",
+    "openapi-unevaluated,true",
+    "asyncapi-unevaluated,false",
+    "asyncapi-unevaluated,true",
+    "composed-unevaluated,false",
+    "composed-unevaluated,true",
+  )
   fun `closed objects reject unknown fields`(
     frontend: String,
+    preserve: Boolean,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
     val registry = TypeScriptTypeRegistry(setOf())
-    TypeScriptSundayIrGenerator(closedModelsApi(frontend, directory), registry, typeScriptSundayTestOptions)
-      .generateServiceTypes()
+    TypeScriptSundayIrGenerator(
+      closedModelsApi(frontend, directory),
+      registry,
+      TypeScriptSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = preserve,
+      ),
+    ).generateServiceTypes()
     val check =
       ModuleSpec
         .builder("ClosedCheck", ModuleSpec.Kind.MODULE)
@@ -108,12 +132,21 @@ class TypeScriptClosedModelsTest {
           CodeBlock.of(
             """
             import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {ExplicitRecordSchema} from './explicit-record';
+            import {ExplicitChildSchema} from './explicit-child';
+            import {ExplicitLeafSchema} from './explicit-leaf';
             import {ClosedRecordSchema} from './closed-record';
             import {ClosedChildSchema} from './closed-child';
             import {EmptyClosedSchema} from './empty-closed';
             import {OpenRecordSchema} from './open-record';
-            ${if (frontend == "composed") "import {EventRecordSchema} from './event-record';" else ""}
+            ${if (frontend.startsWith("composed")) "import {EventRecordSchema} from './event-record';" else ""}
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            for (const declaration of [ExplicitRecordSchema, ExplicitChildSchema, ExplicitLeafSchema]) {
+              const value = runtime.resolveSchema(declaration).parse({extra: 1}) as Record<string, unknown>;
+              if (value.extra !== 1) throw new Error('explicit additional fields discarded');
+            }
+            const implicit = runtime.resolveSchema(OpenRecordSchema).parse({name: 'known', extra: 1});
+            if (Object.hasOwn(implicit, 'extra') !== $preserve) throw new Error('incorrect implicit preservation');
             const closed = runtime.resolveSchema(ClosedRecordSchema);
             closed.parse({'display-name': 'valid', choice: {kind: 'cat', name: 'cat'}});
             if (closed.safeParse({'display-name': 'valid', choice: {kind: 'cat', name: 'cat', extra: 1}}).success) {
@@ -123,7 +156,7 @@ class TypeScriptClosedModelsTest {
               [runtime.resolveSchema(ClosedRecordSchema), {'display-name': 'valid'}],
               [runtime.resolveSchema(ClosedChildSchema), {name: 'valid', count: 1}],
               [runtime.resolveSchema(EmptyClosedSchema), {}],
-              ${if (frontend == "composed") "[runtime.resolveSchema(EventRecordSchema), {}]," else ""}
+              ${if (frontend.startsWith("composed")) "[runtime.resolveSchema(EventRecordSchema), {}]," else ""}
             ] as const) {
               schema.parse(valid);
               for (const extra of [1, null, {}, []]) {

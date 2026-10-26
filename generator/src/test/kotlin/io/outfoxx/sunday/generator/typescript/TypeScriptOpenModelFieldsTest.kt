@@ -98,7 +98,7 @@ class TypeScriptOpenModelFieldsTest {
     "asyncapi,false",
     "composed,false",
   )
-  fun `open model fields round trip by default and can be discarded`(
+  fun `open model fields follow the implicit preservation setting`(
     frontend: String,
     preserve: Boolean,
     compiler: TypeScriptCompiler,

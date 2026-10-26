@@ -88,7 +88,7 @@ internal fun addOpenModelProperties(
         model.copy(patternProperties = properties.patternProperties(model)),
         namesByRoot.getValue(root(type)),
         parent,
-        preserveUnknownFields,
+        properties.preservesUnknownFields(model, preserveUnknownFields),
         typeName,
         properties,
         nativeTypes,
@@ -242,6 +242,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
     model.additionalProperties?.validation?.isNotEmpty() == true ||
     model.additionalProperties?.allowedValues != null ||
     (!closed && !preserve) ||
+    (preserve && parent?.preserves == false) ||
     (closed && parent?.closed == false && parent.permitsName.isEmpty())
   ) {
     return addPatternModelStorage(

@@ -25,4 +25,5 @@ val kotlinSundayTestOptions =
     "http://example.com/",
     listOf("application/json"),
     "API",
+    preserveUnknownFields = true,
   )

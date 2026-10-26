@@ -52,10 +52,10 @@ Gradle Plugin Cache Notes
 - For shared models, select `outputCategories.set(setOf(GeneratedTypeCategory.Model))`
   and make facade modules depend on that artifact. Use `outputOwners` to select
   owning document URIs independently of input files; see [output selection](docs/output-selection.md). Use distinct service packages when client/server
-  interfaces share names. All languages preserve schema-permitted dynamic model
-  fields by default. Use `-no-preserve-unknown-fields` (CLI) or
-  `preserveUnknownFields.set(false)` (Kotlin Gradle plugin) to validate and discard
-  them. See [dynamic model fields](docs/unknown-fields.md).
+  interfaces share names. Explicit `additionalProperties` declarations opt models
+  into dynamic field storage. Implicit preservation defaults to off; enable it with
+  `-preserve-unknown-fields` (CLI) or `preserveUnknownFields.set(true)` (Gradle).
+  Explicitly closed schemas still reject unknown fields. See [dynamic model fields](docs/unknown-fields.md).
 - **Kotlin value equality**: structural model comparison is enabled by default.
   Disable it with `-no-model-value-equality` or Gradle
   `modelValueEquality.set(false)`.

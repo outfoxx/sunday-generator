@@ -75,11 +75,9 @@ class TypeScriptPatternModelsTest {
               for (const valid of [${patternModelValid.joinToString()}]) {
                 const decoded = schema.parse(valid);
                 const output = schema.encode(decoded) as Record<string, unknown>;
-                if ($preserve) {
-                  for (const [key, value] of Object.entries(valid)) {
-                    if (JSON.stringify(output[key]) !== JSON.stringify(value)) throw new Error('round trip lost ' + key);
-                  }
-                } else if ('x-value' in output || 'maybe-value' in output) throw new Error('extensions retained when disabled');
+                for (const [key, value] of Object.entries(valid)) {
+                  if (JSON.stringify(output[key]) !== JSON.stringify(value)) throw new Error('round trip lost ' + key);
+                }
               }
               for (const invalid of [${patternModelInvalid.joinToString()}]) {
                 if (schema.safeParse(invalid).success) throw new Error('invalid pattern value accepted: ' + JSON.stringify(invalid));

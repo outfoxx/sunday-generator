@@ -40,7 +40,17 @@ import java.nio.file.Path
 @Tag("validation")
 class KotlinClosedModelsTest {
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @ValueSource(
+    strings = [
+      "raml",
+      "openapi",
+      "asyncapi",
+      "composed",
+      "openapi-unevaluated",
+      "asyncapi-unevaluated",
+      "composed-unevaluated",
+    ],
+  )
   fun `closed objects reject unknown fields even with a lenient mapper`(
     frontend: String,
     @TempDir directory: Path,
@@ -93,6 +103,13 @@ class KotlinClosedModelsTest {
         }
         val result = compileTypesResult(registry.buildTypes())
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        val empty = result.classLoader.loadClass("io.test.EmptyClosed")
+        assertEquals(false, empty.methods.any { it.name == "getAdditionalProperties" })
+        val openType = result.classLoader.loadClass("io.test.OpenRecord")
+        assertEquals(preserve, openType.methods.any { it.name == "getAdditionalProperties" })
+        val closedType = result.classLoader.loadClass("io.test.ClosedChild")
+        assertEquals(preserve, closedType.methods.any { it.name == "getAdditionalProperties" })
+        assertEquals(false, closedType.declaredMethods.any { it.name == "getAdditionalProperties" })
         val mapper = jacksonObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         for ((name, valid) in listOf(
           "ClosedRecord" to "\"display-name\":\"valid\"",
@@ -106,10 +123,16 @@ class KotlinClosedModelsTest {
             assertThrows(JsonMappingException::class.java) { mapper.readValue("{$fields}", model) }
           }
         }
-        if (frontend == "composed") {
+        if (frontend.startsWith("composed")) {
           val event = result.classLoader.loadClass("io.test.EventRecord")
           mapper.readValue("{}", event)
           assertThrows(JsonMappingException::class.java) { mapper.readValue("""{"extra":1}""", event) }
+        }
+        for (name in listOf("ExplicitRecord", "ExplicitChild", "ExplicitLeaf")) {
+          val type = result.classLoader.loadClass("io.test.$name")
+          val value = mapper.readValue("""{"name":"known","future":{"value":null}}""", type)
+          assertEquals(true, type.methods.any { it.name == "getAdditionalProperties" }, name)
+          assertEquals(true, mapper.readTree(mapper.writeValueAsBytes(value)).has("future"), name)
         }
         val closed = result.classLoader.loadClass("io.test.ClosedRecord")
         mapper.readValue("""{"display-name":"valid","choice":{"kind":"cat","name":"cat"}}""", closed)

@@ -62,11 +62,8 @@ class PythonPatternModelsTest : PythonTest() {
           for wire in [${patternModelValid.joinToString { "'$it'" }}]:
               decoded = PatternRecord.model_validate(json.loads(wire))
               output = decoded.model_dump(mode="json", by_alias=True, exclude_unset=True)
-              if ${if (preserve) "True" else "False"}:
-                  for key, value in json.loads(wire).items():
-                      assert output[key] == value, (key, output)
-              else:
-                  assert "x-value" not in output and "maybe-value" not in output
+              for key, value in json.loads(wire).items():
+                  assert output[key] == value, (key, output)
           for wire in [${patternModelInvalid.joinToString { "'$it'" }}]:
               try:
                   PatternRecord.model_validate(json.loads(wire))

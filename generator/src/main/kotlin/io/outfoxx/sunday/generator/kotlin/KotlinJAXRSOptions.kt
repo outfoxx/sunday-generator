@@ -43,7 +43,7 @@ class KotlinJAXRSOptions(
   val resourceAdapters: Boolean = false,
   /** Enforce complete scheme and permission requirements through generated resources and application authenticators. */
   val enforceSecuritySchemes: Boolean = false,
-  preserveUnknownFields: Boolean = true,
+  preserveUnknownFields: Boolean = false,
   profile: String? = null,
   defaultTolerance: Tolerance = Tolerance.Response,
   /** Default server SSE representation, overridable per operation and ignored for clients. */

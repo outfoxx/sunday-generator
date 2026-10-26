@@ -44,7 +44,7 @@ class PythonAnyOfDeserializationTest : PythonTest() {
       compileModules(
         compiler,
         listOf(
-          PythonModelRenderer("test_api").renderModels(api.models),
+          PythonModelRenderer("test_api", preserveUnknownFields = true).renderModels(api.models),
           PythonModuleBuilder("test_api/__init__.py").build(),
         ),
         importModules = listOf("test_api.models"),

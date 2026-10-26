@@ -163,13 +163,13 @@ class PythonOpenModelFieldsTest : PythonTest() {
     "asyncapi,false",
     "composed,false",
   )
-  fun `open model fields round trip by default and can be discarded`(
+  fun `open model fields follow the implicit preservation setting`(
     frontend: String,
     preserve: Boolean,
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
-    val renderer = if (preserve) PythonModelRenderer("test_api") else PythonModelRenderer("test_api", false)
+    val renderer = PythonModelRenderer("test_api", preserve)
     assertTrue(
       compileModules(
         compiler,

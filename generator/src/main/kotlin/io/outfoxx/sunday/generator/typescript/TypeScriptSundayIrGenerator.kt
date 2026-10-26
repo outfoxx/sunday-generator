@@ -1685,6 +1685,14 @@ class TypeScriptSundayIrGenerator(
       .build()
   }
 
+  private fun GeneratedModel.preservesExtensions(): Boolean =
+    modelProperties.preservesUnknownFields(this, options.preserveUnknownFields) ||
+      isProblemModel() &&
+      inheritsExtensionStorage()
+
+  private fun GeneratedModel.inheritsExtensionStorage(): Boolean =
+    inherits.firstOrNull()?.modelOrNull(index)?.preservesExtensions() == true
+
   private fun generateObjectModelType(
     ownerTypeName: TypeName.Standard,
     model: GeneratedModel,
@@ -1799,7 +1807,7 @@ class TypeScriptSundayIrGenerator(
       )
     }
 
-    if (options.preserveUnknownFields && superTypeName == null) {
+    if (model.preservesExtensions() && !model.inheritsExtensionStorage()) {
       val extensionType = TypeName.implicit("{readonly [key: string]: unknown}")
       interfaceBuilder.addProperty(PropertySpec.builder(extensionFieldName, extensionType).optional(true).build())
       classBuilder.addProperty(
@@ -1811,7 +1819,7 @@ class TypeScriptSundayIrGenerator(
       )
     }
 
-    if (allSerializableProperties.isNotEmpty() || options.preserveUnknownFields) {
+    if (allSerializableProperties.isNotEmpty() || model.preservesExtensions()) {
       val constants = allSerializableProperties.filter { it.allowedValues?.size == 1 }
       val defaulted = allSerializableProperties.filter { it.defaultValue != null && it !in constants }
       val initialized = constants + defaulted
@@ -1854,7 +1862,7 @@ class TypeScriptSundayIrGenerator(
         )
       }
       if (superTypeName != null) {
-        if (inheritedProperties.isNotEmpty() || options.preserveUnknownFields) {
+        if (inheritedProperties.isNotEmpty() || model.inheritsExtensionStorage()) {
           constructorBuilder.addStatement("super(%N)", inputName)
         } else {
           constructorBuilder.addStatement("super()")
@@ -1872,8 +1880,8 @@ class TypeScriptSundayIrGenerator(
           constructorBuilder.addStatement("this.%N = %N.%N", propertyName, inputName, propertyName)
         }
       }
-      if (options.preserveUnknownFields) {
-        if (superTypeName == null) {
+      if (model.preservesExtensions()) {
+        if (!model.inheritsExtensionStorage()) {
           constructorBuilder.addStatement(
             "this.%N = Object.freeze({...init.%N})",
             extensionFieldName,
@@ -2730,9 +2738,13 @@ class TypeScriptSundayIrGenerator(
           index,
         )
       }
-      if (options.preserveUnknownFields && !declaresPrototype) add("        entries.push(['__proto__', item]);\n")
+      if (modelProperties.preservesUnknownFields(model, options.preserveUnknownFields) &&
+        !declaresPrototype
+      ) {
+        add("        entries.push(['__proto__', item]);\n")
+      }
       add("      }\n")
-      if (!options.preserveUnknownFields) {
+      if (!modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
         add("      const declared = new Set<string>([%L]);\n", model.declaredWireNames())
         add(
           "      return Object.fromEntries(entries.filter(([key]) => declared.has(key))) as %T.%L<typeof %L>;\n",
@@ -3034,11 +3046,11 @@ class TypeScriptSundayIrGenerator(
         resolvedWireSchemaName = applyUnknownFieldPolicy(model, serviceTypeName, resolvedWireSchemaName)
         add("  return %T.codec(%L, %T.instanceof(%T), {\n", Z, resolvedWireSchemaName, Z, typeName)
       }.apply {
-        if (properties.isEmpty() && !options.preserveUnknownFields) {
+        if (properties.isEmpty() && !model.preservesExtensions()) {
           add("    decode: () => %Q(%T),\n", CONSTRUCT_VALIDATED_MODEL, typeName)
         } else {
           add("    decode: (value) => %Q(%T, {\n", CONSTRUCT_VALIDATED_MODEL, typeName)
-          if (options.preserveUnknownFields) {
+          if (model.preservesExtensions()) {
             add(
               "      %N: Object.fromEntries(Object.entries(value).filter(([key]) => !new Set<string>([%L]).has(key))),\n",
               extensionFieldName,
@@ -3067,7 +3079,7 @@ class TypeScriptSundayIrGenerator(
         }
       }.add("    encode: (value) => ({\n")
       .apply {
-        if (options.preserveUnknownFields) {
+        if (model.preservesExtensions()) {
           add(
             "      ...Object.fromEntries(Object.entries(value.%N).filter(([key]) => !new Set<string>([%L]).has(key))),\n",
             extensionFieldName,

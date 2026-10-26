@@ -32,4 +32,5 @@ val kotlinJAXRSTestOptions =
     listOf("application/json"),
     "API",
     false,
+    preserveUnknownFields = true,
   )

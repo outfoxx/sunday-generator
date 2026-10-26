@@ -390,11 +390,9 @@ class KotlinPatternModelsTest {
         val model = result.classLoader.loadClass("io.test.PatternRecord")
         patternModelValid.forEach { wire ->
           val decoded = mapper.readValue(wire, model)
-          if (preserve) {
-            val input = mapper.readTree(wire)
-            val output = mapper.readTree(mapper.writeValueAsString(decoded))
-            input.properties().forEach { (key, value) -> assertEquals(value, output[key], key) }
-          }
+          val input = mapper.readTree(wire)
+          val output = mapper.readTree(mapper.writeValueAsString(decoded))
+          input.properties().forEach { (key, value) -> assertEquals(value, output[key], key) }
         }
         patternModelInvalid.forEach { wire ->
           assertThrows(JsonMappingException::class.java, { mapper.readValue(wire, model) }, wire)

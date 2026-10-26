@@ -123,7 +123,9 @@ class SundayGeneration(
   val disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java)
   val disableContainerElementValid: Property<Boolean> = objects.property(Boolean::class.java)
   val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)
-  val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
+  /** Preserve fields on implicitly open models. Disabled by default; explicit schema declarations take precedence. */
+  val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   /** Generates structural value equality for implemented Kotlin models. Enabled by default. */
   val modelValueEquality: Property<Boolean> = objects.property(Boolean::class.java).convention(true)

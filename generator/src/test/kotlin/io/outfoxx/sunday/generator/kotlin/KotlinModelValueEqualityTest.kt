@@ -585,6 +585,7 @@ class KotlinModelValueEqualityTest {
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
           quarkus = framework == "quarkus",
+          preserveUnknownFields = true,
         ),
       ).generateServiceTypes()
     }

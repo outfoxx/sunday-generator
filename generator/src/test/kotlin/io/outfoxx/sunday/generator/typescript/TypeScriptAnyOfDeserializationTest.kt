@@ -47,7 +47,7 @@ class TypeScriptAnyOfDeserializationTest {
     TypeScriptSundayIrGenerator(
       anyOfDeserializationApi(frontend, directory),
       registry,
-      TypeScriptSundayOptions("http://example.com/", listOf("application/json"), "API"),
+      TypeScriptSundayOptions("http://example.com/", listOf("application/json"), "API", preserveUnknownFields = true),
     ).generateServiceTypes()
     val check =
       ModuleSpec

@@ -73,6 +73,7 @@ class KotlinAnyOfDeserializationTest {
           "http://example.com/",
           listOf("application/json"),
           "API",
+          preserveUnknownFields = true,
         ),
       ).generateServiceTypes()
     } else {
@@ -91,6 +92,7 @@ class KotlinAnyOfDeserializationTest {
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
           quarkus = false,
+          preserveUnknownFields = true,
         ),
       ).generateServiceTypes()
     }

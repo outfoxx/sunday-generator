@@ -47,7 +47,7 @@ type UniqueId = str
 class ProjectView(SundayModel):
     """Generated ProjectView model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     project_id: str = Field(alias="projectId")
     unique_id: UniqueId = Field(alias="uniqueId")
@@ -81,7 +81,7 @@ class ProjectView(SundayModel):
 class UserSummaryResponse(SundayModel):
     """Generated UserSummaryResponse model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     user_id: str = Field(alias="userId")
     email: str
@@ -90,7 +90,7 @@ class UserSummaryResponse(SundayModel):
 class UserSelfResponse(SundayModel):
     """Generated UserSelfResponse model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     user_id: str = Field(alias="userId")
     email: str
@@ -103,7 +103,7 @@ type UserResponse = UserSelfResponse | UserSummaryResponse
 class UserIdentity(SundayModel):
     """Generated UserIdentity model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     kind: Literal["user"]
     user_id: str = Field(alias="userId")
@@ -112,7 +112,7 @@ class UserIdentity(SundayModel):
 class ServiceIdentity(SundayModel):
     """Generated ServiceIdentity model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     kind: Literal["service"]
     service_id: str = Field(alias="serviceId")
@@ -127,7 +127,7 @@ type Identity = Annotated[
 class EventEnvelope(SundayModel):
     """Generated EventEnvelope model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     type: str
     data: EventData
@@ -171,7 +171,7 @@ type EventData = ProjectCreatedData | ProjectDeletedData
 class ProjectCreatedData(SundayModel):
     """Generated ProjectCreatedData model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     project_id: str = Field(alias="projectId")
 
@@ -179,7 +179,7 @@ class ProjectCreatedData(SundayModel):
 class ProjectDeletedData(SundayModel):
     """Generated ProjectDeletedData model."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     project_id: str = Field(alias="projectId")
     reason: str | None = Field(default=None, exclude_if=lambda value: value is None)

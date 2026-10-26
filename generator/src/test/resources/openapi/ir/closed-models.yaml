@@ -33,6 +33,8 @@ components:
         child: {$ref: '#/components/schemas/ClosedChild'}
         empty: {$ref: '#/components/schemas/EmptyClosed'}
         choice: {$ref: '#/components/schemas/Choice'}
+        explicit: {$ref: '#/components/schemas/ExplicitRecord'}
+        leaf: {$ref: '#/components/schemas/ExplicitLeaf'}
     OpenRecord:
       type: object
       properties:
@@ -71,3 +73,21 @@ components:
         mapping:
           cat: '#/components/schemas/Cat'
           dog: '#/components/schemas/Dog'
+    ExplicitRecord:
+      type: object
+      additionalProperties: true
+      properties:
+        name: {type: string}
+    ExplicitChild:
+      allOf:
+        - {$ref: '#/components/schemas/OpenRecord'}
+      type: object
+      additionalProperties: true
+      properties:
+        count: {type: integer}
+    ExplicitLeaf:
+      allOf:
+        - {$ref: '#/components/schemas/ExplicitChild'}
+      type: object
+      properties:
+        flag: {type: boolean}

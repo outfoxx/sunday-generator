@@ -106,6 +106,25 @@ internal class GeneratedModelProperties(
     return closed(model)
   }
 
+  /** Explicit dynamic fields opt in to storage; the generator option supplies only the implicit-open default. */
+  fun preservesUnknownFields(
+    model: GeneratedModel,
+    default: Boolean,
+  ): Boolean {
+    if (patternProperties(model).isNotEmpty()) return true
+    if (isClosed(model)) return false
+    val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
+
+    fun explicit(candidate: GeneratedModel): Boolean =
+      visited.add(candidate) &&
+        (
+          candidate.additionalProperties?.allowed == true ||
+            candidate.additionalProperties?.type != null ||
+            candidate.inherits.mapNotNull(modelFor).any(::explicit)
+        )
+    return default || explicit(model)
+  }
+
   /** All pattern assertions applying to a model, including inherited constraints. */
   fun patternProperties(model: GeneratedModel): List<GeneratedPatternProperty> {
     val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())

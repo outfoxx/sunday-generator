@@ -188,12 +188,7 @@ class SwiftPatternModelsTest {
             let encoded = try JSONEncoder().encode(decoded)
             let input = try JSONSerialization.jsonObject(with: Data(wire.utf8)) as! NSDictionary
             let output = try JSONSerialization.jsonObject(with: encoded) as! NSDictionary
-            if $preserve {
-              for (key, value) in input { XCTAssertEqual(output[key] as? NSObject, value as? NSObject) }
-            } else {
-              XCTAssertNil(output["x-value"])
-              XCTAssertNil(output["maybe-value"])
-            }
+            for (key, value) in input { XCTAssertEqual(output[key] as? NSObject, value as? NSObject) }
           }
           for wire in invalid {
             XCTAssertThrowsError(try JSONDecoder().decode(PatternRecord.self, from: Data(wire.utf8)), wire)
@@ -248,8 +243,6 @@ class SwiftPatternModelsTest {
           _ = try JSONDecoder().decode(OpenPattern.self, from: Data(#"{"extra":1,"x-valid":"ok"}"#.utf8))
           XCTAssertThrowsError(try JSONDecoder().decode(OpenPattern.self, from: Data(#"{"extra":"wrong"}"#.utf8)))
           _ = try JSONDecoder().decode(PatternOnly.self, from: Data(#"{"x-valid":"ok"}"#.utf8))
-          ${if (preserve) {
-        """
           XCTAssertThrowsError(try PatternRecord(additionalProperties: ["numbers-values": [2, 3]])) { error in
             guard let failure = error as? ModelValidationError else { return XCTFail("Unexpected failure") }
             XCTAssertEqual(failure.diagnostics.map(\.jsonPointer), ["/numbers-values/1"])
@@ -286,10 +279,6 @@ class SwiftPatternModelsTest {
             XCTAssertEqual(error.diagnostics.map(\.reason), [.unknownEnum])
           }
 
-          """
-      } else {
-        ""
-      }}
 
         }
       }

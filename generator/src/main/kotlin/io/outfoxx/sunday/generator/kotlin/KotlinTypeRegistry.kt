@@ -65,7 +65,7 @@ class KotlinTypeRegistry(
     ContainerElementValid,
     JacksonAnnotations,
 
-    /** Compatibility marker; generation options now control preservation and default it to enabled. */
+    /** Compatibility marker; generation options control implicit preservation, which defaults to disabled. */
     PreserveUnknownFields,
     AddGeneratedAnnotation,
     SuppressPublicApiWarnings,

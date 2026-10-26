@@ -23,4 +23,5 @@ val swiftSundayTestOptions =
     "http://example.com/",
     listOf("application/json"),
     "API",
+    preserveUnknownFields = true,
   )

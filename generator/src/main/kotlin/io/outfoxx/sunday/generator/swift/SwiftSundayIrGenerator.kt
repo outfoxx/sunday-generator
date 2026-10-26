@@ -4821,7 +4821,7 @@ class SwiftSundayIrGenerator(
   }
 
   private fun GeneratedModel.preservesExtensions(): Boolean =
-    options.preserveUnknownFields &&
+    (modelProperties.preservesUnknownFields(this, options.preserveUnknownFields) || inheritsExtensionStorage()) &&
       kind == GeneratedModel.Kind.OBJECT &&
       !isProtocolHierarchyRootModel &&
       !isProblemHierarchyProtocolModel &&
