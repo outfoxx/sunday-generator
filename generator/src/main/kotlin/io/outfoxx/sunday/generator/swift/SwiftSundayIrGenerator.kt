@@ -237,7 +237,7 @@ class SwiftSundayIrGenerator(
         it.swiftDeclaredTypeName()
       }
     })
-  private val normalizedValidationModels by lazy { api.models.toSet() }
+  private val normalizedValidationModels by lazy { api.models.toSet() + protocolImplementations.values }
   private val decodingDefaultNames by lazy { inheritedDecodingDefaultNames() }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
@@ -419,6 +419,16 @@ class SwiftSundayIrGenerator(
             outputDirectory = outputDirectory,
             outputGroup = outputGroup,
           )
+          protocolImplementations[model]?.let { implementation ->
+            val implementationName = implementation.swiftDeclaredTypeName()
+            typeRegistry.outputOwnership.bind(implementationName, model.modelOutputOrigin())
+            typeRegistry.addModelType(
+              implementationName,
+              requireNotNull(implementation.swiftTypeSpecBuilderOrNull(outputDirectory, outputGroup)),
+              outputDirectory = outputDirectory,
+              outputGroup = outputGroup,
+            )
+          }
           discriminatorFallbacks[model]?.let { fallback ->
             typeRegistry.addModelType(
               model
@@ -882,6 +892,54 @@ class SwiftSundayIrGenerator(
     }
     inheritingModels
   }
+
+  // A structural parent remains a valid wire schema even when none of its descendants matches.
+  // These private emitter models reuse ordinary inherited storage without changing the source hierarchy.
+  private val protocolImplementations by lazy {
+    api.models
+      .filter { it.kind == GeneratedModel.Kind.UNION }
+      .flatMap { it.unionCaseModels() }
+      .distinct()
+      .filter {
+        it.target("swift", "swift")?.typeName == null &&
+          !it.hasSwiftReferenceType &&
+          (it.isProblemHierarchyProtocolModel || it.isProtocolHierarchyRootModel)
+      }.associateWith { parent ->
+        GeneratedModel(
+          name = "Any${parent.name}",
+          kind = GeneratedModel.Kind.OBJECT,
+          source = parent.source,
+          declarationUri = parent.declarationUri,
+          ownerUris = parent.ownerUris,
+          targets = parent.targets,
+          inherits = listOf(GeneratedTypeRef.named(parent.name, scope = parent.scope, source = parent.source)),
+          documentation = GeneratedDocumentation(description = "A concrete value of the ${parent.name} schema."),
+        )
+      }
+  }
+
+  private val protocolImplementationTypeNames by lazy {
+    val allocators = mutableMapOf<String, NameAllocator>()
+
+    fun allocator(type: DeclaredTypeName) =
+      allocators.getOrPut(type.enclosingTypeName()?.toString() ?: type.moduleName) { NameAllocator() }
+    (api.models.map { it.swiftDeclaredTypeName() } + reservedHelperTypes).distinct().forEach { type ->
+      allocator(type).newName(type.simpleName, type)
+    }
+    protocolImplementations.entries.associate { (parent, implementation) ->
+      val type = parent.swiftDeclaredTypeName()
+      val name = allocator(type).newName("Any${type.simpleName}", implementation)
+      implementation to
+        (type.enclosingTypeName()?.nestedType(name) ?: DeclaredTypeName.typeName("${type.moduleName}.$name"))
+    }
+  }
+
+  private fun GeneratedModel.swiftUnionCaseTypeName(): DeclaredTypeName =
+    when {
+      target("swift", "swift")?.typeName != null -> swiftDeclaredTypeName()
+      hasSwiftReferenceType -> swiftReferenceTypeName()
+      else -> protocolImplementations[this]?.swiftDeclaredTypeName() ?: swiftDeclaredTypeName()
+    }
 
   private val swiftHierarchyCaseModelsByRootKey: Map<SwiftModelKey, List<GeneratedModel>> by lazy {
     val hierarchy =
@@ -1981,7 +2039,7 @@ class SwiftSundayIrGenerator(
                     addStatement(
                       "case .%N(let value): return %T.view(value)",
                       branch.unionCaseName,
-                      SwiftModelValidation.name(branch.swiftDeclaredTypeName()),
+                      SwiftModelValidation.name(branch.swiftUnionCaseTypeName()),
                     )
                   }
                   discriminatorFallbacks[this@normalizedValidator]?.let { fallback ->
@@ -2139,7 +2197,7 @@ class SwiftSundayIrGenerator(
   }
 
   private fun GeneratedModel.normalizedProtocolValidator(): TypeSpec.Builder {
-    val cases = swiftHierarchyCaseModels()
+    val cases = swiftHierarchyCaseModels() + listOfNotNull(protocolImplementations[this])
     val discriminator = discriminatorPropertyOrNull()
     val fallback = discriminatorFallbacks[this]
     val view =
@@ -3113,7 +3171,9 @@ class SwiftSundayIrGenerator(
     get() = swiftModelKey() in protocolHierarchyRootModelKeys
 
   private val GeneratedModel.isProtocolHierarchyValueModel: Boolean
-    get() = !isProblemModel && swiftModelKey() in protocolHierarchyValueModelKeys
+    get() =
+      !isProblemModel &&
+        (swiftModelKey() in protocolHierarchyValueModelKeys || this in protocolImplementations.values)
 
   private val GeneratedModel.isProblemHierarchyProtocolModel: Boolean
     get() =
@@ -3225,7 +3285,7 @@ class SwiftSundayIrGenerator(
       .addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
       .apply {
         cases.forEach { model ->
-          addEnumCase(model.unionCaseName, model.swiftDeclaredTypeName())
+          addEnumCase(model.unionCaseName, model.swiftUnionCaseTypeName())
         }
         if (fallback != null && fallbackTypeName != null) {
           addEnumCase(fallback.fallbackName.swiftEnumCaseName, fallbackTypeName)
@@ -3287,7 +3347,7 @@ class SwiftSundayIrGenerator(
               "case %L: self = .%N(try %T(from: decoder))",
               index,
               branch.unionCaseName,
-              branch.swiftDeclaredTypeName(),
+              branch.swiftUnionCaseTypeName(),
             )
           }
           discriminatorFallbacks[this@unionDecoderConstructor]?.let { fallback ->
@@ -3314,7 +3374,7 @@ class SwiftSundayIrGenerator(
             addStatement(
               "self = .%N(try %T(from: decoder))",
               case.model.unionCaseName,
-              case.model.swiftDeclaredTypeName(),
+              case.model.swiftUnionCaseTypeName(),
             )
             addStatement("return")
             endControlFlow("if")
@@ -3348,7 +3408,7 @@ class SwiftSundayIrGenerator(
               addStatement(
                 "self = .%N(try %T(from: decoder))",
                 branch.model.unionCaseName,
-                branch.model.swiftDeclaredTypeName(),
+                branch.model.swiftUnionCaseTypeName(),
               )
               addStatement("return")
               endControlFlow("if")
@@ -3361,7 +3421,7 @@ class SwiftSundayIrGenerator(
               addStatement(
                 "self = .%N(try %T(from: decoder))",
                 branch.model.unionCaseName,
-                branch.model.swiftDeclaredTypeName(),
+                branch.model.swiftUnionCaseTypeName(),
               )
               addStatement("return")
               endControlFlow("if")
@@ -4031,9 +4091,14 @@ class SwiftSundayIrGenerator(
   private val GeneratedModel.hasSwiftReferenceType: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
-        discriminator != null &&
+        discriminatorNameOrNull() != null &&
         !externallyDiscriminated &&
-        (inherits.isEmpty() || isDiscriminatorMappingUnionModel) &&
+        (
+          inherits.isEmpty() ||
+            isDiscriminatorMappingUnionModel ||
+            isProtocolHierarchyRootModel ||
+            isProblemHierarchyProtocolModel
+        ) &&
         swiftHierarchyCaseModels().isNotEmpty()
 
   private val GeneratedModel.isSwiftSendableModel: Boolean
@@ -4237,14 +4302,7 @@ class SwiftSundayIrGenerator(
     outputDirectory: OutputDirectory,
     outputGroup: String?,
   ): TypeSpec? {
-    if (
-      discriminator == null ||
-      externallyDiscriminated ||
-      inherits.isNotEmpty() &&
-      !isDiscriminatorMappingUnionModel
-    ) {
-      return null
-    }
+    if (!hasSwiftReferenceType) return null
 
     val discriminatorProperty = discriminatorPropertyOrNull() ?: return null
     val inheritingModels = swiftHierarchyCaseModels()
@@ -6100,6 +6158,7 @@ class SwiftSundayIrGenerator(
     customValidationTypeNames[this] ?: swiftDeclaredTypeName()
 
   private fun GeneratedModel.swiftDeclaredTypeName(ignoreExternalType: Boolean = false): DeclaredTypeName {
+    if (this in protocolImplementations.values) return protocolImplementationTypeNames.getValue(this)
     if (scope != null) {
       return scopedModelNames[this] ?: DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
     }

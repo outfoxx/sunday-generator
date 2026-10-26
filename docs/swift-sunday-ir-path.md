@@ -31,6 +31,27 @@ shares the throwing signature when any member requires validation, because Swift
 does not permit an override to add `throws`. Unconstrained value models keep their
 non-throwing initializers.
 
+## Protocol branches in object unions
+
+An object `oneOf` or `anyOf` enum stores a concrete Codable value for every branch.
+A discriminated protocol hierarchy uses its `…Ref` enum, including intermediate
+protocols on a mapped inheritance path. An ordinary parent schema uses a generated
+`Any<ProtocolName>` implementation, such as `AnyCollectionProblem`. This value
+conforms to the parent protocol and retains its inherited fields and constraints.
+Its name is allocated alongside existing declarations to avoid collisions.
+
+The ordinary parent implementation accepts parent-only payloads; it does not
+restrict the schema to known descendants. Validation still counts matches against
+the original union branches. A payload matching both parent and child is rejected
+by `oneOf` and accepted by `anyOf`. A payload satisfying the parent but failing a
+child-only constraint can still match exactly one branch. Permitted extra fields
+follow the same preservation option as other generated object models.
+
+`SwiftProtocolUnionTest` compiles and executes these cases for OpenAPI, AsyncAPI,
+RAML, and composed inputs. RAML unions retain their inclusive matching semantics;
+the fixture supplies the shared IR URI format for the runtime Problem field,
+because RAML strings do not support that format facet.
+
 ## Exit Audit
 
 Swift/Sunday generation is fully IR-backed after RAML parsing.
