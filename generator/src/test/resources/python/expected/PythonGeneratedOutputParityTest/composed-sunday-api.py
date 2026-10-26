@@ -60,7 +60,7 @@ class ParityAPI[TransportRequestT, TransportResponseT]:
 class ParityAPISecurityAlternative(_Enum):
     """Complete security alternatives, retaining each scheme's required scopes."""
 
-    PUBLIC = ()
+    public = ()
 
     def matches(self, bindings: _Sequence[_SecurityBinding]) -> bool:
         """Match a whole alternative without dropping schemes or scopes."""

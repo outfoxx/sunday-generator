@@ -1,0 +1,42 @@
+#%RAML 1.0
+title: Enum Naming API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+types:
+  JobKind:
+    type: string
+    enum:
+      - "BACKGROUND_TASK"
+      - "USER_INITIATED_TASK"
+      - "IMMEDIATE"
+      - "lower_snake"
+      - "kebab-case"
+      - "dotted.case"
+      - "space separated"
+      - "render:character_reference"
+      - "lowerCamelCase"
+      - "UpperCamelCase"
+      - "HTTPServer"
+      - "parseURLValue"
+      - "HTTP2_RESPONSE"
+      - "version2Value"
+      - "UNKNOWN_VALUE"
+  TolerantKind:
+    type: string
+    enum:
+      - "BACKGROUND_TASK"
+      - "USER_INITIATED_TASK"
+      - "IMMEDIATE"
+      - "lower_snake"
+      - "kebab-case"
+      - "dotted.case"
+      - "space separated"
+      - "render:character_reference"
+      - "lowerCamelCase"
+      - "UpperCamelCase"
+      - "HTTPServer"
+      - "parseURLValue"
+      - "HTTP2_RESPONSE"
+      - "version2Value"
+      - "UNKNOWN_VALUE"
+    (sunday.unknownValue): UNKNOWN_VALUE

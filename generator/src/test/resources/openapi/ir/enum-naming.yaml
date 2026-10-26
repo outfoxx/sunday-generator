@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info: {title: Enum Naming API, version: 1.0.0}
+paths: {}
+components:
+  schemas:
+    JobKind:
+      type: string
+      enum:
+        - "BACKGROUND_TASK"
+        - "USER_INITIATED_TASK"
+        - "IMMEDIATE"
+        - "lower_snake"
+        - "kebab-case"
+        - "dotted.case"
+        - "space separated"
+        - "render:character_reference"
+        - "lowerCamelCase"
+        - "UpperCamelCase"
+        - "HTTPServer"
+        - "parseURLValue"
+        - "HTTP2_RESPONSE"
+        - "version2Value"
+        - "UNKNOWN_VALUE"
+    TolerantKind:
+      type: string
+      enum:
+        - "BACKGROUND_TASK"
+        - "USER_INITIATED_TASK"
+        - "IMMEDIATE"
+        - "lower_snake"
+        - "kebab-case"
+        - "dotted.case"
+        - "space separated"
+        - "render:character_reference"
+        - "lowerCamelCase"
+        - "UpperCamelCase"
+        - "HTTPServer"
+        - "parseURLValue"
+        - "HTTP2_RESPONSE"
+        - "version2Value"
+        - "UNKNOWN_VALUE"
+      x-unknown-value: UNKNOWN_VALUE

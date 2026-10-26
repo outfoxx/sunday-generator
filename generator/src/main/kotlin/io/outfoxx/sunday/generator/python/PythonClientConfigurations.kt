@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -203,6 +204,7 @@ internal class PythonClientConfigurations(
         appendLine("class $alternativeType(_Enum):")
         appendLine("    \"\"\"Complete security alternatives, retaining each scheme's required scopes.\"\"\"")
         appendLine()
+        val alternativeNames = NameAllocator(preallocateKeywords = false).apply { newName("matches") }
         security.values.clientFactoryAlternatives().forEach { choice ->
           val entries =
             choice.requirement.permissions.map { (scheme, scopes) ->
@@ -210,7 +212,8 @@ internal class PythonClientConfigurations(
               "(${scheme.pythonStringLiteral()}, (${values}${if (scopes.size == 1) "," else ""}))"
             }
           val value = entries.joinToString(", ")
-          appendLine("    ${choice.name.pythonEnumMemberName} = ($value${if (entries.size == 1) "," else ""})")
+          val name = alternativeNames.newName(choice.name.pythonEnumMemberName)
+          appendLine("    $name = ($value${if (entries.size == 1) "," else ""})")
         }
         appendLine()
         appendLine("    def matches(self, bindings: _Sequence[_SecurityBinding]) -> bool:")

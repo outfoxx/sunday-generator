@@ -201,13 +201,13 @@ class PythonPropertyRestrictionsTest : PythonTest() {
           from pydantic import ValidationError
           from turnpost_api.models import Base, Child, Grandchild, InvalidDefault, StateAlias, Ordinary
           for model in (Child, Grandchild):
-              for factory in (lambda: model(), lambda: model(state_tag=StateAlias.SHORT, ordinary=Ordinary.SHORT),
+              for factory in (lambda: model(), lambda: model(state_tag=StateAlias.short, ordinary=Ordinary.short),
                               lambda: model(stateTag='short'), lambda: model.model_validate({'stateTag': 'short'}),
                               lambda: model.model_validate_json('{"stateTag":"short"}')):
                   value = factory()
                   assert isinstance(value, Base)
-                  assert value.state_tag is StateAlias.SHORT
-                  assert value.ordinary is Ordinary.SHORT
+                  assert value.state_tag is StateAlias.short
+                  assert value.ordinary is Ordinary.short
                   assert json.loads(value.model_dump_json(by_alias=True)) == {'stateTag': 'short', 'ordinary': 'short'}
               for field, bad in (('state_tag', 'longer'), ('stateTag', 's'), ('ordinary', 'longer'), ('state_tag', None)):
                   try:
@@ -219,7 +219,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
               assert schema['pattern'] == '^s' and schema['minLength'] == 2
           unknown = Child(state_tag='surprise').state_tag
           assert isinstance(unknown, StateAlias) and unknown.value == 'surprise'
-          assert Base(state_tag='longer').state_tag is StateAlias.LONGER
+          assert Base(state_tag='longer').state_tag is StateAlias.longer
           for factory in (InvalidDefault, lambda: Grandchild(state_tag='surprise')):
               try:
                   factory()

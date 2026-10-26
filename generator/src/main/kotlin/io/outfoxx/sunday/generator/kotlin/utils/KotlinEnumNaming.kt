@@ -18,7 +18,7 @@ package io.outfoxx.sunday.generator.kotlin.utils
 
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
-import io.outfoxx.sunday.generator.utils.toUpperCamelCase
+import io.outfoxx.sunday.generator.utils.enumUpperCamelCase
 import java.util.IdentityHashMap
 
 internal data class KotlinEnumEntry(
@@ -90,16 +90,19 @@ internal fun GeneratedModel.kotlinEnumEntries(): List<KotlinEnumEntry> {
   return entries
 }
 
-internal fun String.kotlinEnumConstantName(): String =
-  split(enumSplitRegex)
-    .joinToString("") { part -> part.replaceFirstChar { it.titlecase() } }
-    .toUpperCamelCase()
+internal fun String.kotlinEnumConstantName(): String = enumUpperCamelCase()
 
 private fun GeneratedModel.validateKotlinEnumConstantName(
   constantName: String,
   value: String,
   explicitName: String?,
 ) {
+  if (constantName == "Companion") {
+    genError(
+      "Kotlin enum '$name' constant name 'Companion' is reserved for the generated companion object. " +
+        "Use x-enum-varnames to give value '$value' a different Kotlin enum constant name.",
+    )
+  }
   if (!kotlinEnumConstantIdentifierRegex.matches(constantName)) {
     if (explicitName != null) {
       genError(
@@ -115,5 +118,4 @@ private fun GeneratedModel.validateKotlinEnumConstantName(
   }
 }
 
-private val enumSplitRegex = """\W""".toRegex()
 private val kotlinEnumConstantIdentifierRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")

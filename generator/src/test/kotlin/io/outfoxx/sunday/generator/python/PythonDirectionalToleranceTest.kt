@@ -204,16 +204,16 @@ class PythonDirectionalToleranceTest : PythonTest() {
           from test_api.models import Event, EventUnknown, Item, State, OpenState
           state = TypeAdapter(State).validate_python("future")
           TypeAdapter(OpenState).validate_python("future", context={"mode": "request"})
-          item = Item(state=State.ACTIVE)
+          item = Item(state=State.active)
           assert Item.model_validate(item, context={"mode": "request"}) == item
-          item.states = [State.ACTIVE, state]
+          item.states = [State.active, state]
           try:
               Item.model_validate(item, context={"mode": "request"})
           except ValidationError as error:
               assert error.errors()[0]["loc"] == ("states", 1)
           else:
               raise AssertionError("nested unknown request value accepted")
-          item.states = [State.ACTIVE]
+          item.states = [State.active]
           Item.model_validate(item, context={"mode": "request"})
           adapter = TypeAdapter(Event)
           raw = {"kind": "future", "detail": {"attempt": 2}}
