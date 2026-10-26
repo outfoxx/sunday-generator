@@ -202,6 +202,34 @@ class SwiftSundayIrGenerator(
   }
   private val patchHelpers by lazy { SwiftPatchHelpers(api.models, reservedHelperTypes) { it.swiftDeclaredTypeName() } }
 
+  // Merge decoding reaches nested values and dispatch cases, not just models with patch companions.
+  private val mergeDecodingModelKeys by lazy {
+    buildSet {
+      val pending = ArrayDeque(api.models.mapNotNull { it.patchOf })
+
+      fun enqueue(type: GeneratedTypeRef) {
+        pending.add(type)
+        type.arguments.forEach(::enqueue)
+      }
+      while (pending.isNotEmpty()) {
+        val model = pending.removeFirst().modelOrNull(apiIndex) ?: continue
+        if (!add(model.swiftModelKey())) continue
+        protocolImplementations[model]?.let { add(it.swiftModelKey()) }
+        model.inherits.forEach(::enqueue)
+        model.aliases.forEach(::enqueue)
+        model.properties.forEach { enqueue(it.type) }
+        model.additionalProperties?.type?.let(::enqueue)
+        model.patternProperties.forEach { enqueue(it.type) }
+        model.discriminatorMappings.values.forEach(::enqueue)
+        if (model.discriminatorNameOrNull() != null) {
+          model.swiftHierarchyCaseModels().forEach { variant ->
+            enqueue(GeneratedTypeRef.named(variant.name, scope = variant.scope, source = variant.source))
+          }
+        }
+      }
+    }
+  }
+
   // Helpers are named before services and problems are registered, so reserve their planned names too.
   private val reservedHelperTypes by lazy {
     buildList {
@@ -5282,7 +5310,10 @@ class SwiftSundayIrGenerator(
                 "container.contains(.%N) ? %L : %L",
                 property.name.swiftIdentifierName,
                 decode,
-                patchHelpers.decodingDefault(it),
+                patchHelpers.decodingDefault(
+                  it,
+                  property.swiftTypeName().optional && model.swiftModelKey() in mergeDecodingModelKeys,
+                ),
               )
             }
               ?: decode,
