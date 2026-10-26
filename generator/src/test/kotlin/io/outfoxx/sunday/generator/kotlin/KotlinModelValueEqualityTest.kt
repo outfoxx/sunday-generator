@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedNestedType
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
+import io.outfoxx.sunday.generator.ir.GeneratedTarget
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.sunday.kotlinSundayTestOptions
@@ -350,6 +351,82 @@ class KotlinModelValueEqualityTest {
     assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
     compiled.classLoader
       .loadClass("io.test.PatchCheck")
+      .getMethod("checkValues")
+      .invoke(null)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["sunday", "jaxrs"])
+  fun `mapped parent schema fields participate in child and descendant equality`(framework: String) {
+    val source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory")
+    val api =
+      GeneratedApi(
+        name = "MappedParent",
+        source = source,
+        models =
+          listOf(
+            GeneratedModel(
+              "Base",
+              GeneratedModel.Kind.OBJECT,
+              source = source,
+              targets = mapOf("kotlin" to GeneratedTarget(typeName = "io.example.Base")),
+              properties =
+                listOf(
+                  GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty(
+                    "payload",
+                    GeneratedTypeRef.scalar("string", format = "byte"),
+                    required = true,
+                  ),
+                ),
+            ),
+            GeneratedModel(
+              "Child",
+              GeneratedModel.Kind.OBJECT,
+              source = source,
+              inherits = listOf(GeneratedTypeRef.named("Base")),
+              properties = listOf(GeneratedModelProperty("label", GeneratedTypeRef.scalar("string"), required = true)),
+            ),
+            GeneratedModel(
+              "Descendant",
+              GeneratedModel.Kind.OBJECT,
+              source = source,
+              inherits = listOf(GeneratedTypeRef.named("Child")),
+            ),
+          ),
+      )
+    val consumer =
+      SourceFile.kotlin(
+        "MappedParentCheck.kt",
+        """
+        package io.example
+        import io.test.Child
+        import io.test.Descendant
+        open class Base(val id: String, val payload: ByteArray)
+        object MappedParentCheck {
+          @JvmStatic fun checkValues() {
+            for (create in listOf(::Child, ::Descendant)) {
+              val first = create("one", byteArrayOf(1, 2), "label")
+              val same = create("one", byteArrayOf(1, 2), "label")
+              val differentId = create("two", byteArrayOf(1, 2), "label")
+              check(first == same)
+              check(same == first)
+              check(first.hashCode() == same.hashCode())
+              check(first != differentId)
+              check(first.hashCode() != differentId.hashCode())
+              check(hashSetOf(first, same, differentId).size == 2)
+              check(first != create("one", byteArrayOf(2, 1), "label"))
+              check(first != create("one", byteArrayOf(1, 2), "changed"))
+            }
+            check(Child("one", byteArrayOf(1, 2), "label") != Descendant("one", byteArrayOf(1, 2), "label"))
+          }
+        }
+        """.trimIndent(),
+      )
+    val compiled = compileTypesResult(generate(api, framework).buildTypes(), listOf(consumer))
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+    compiled.classLoader
+      .loadClass("io.example.MappedParentCheck")
       .getMethod("checkValues")
       .invoke(null)
   }

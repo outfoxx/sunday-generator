@@ -562,7 +562,19 @@ class KotlinSundayIrGenerator(
           }.toMap(),
         models.filter { it.isProblemModel() }.mapTo(mutableSetOf()) { it.kotlinClassName() },
         emittedModels.map { it.first },
-      )
+      ) { name ->
+        modelTypes[name]
+          ?.first
+          ?.let { model ->
+            model.inheritedModelProperties().map { property ->
+              PropertySpec
+                .builder(
+                  property.name.kotlinIdentifierName,
+                  property.modelPropertyTypeName(model.patchableProperty(property.wireName)),
+                ).build()
+            }
+          }.orEmpty()
+      }
     }
     emittedModels.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
   }

@@ -32,6 +32,7 @@ internal fun addModelValueEquality(
   models: Map<ClassName, TypeSpec.Builder>,
   problems: Set<ClassName>,
   reservedTypes: Collection<ClassName>,
+  inheritedSchemaProperties: (ClassName) -> List<PropertySpec>,
 ) {
   fun isProblem(name: ClassName): Boolean =
     name in problems || (models[name]?.build()?.superclass as? ClassName)?.let(::isProblem) == true
@@ -41,6 +42,8 @@ internal fun addModelValueEquality(
     val inherited = (type.superclass as? ClassName)?.let(::properties).orEmpty()
     return (
       inherited +
+        // Custom-mapped parents have schema fields but no emitted builder to traverse.
+        inheritedSchemaProperties(name) +
         type.propertySpecs
           .filterNot {
             KModifier.PRIVATE in it.modifiers || KModifier.PROTECTED in it.modifiers
