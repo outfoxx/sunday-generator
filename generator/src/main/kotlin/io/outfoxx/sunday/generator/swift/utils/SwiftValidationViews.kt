@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.swiftpoet.CodeBlock
 import io.outfoxx.swiftpoet.DATA
 import io.outfoxx.swiftpoet.DeclaredTypeName
@@ -41,20 +42,36 @@ internal class SwiftValidationViews(
   fun project(
     reference: GeneratedTypeRef,
     value: CodeBlock,
+    useReferenceTypes: Boolean = true,
   ): CodeBlock {
     if (reference.nullable) {
       return CodeBlock.of(
         "%L.map { value in %L } ?? .null",
         value,
-        project(reference.copy(nullable = false), CodeBlock.of("value")),
+        project(reference.copy(nullable = false), CodeBlock.of("value"), useReferenceTypes),
       )
     }
     if (reference.kind == GeneratedTypeRef.Kind.NAMED) {
       val model = requireNotNull(modelFor(reference))
+      if (!useReferenceTypes && model.target("swift", "swift")?.typeName == null) {
+        val underlying =
+          when (model.kind) {
+            GeneratedModel.Kind.ARRAY ->
+              GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = model.aliases)
+            GeneratedModel.Kind.MAP -> GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = model.aliases)
+            GeneratedModel.Kind.SCALAR_ALIAS -> model.aliases.singleOrNull().takeUnless { model.nominal }
+            else -> null
+          }
+        if (underlying != null) return project(underlying, value, useReferenceTypes = false)
+      }
       return if (isFreeform(model)) {
         CodeBlock.of("%T.object { %L.mapValues { %T($0) } }", valueType, value, valueType)
       } else {
-        CodeBlock.of("%T.view(%L)", SwiftModelValidation.name(storedModelName(model)), value)
+        CodeBlock.of(
+          "%T.view(%L)",
+          SwiftModelValidation.name(if (useReferenceTypes) storedModelName(model) else modelName(model)),
+          value,
+        )
       }
     }
     return when (reference.kind) {
@@ -63,14 +80,14 @@ internal class SwiftValidationViews(
           "%T.array { %L.map { element in %L } }",
           valueType,
           value,
-          project(reference.arguments.single(), CodeBlock.of("element")),
+          project(reference.arguments.single(), CodeBlock.of("element"), useReferenceTypes),
         )
       GeneratedTypeRef.Kind.MAP ->
         CodeBlock.of(
           "%T.object { %L.mapValues { element in %L } }",
           valueType,
           value,
-          project(reference.arguments.single().swiftDictionaryValue(), CodeBlock.of("element")),
+          project(reference.arguments.single().swiftDictionaryValue(), CodeBlock.of("element"), useReferenceTypes),
         )
       GeneratedTypeRef.Kind.SCALAR ->
         when (reference.name) {
@@ -98,6 +115,7 @@ internal class SwiftValidationViews(
     validatorName: DeclaredTypeName = SwiftModelValidation.name(modelName(model)),
     patchField: (GeneratedModelProperty) -> Boolean = { model.patchable },
     storageProperty: (GeneratedModelProperty) -> GeneratedModelProperty = { it },
+    patchReferenceTypes: (GeneratedModelProperty) -> Boolean = { true },
   ): CodeBlock =
     CodeBlock
       .builder()
@@ -120,7 +138,7 @@ internal class SwiftValidationViews(
                   "{ () -> %T in if case .set(let value) = %L { return %L }; return %L.isUnchanged ? .omitted : .null }()",
                   valueType,
                   value,
-                  project(property.type.copy(nullable = false), CodeBlock.of("value")),
+                  project(property.type.copy(nullable = false), CodeBlock.of("value"), patchReferenceTypes(property)),
                   value,
                 )
               } else if (!property.required && !property.type.nullable) {

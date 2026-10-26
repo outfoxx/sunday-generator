@@ -1,0 +1,43 @@
+#%RAML 1.0
+title: Polymorphic Patches
+annotationTypes:
+  sunday.patchable: {type: boolean, allowedTargets: [TypeDeclaration]}
+types:
+  Kind: {type: string, enum: [cat, dog]}
+  Animal:
+    type: object
+    discriminator: kind
+    properties:
+      kind: Kind
+      name: string
+  Cat:
+    type: Animal
+    discriminatorValue: cat
+    properties:
+      indoor?: boolean
+  Dog:
+    type: Animal
+    discriminatorValue: dog
+    properties:
+      trained?: boolean
+  AnimalList: Animal[]
+  Zoo:
+    type: object
+    (sunday.patchable): true
+    properties:
+      requiredAnimals: Animal[]
+      favorite?: Animal
+      animals?: Animal[]
+      aliasedAnimals?: AnimalList
+      byName?:
+        type: object
+        properties:
+          //: Animal
+      matrix?: Animal[][]
+/zoo:
+  patch:
+    displayName: updateZoo
+    body:
+      application/merge-patch+json: Zoo
+    responses:
+      204:
