@@ -163,6 +163,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 import io.outfoxx.sunday.generator.kotlin.utils.addKotlinPatchHelpers
 import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
+import io.outfoxx.sunday.generator.kotlin.utils.addModelValueEquality
 import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
@@ -820,16 +821,40 @@ class KotlinJAXRSIrGenerator(
       typeRegistry.outputOwnership.bindShared(name, consumers.map { it.modelOutputOrigin() })
       typeRegistry.addModelType(name, helper)
     }
-    models
-      .flatMap { model ->
-        buildList {
-          modelTypes[model.kotlinClassName()]?.let { (_, type) -> add(model.kotlinClassName() to type) }
-          model.discriminatorFallbackType()?.let { fallback ->
-            typeRegistry.outputOwnership.bind(fallback.first, model.modelOutputOrigin())
-            add(fallback)
+    val emittedModels =
+      models
+        .flatMap { model ->
+          buildList {
+            modelTypes[model.kotlinClassName()]?.let { (_, type) -> add(model.kotlinClassName() to type) }
+            model.discriminatorFallbackType()?.let { fallback ->
+              typeRegistry.outputOwnership.bind(fallback.first, model.modelOutputOrigin())
+              add(fallback)
+            }
           }
         }
-      }.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
+    if (KotlinTypeRegistry.Option.ModelValueEquality in typeRegistry.options) {
+      addModelValueEquality(
+        emittedModels
+          .filter { (name, _) ->
+            modelTypes[name]?.first?.kind?.let { it == GeneratedModel.Kind.OBJECT } ?: true
+          }.toMap(),
+        models.filter { it.isProblemModel() }.mapTo(mutableSetOf()) { it.kotlinClassName() },
+        emittedModels.map { it.first },
+      ) { name ->
+        modelTypes[name]
+          ?.first
+          ?.let { model ->
+            model.inheritedModelProperties().map { property ->
+              PropertySpec
+                .builder(
+                  property.name.kotlinIdentifierName,
+                  property.modelPropertyTypeName(model.patchableProperty(property.wireName)),
+                ).build()
+            }
+          }.orEmpty()
+      }
+    }
+    emittedModels.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
   }
 
   private fun GeneratedModel.discriminatorFallbackType(): Pair<ClassName, TypeSpec.Builder>? {

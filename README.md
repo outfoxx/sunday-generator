@@ -56,6 +56,10 @@ Gradle Plugin Cache Notes
   fields by default. Use `-no-preserve-unknown-fields` (CLI) or
   `preserveUnknownFields.set(false)` (Kotlin Gradle plugin) to validate and discard
   them. See [dynamic model fields](docs/unknown-fields.md).
+- **Kotlin value equality**: structural model comparison is enabled by default.
+  Disable it with `-no-model-value-equality` or Gradle
+  `modelValueEquality.set(false)`.
+  See [the equality policy](docs/kotlin-value-equality.md).
 - Generated Kotlin broker consumers require `sunday-broker` 2.0.0-beta.6 or newer
   for decode-failure recovery. A sibling `sunday-kt` checkout is substituted by
   default during local development. Run `./gradlew -PuseLocalSundayKt=false check`
