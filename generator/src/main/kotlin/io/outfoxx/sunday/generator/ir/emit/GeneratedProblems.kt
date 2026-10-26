@@ -57,6 +57,6 @@ fun GeneratedProblem.resolvedTypeUri(defaultProblemBaseUri: String): String {
   return if (uri.isAbsolute) {
     typeUri
   } else {
-    URI(defaultProblemBaseUri).resolve("./$typeUri").toString()
+    URI(defaultProblemBaseUri).resolve(uri).toString()
   }
 }

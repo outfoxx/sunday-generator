@@ -54,7 +54,7 @@ class InheritedQuarkusProblemTest {
   @ValueSource(booleans = [false, true])
   fun `inherited extensions survive the Quarkiverse serialization pipeline`(
     validation: Boolean,
-    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
   ) {
     val registry =
       KotlinTypeRegistry(
@@ -79,7 +79,7 @@ class InheritedQuarkusProblemTest {
         baseUriMode = null,
         alwaysUseResponseReturn = false,
         placement = kotlinPlacement("io.test.inherited", "io.test.inherited"),
-        defaultProblemBaseUri = "http://example.com/",
+        defaultProblemBaseUri = "https://example.com/",
         defaultMediaTypes = listOf("application/json"),
         serviceSuffix = "API",
         quarkus = true,

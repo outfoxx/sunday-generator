@@ -17,6 +17,8 @@
 package io.outfoxx.sunday.generator.ir
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.outfoxx.sunday.generator.GeneratedDocumentUri
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
@@ -80,7 +82,18 @@ class OpenApiToGeneratedApi(
         documentation = documentation(description = document.info["description"] as? String),
       )
 
-    val patchApi = GeneratedPatchModels.materialize(generatedApi, autoPatchable = options.autoPatchable)
+    val apiProblemBase = document.source.problemBaseUri()
+    val problemBases = mutableMapOf(GeneratedDocumentUri.canonical(URI(document.location)) to apiProblemBase)
+    val problemDocuments = document.resolution.documents.mapKeys { (uri, _) -> GeneratedDocumentUri.canonical(uri) }
+    val resolvedApi =
+      generatedApi.resolveSchemaProblemUris { model ->
+        problemBases.getOrPut(GeneratedDocumentUri.canonical(URI(model.source.location))) {
+          val captured = problemDocuments[GeneratedDocumentUri.canonical(URI(model.source.location))]
+          val owner = captured?.let { ObjectMapper(YAMLFactory()).readValue(it.bytes, Map::class.java) }.orEmpty()
+          owner.problemBaseUri(apiProblemBase)
+        }
+      }
+    val patchApi = GeneratedPatchModels.materialize(resolvedApi, autoPatchable = options.autoPatchable)
     return GeneratedApiFragment(
       api = patchApi,
       apiId = document.compositionApiIdentity(),
@@ -945,19 +958,29 @@ class OpenApiToGeneratedApi(
       else -> null
     }
 
+  // Referenced problem libraries inherit the importing API's base unless they define their own.
+  private fun Map<*, *>.problemBaseUri(fallback: URI = URI("")): URI {
+    val server = (this["servers"] as? List<*>)?.firstOrNull() as? Map<*, *>
+    val serverDefaults =
+      (server?.get("variables") as? Map<*, *>).orEmpty().mapValues { (_, value) ->
+        (value as? Map<*, *>)?.get("default")?.toString().orEmpty()
+      }
+    val params =
+      (serverDefaults + mapValue("x-sunday-problemUriParams").orEmpty().mapValues { it.value.toString() })
+        .mapKeys { it.key.toString() }
+    val serverBase = resolveProblemBaseUri(server?.get("url") as? String, params, fallback)
+    return resolveProblemBaseUri(stringValue("x-sunday-problemBaseUri"), params, serverBase)
+  }
+
   private fun OpenApiSourceDocument.problems(): List<GeneratedProblem> {
-    val problemBaseUri = stringValue("x-sunday-problemBaseUri") ?: return emptyList()
-    val problemUriParams = mapValue("x-sunday-problemUriParams").orEmpty().mapValues { it.value.toString() }
+    val problemBaseUri = source.problemBaseUri()
     return mapValue("x-sunday-problemTypes")
       .orEmpty()
       .mapNotNull { (sourceNameValue, value) ->
         val sourceName = sourceNameValue as? String ?: return@mapNotNull null
         val problem = value as? Map<*, *> ?: return@mapNotNull null
         val name = sourceName.toUpperCamelCase() + "Problem"
-        val typeUri =
-          problemUriParams.entries.fold(problemBaseUri) { uri, (key, replacement) ->
-            uri.replace("{$key}", replacement)
-          } + sourceName
+        val typeUri = problemBaseUri.resolve("./$sourceName").toString()
         val customFields =
           problem.mapValue("custom").orEmpty().map { (fieldName, typeName) ->
             GeneratedModelProperty(

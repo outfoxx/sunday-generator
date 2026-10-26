@@ -31,6 +31,7 @@ import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.orInvocation
+import io.outfoxx.sunday.generator.ir.resolveProblemUris
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
@@ -47,6 +48,7 @@ class PythonSundayIrGenerator(
         generationLanguage = "python",
         generationRole = "client",
       ).resolve(sourceApi)
+      .resolveProblemUris(options.defaultProblemBaseUri)
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(listOf("application/json"))
 

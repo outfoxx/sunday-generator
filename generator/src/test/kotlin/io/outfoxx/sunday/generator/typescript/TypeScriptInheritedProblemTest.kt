@@ -20,7 +20,6 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
 import io.outfoxx.sunday.generator.tools.TEAM_NOT_FOUND_JSON
 import io.outfoxx.sunday.generator.tools.USER_NOT_FOUND_JSON
-import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -38,12 +37,15 @@ import java.net.URI
 class TypeScriptInheritedProblemTest {
   @Test
   fun `inherited problem fields survive construction decoding and encoding`(
-    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
     compiler: TypeScriptCompiler,
   ) {
     val registry = TypeScriptTypeRegistry(setOf())
-    TypeScriptSundayIrGenerator(GeneratedApiIrExporter().export(listOf(source)), registry, typeScriptSundayTestOptions)
-      .generateServiceTypes()
+    TypeScriptSundayIrGenerator(
+      GeneratedApiIrExporter().export(listOf(source)),
+      registry,
+      TypeScriptSundayOptions("https://example.com/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
     val consumer =
       ModuleSpec
         .builder("Check", ModuleSpec.Kind.MODULE)

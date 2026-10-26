@@ -75,6 +75,7 @@ import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.ir.resolveProblemUris
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.OutputDirectory
@@ -183,6 +184,7 @@ class SwiftSundayIrGenerator(
         sourceApi.placementConfiguration,
         generationLanguage = "swift",
       ).resolve(sourceApi)
+      .resolveProblemUris(options.defaultProblemBaseUri)
       .let {
         it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
       }

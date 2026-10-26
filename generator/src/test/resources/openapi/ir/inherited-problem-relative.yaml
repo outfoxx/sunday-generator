@@ -1,0 +1,138 @@
+openapi: 3.1.0
+x-sunday-problemBaseUri: "{base}/"
+x-sunday-problemUriParams: {base: problems}
+info: {title: Inherited problems, version: '1'}
+x-sunday-placement:
+  kotlin: {package: io.test.inherited}
+paths:
+  /inherited-problems:
+    get:
+      operationId: readResource
+      responses:
+        '409':
+          description: Resource is rebuilding
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/QueuedProblem'}
+  /missing/{kind}:
+    get:
+      operationId: readMissing
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '404':
+          description: Team or user not found
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - {$ref: '#/components/schemas/TeamNotFoundProblem'}
+                  - {$ref: '#/components/schemas/UserNotFoundProblem'}
+  /missing-named/{kind}:
+    get:
+      operationId: readMissingNamed
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '404':
+          description: Team or user not found
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/NotFoundProblems'}
+components:
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string, default: Something bad happened}
+        instance: {type: string, format: uri}
+        traceId: {type: string, default: trace-A}
+        nullableParent: {type: [string, 'null']}
+      additionalProperties: true
+    RebuildingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          required: [resourceKey, retryAfterSeconds, nullableChild, metadata]
+          properties:
+            detail: {type: string, default: Resource A is rebuilding}
+            type: {type: string, format: uri, const: 'rebuilding'}
+            title: {type: string, const: Resource Rebuilding}
+            status: {type: integer, const: 409}
+            resourceKey: {type: string, minLength: 1, default: A}
+            retryAfterSeconds: {type: integer, minimum: 1, const: 1}
+            optionalChild: {type: string}
+            nullableChild: {type: [string, 'null']}
+            metadata: {$ref: '#/components/schemas/Metadata'}
+    QueuedProblem:
+      allOf:
+        - {$ref: '#/components/schemas/RebuildingProblem'}
+        - type: object
+          required: [queuePosition, queue-name]
+          properties:
+            detail: {type: string, maxLength: 200}
+            queuePosition: {type: integer, minimum: 1, default: 2}
+            queue-name: {type: string, const: rebuilds}
+    DefaultedProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'defaulted'}
+            title: {type: string, const: Defaulted}
+            status: {type: integer, const: 400}
+            enabled: {type: boolean, default: false}
+            count: {type: integer, default: 0}
+            note: {type: [string, 'null'], default: fallback}
+            location: {type: string, format: uri, default: 'https://example.com/default'}
+            revision: {type: integer, const: 1}
+    Metadata:
+      type: object
+      required: [region]
+      properties:
+        region: {type: string, minLength: 1}
+    NotFoundProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          required: [resourceId, error-code]
+          properties:
+            status: {type: integer, const: 404}
+            detail: {type: string, default: Resource not found}
+            resourceId: {type: string, minLength: 1, default: unknown}
+            error-code: {type: string, const: missing}
+    TeamNotFoundProblem:
+      allOf:
+        - {$ref: '#/components/schemas/NotFoundProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'team-not-found'}
+            title: {type: string, const: Team Not Found}
+            detail: {type: string, default: Team not found}
+    UserNotFoundProblem:
+      allOf:
+        - {$ref: '#/components/schemas/NotFoundProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'user-not-found'}
+            title: {type: string, const: User Not Found}
+            detail: {type: string, maxLength: 200}
+    NotFoundProblems:
+      discriminator:
+        propertyName: type
+        mapping:
+          'team-not-found': '#/components/schemas/TeamNotFoundProblem'
+          'user-not-found': '#/components/schemas/UserNotFoundProblem'
+      anyOf:
+        - {$ref: '#/components/schemas/TeamNotFoundProblem'}
+        - {$ref: '#/components/schemas/UserNotFoundProblem'}

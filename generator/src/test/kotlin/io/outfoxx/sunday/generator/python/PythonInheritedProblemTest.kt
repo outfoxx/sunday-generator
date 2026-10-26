@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedOutputSelection
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.nio.file.Path
@@ -44,7 +47,7 @@ import kotlin.io.path.writeText
 class PythonInheritedProblemTest : PythonTest() {
   @Test
   fun `problem extensions cannot shadow wrapper payload members`(
-    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
     compiler: PythonCompiler,
   ) {
     val original = GeneratedApiIrExporter().export(source)
@@ -72,7 +75,13 @@ class PythonInheritedProblemTest : PythonTest() {
     assertTrue(
       compileModules(
         compiler,
-        PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api"))).generateModules(),
+        PythonSundayIrGenerator(
+          api,
+          PythonGeneratorOptions(
+            placement = pythonPlacement("test_api"),
+            defaultProblemBaseUri = "https://example.com/",
+          ),
+        ).generateModules(),
         smokeCode =
           """
           import json
@@ -108,12 +117,20 @@ class PythonInheritedProblemTest : PythonTest() {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "asyncapi", "composed"])
+  @CsvSource(
+    "raml,sunday",
+    "asyncapi,sunday",
+    "composed,sunday",
+    "raml,litestar",
+    "asyncapi,litestar",
+    "composed,litestar",
+  )
   fun `source-schema exceptions compile for every supported frontend`(
     frontend: String,
+    target: String,
     @ResourceUri("raml/ir/inherited-problem.raml") raml: URI,
     @ResourceUri("asyncapi/ir/inherited-problem.yaml") asyncapi: URI,
-    @ResourceUri("openapi/ir/inherited-problem.yaml") openapi: URI,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") openapi: URI,
     @TempDir directory: Path,
     compiler: PythonCompiler,
   ) {
@@ -128,10 +145,20 @@ class PythonInheritedProblemTest : PythonTest() {
         }
       }
     val api = GeneratedApiIrExporter().export(sources)
+    val options =
+      PythonGeneratorOptions(placement = pythonPlacement("test_api"), defaultProblemBaseUri = "https://example.com/")
+    val modules =
+      if (target == "litestar") {
+        PythonLitestarIrGenerator(api, options).generateModules(
+          GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+        )
+      } else {
+        PythonSundayIrGenerator(api, options).generateModules()
+      }
     assertTrue(
       compileModules(
         compiler,
-        PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api"))).generateModules(),
+        modules,
         smokeCode =
           """
           import json
@@ -158,7 +185,7 @@ class PythonInheritedProblemTest : PythonTest() {
   @ValueSource(booleans = [false, true])
   fun `inherited problem fields survive construction decoding and encoding`(
     nullableType: Boolean,
-    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
     compiler: PythonCompiler,
   ) {
     val original = GeneratedApiIrExporter().export(listOf(source))
@@ -193,7 +220,10 @@ class PythonInheritedProblemTest : PythonTest() {
         compiler,
         PythonSundayIrGenerator(
           api.copy(services = listOf(api.services.first().copy(name = "Resources", group = null))),
-          PythonGeneratorOptions(placement = pythonPlacement("test_api")),
+          PythonGeneratorOptions(
+            placement = pythonPlacement("test_api"),
+            defaultProblemBaseUri = "https://example.com/",
+          ),
         ).generateModules(),
         importModules = listOf("test_api.models"),
         smokeCode =

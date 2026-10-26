@@ -19,7 +19,6 @@ package io.outfoxx.sunday.generator.swift
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
-import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
@@ -39,12 +38,15 @@ import kotlin.io.path.writeText
 class SwiftInheritedProblemTest {
   @Test
   fun `inherited problem fields survive construction decoding and encoding`(
-    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
     compiler: SwiftCompiler,
   ) {
     val registry = SwiftTypeRegistry(setOf())
-    SwiftSundayIrGenerator(GeneratedApiIrExporter().export(listOf(source)), registry, swiftSundayTestOptions)
-      .generateServiceTypes()
+    SwiftSundayIrGenerator(
+      GeneratedApiIrExporter().export(listOf(source)),
+      registry,
+      SwiftSundayOptions("https://example.com/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
     registry.generateFiles(
       GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
       compiler.srcDir,

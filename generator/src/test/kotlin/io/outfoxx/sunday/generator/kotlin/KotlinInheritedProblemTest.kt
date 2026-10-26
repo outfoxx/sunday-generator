@@ -68,7 +68,7 @@ class KotlinInheritedProblemTest {
     library: KotlinProblemLibrary,
     namespace: String,
     validation: Boolean,
-    @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
+    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
   ) {
     val registry =
       KotlinTypeRegistry(
@@ -89,7 +89,7 @@ class KotlinInheritedProblemTest {
         registry,
         KotlinSundayOptions(
           kotlinPlacement("io.test.inherited", "io.test.inherited"),
-          "http://example.com/",
+          "https://example.com/",
           listOf("application/json"),
           "API",
         ),
@@ -106,7 +106,7 @@ class KotlinInheritedProblemTest {
           baseUriMode = null,
           alwaysUseResponseReturn = false,
           placement = kotlinPlacement("io.test.inherited", "io.test.inherited"),
-          defaultProblemBaseUri = "http://example.com/",
+          defaultProblemBaseUri = "https://example.com/",
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
           quarkus = target == "quarkus",

@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.orInvocation
+import io.outfoxx.sunday.generator.ir.resolveProblemUris
 import io.outfoxx.sunday.generator.outputOrigin
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
@@ -45,6 +46,7 @@ class PythonLitestarIrGenerator(
         generationLanguage = "python",
         generationRole = "server",
       ).resolve(sourceApi)
+      .resolveProblemUris(options.defaultProblemBaseUri)
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(selection: GeneratedOutputSelection = GeneratedOutputSelection()): List<PythonModule> {
