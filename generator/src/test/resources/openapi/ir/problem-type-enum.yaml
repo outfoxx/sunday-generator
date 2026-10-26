@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info: {title: Enum problems, version: '1'}
+x-sunday-problemBaseUri: problems/
+paths: {}
+components:
+  schemas:
+    ProblemType:
+      type: string
+      enum: [missing]
+      default: missing
+    Problem:
+      type: object
+      properties:
+        type: {$ref: '#/components/schemas/ProblemType'}
+        title: {type: string, default: Missing}
+        status: {type: integer, default: 404}
+        code: {$ref: '#/components/schemas/ProblemType'}
+    ChildProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            detail: {type: string, default: Child missing}
+    Ordinary:
+      type: object
+      properties:
+        type: {$ref: '#/components/schemas/ProblemType'}

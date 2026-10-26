@@ -51,7 +51,6 @@ import amf.shapes.client.platform.model.domain.NilShape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.ScalarShape
 import amf.shapes.client.platform.model.domain.UnionShape
-import com.damnhandy.uri.template.UriTemplate
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.GeneratedDocumentUri
@@ -155,7 +154,6 @@ import io.outfoxx.sunday.generator.utils.writeOnly
 import io.outfoxx.sunday.generator.utils.xone
 import java.math.BigDecimal
 import java.net.URI
-import java.net.URISyntaxException
 
 /**
  * Converts an AMF API processor result into the Sunday generated API IR.
@@ -1746,11 +1744,7 @@ class RamlToGeneratedApi(
     api: WebApi,
   ): List<GeneratedProblem> {
     val apiProblemBaseUri = problemBaseUri(api)
-    val problemDefLocations: Map<BaseUnit, CustomizableElement> =
-      document.allUnits.filterIsInstance<CustomizableElement>().associateBy { it as BaseUnit } +
-        document.allUnits.filterIsInstance<EncodesModel>().associate { it as BaseUnit to it.encodes }
-
-    return problemDefLocations
+    return problemDefinitionLocations(document)
       .flatMap { (unit, element) ->
         val problemTypes =
           element.findAnnotation(APIAnnotationName.ProblemTypes, null) as? ObjectNode ?: return@flatMap listOf()
@@ -1761,47 +1755,41 @@ class RamlToGeneratedApi(
       }.sortedBy { it.name }
   }
 
+  private fun problemDefinitionLocations(document: BaseUnit): Map<BaseUnit, CustomizableElement> =
+    document.allUnits.filterIsInstance<CustomizableElement>().associateBy { it as BaseUnit } +
+      document.allUnits.filterIsInstance<EncodesModel>().associate { it as BaseUnit to it.encodes }
+
   private fun problemBaseUri(api: WebApi): URI {
-    val baseUri = expandProblemUri(api.servers.firstOrNull()?.url ?: "", api.problemBaseUriParams())
-    return problemBaseUri(api, baseUri)
+    val server = api.servers.firstOrNull()
+    val defaults =
+      server
+        ?.variables
+        .orEmpty()
+        .mapNotNull { variable ->
+          val name = variable.name ?: variable.parameterName().value() ?: return@mapNotNull null
+          val value = variable.schema()?.defaultValue?.anyValue ?: api.version.takeIf { name == "version" }
+          value?.toString()?.let { name to it }
+        }.toMap()
+    val params = defaults + api.problemBaseUriParams()
+    val serverBase = resolveProblemBaseUri(server?.url, params, URI(""))
+    return resolveProblemBaseUri(api.findStringAnnotation(APIAnnotationName.ProblemBaseUri, null), params, serverBase)
   }
 
   private fun problemBaseUri(
     element: CustomizableElement,
     defaultBaseUri: URI,
-  ): URI {
-
-    var problemBaseUri =
-      element
-        .findStringAnnotation(APIAnnotationName.ProblemBaseUri, null)
-        ?.let { template -> expandProblemUri(template, element.problemBaseUriParams()) }
-        ?: defaultBaseUri
-    if (!problemBaseUri.isAbsolute) {
-      problemBaseUri = defaultBaseUri.resolve(problemBaseUri)
-    }
-    return problemBaseUri
-  }
+  ): URI =
+    resolveProblemBaseUri(
+      element.findStringAnnotation(APIAnnotationName.ProblemBaseUri, null),
+      element.problemBaseUriParams(),
+      defaultBaseUri,
+    )
 
   private fun CustomizableElement.problemBaseUriParams(): Map<String, String> =
     findAnnotation(APIAnnotationName.ProblemBaseUriParams, null)
       ?.objectValue
       ?.mapValues { (_, value) -> value?.toString() ?: "" }
       .orEmpty()
-
-  private fun expandProblemUri(
-    template: String,
-    params: Map<String, String>,
-  ): URI =
-    try {
-      URI(UriTemplate.expand(template, params))
-    } catch (_: URISyntaxException) {
-      throw IllegalArgumentException(
-        """
-        Problem URI is not a valid URI; it cannot be a template.
-        Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
-        """.trimIndent(),
-      )
-    }
 
   private fun problem(
     problemCode: String,

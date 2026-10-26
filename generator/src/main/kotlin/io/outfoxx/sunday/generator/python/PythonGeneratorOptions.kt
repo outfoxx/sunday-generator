@@ -38,5 +38,7 @@ data class PythonGeneratorOptions(
   override val defaultTolerance: Tolerance = Tolerance.Response,
   /** Generate server configurations for Sunday clients; ignored by server targets. */
   val generateClientConfig: Boolean = true,
+  /** Fallback for relative problem type URIs when the source does not provide an absolute base. */
+  val defaultProblemBaseUri: String = "http://example.com/",
 ) : BrokerGenerationOptions,
   EnvironmentGenerationOptions

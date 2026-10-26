@@ -102,6 +102,7 @@ import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.ir.orInvocation
+import io.outfoxx.sunday.generator.ir.resolveProblemUris
 import io.outfoxx.sunday.generator.kotlin.utils.AssociatedFunctions
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_DESERIALIZATION_CONTEXT
@@ -202,6 +203,7 @@ class KotlinSundayIrGenerator(
         generationLanguage = "kotlin",
         generationRole = typeRegistry.generationMode.name.lowercase(),
       ).resolve(sourceApi)
+      .resolveProblemUris(options.defaultProblemBaseUri)
       .let {
         it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
       }

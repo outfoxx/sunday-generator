@@ -106,6 +106,7 @@ import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.ir.mergeWith
 import io.outfoxx.sunday.generator.ir.orInvocation
+import io.outfoxx.sunday.generator.ir.resolveProblemUris
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
@@ -207,6 +208,7 @@ class KotlinJAXRSIrGenerator(
         generationLanguage = "kotlin",
         generationRole = typeRegistry.generationMode.name.lowercase(),
       ).resolve(sourceApi)
+      .resolveProblemUris(options.defaultProblemBaseUri)
       .let {
         it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
       }
@@ -3129,6 +3131,12 @@ class KotlinJAXRSIrGenerator(
     property: GeneratedModelProperty,
     methodName: String,
   ) {
+    // Fixed fields have no constructor parameter after decoding defaults are applied.
+    val constant = property.allowedValues?.singleOrNull()?.let { property.type.parameterDefaultCode(it) }
+    if (constant != null) {
+      addStatement("builder.%L(%L)", methodName, constant)
+      return
+    }
     val name = property.name.kotlinIdentifierName
     if (property.problemConstructorTypeName().isNullable) {
       beginControlFlow("if (%N != null)", name)

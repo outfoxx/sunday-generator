@@ -312,6 +312,20 @@ Distinct response problems sharing a fixed custom URI fail validation in every
 generation mode, including server and model/problem-only output, regardless of
 output selection. `about:blank` is the sole exception to this custom URI conflict check.
 
+OpenAPI schema `type` constants and defaults use the same base selection as
+`x-sunday-problemTypes` and RAML `(sunday.problemTypes)`: the declaring document's
+problem base URI, resolved against the first API server URI when relative; otherwise
+the first server URI itself. Server variable defaults are expanded, with
+`problemUriParams` taking precedence. Referenced schema documents inherit the
+importing API's problem base unless they declare their own. A relative library base
+is resolved against that inherited base. If the result remains relative, every
+backend uses `-problem-base` (default `http://example.com/`) during generation.
+URI resolution follows standard path resolution, so a trailing slash identifies a
+base directory. Absolute URIs, including `about:blank` and URNs, remain unchanged.
+Resolution precedes inheritance validation and client registration, and applies to
+problem `type` discriminator mappings as well as constructor and wire constraints.
+Ordinary model URI properties and problem extension URI values are unchanged.
+
 Problems whose URI is selected at runtime require explicit transport registration. Constructors fill
 fixed fields; decoders still reject conflicting wire values. HTTP Problem constructors
 also expose inherited scalar schema defaults as overridable arguments, including

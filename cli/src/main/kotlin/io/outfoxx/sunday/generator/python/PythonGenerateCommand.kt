@@ -62,6 +62,7 @@ abstract class PythonGenerateCommand(
 
   protected fun pythonOptions(): PythonGeneratorOptions =
     PythonGeneratorOptions(
+      defaultProblemBaseUri = problemBaseUri,
       aggregateServices = aggregateServices,
       aggregateServiceName = aggregateServiceName,
       generateBrokerServices = generateBrokerServices,
