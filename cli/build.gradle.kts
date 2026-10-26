@@ -65,23 +65,6 @@ tasks {
       exclude(dependency("org.jetbrains.kotlin:kotlin-reflect:.*"))
     }
   }
-  test {
-    dependsOn(shadowJar)
-    jvmArgumentProviders.add(
-      objects.newInstance<ShadedCliArguments>().apply {
-        jarFile.set(shadowJar.flatMap { it.archiveFile })
-      },
-    )
-  }
-}
-
-/** Tests the distributed CLI artifact without inheriting the test JVM's dependency classpath. */
-abstract class ShadedCliArguments : org.gradle.process.CommandLineArgumentProvider {
-  @get:InputFile
-  @get:PathSensitive(PathSensitivity.NONE)
-  abstract val jarFile: RegularFileProperty
-
-  override fun asArguments(): Iterable<String> = listOf("-Dsunday.cli.shadow-jar=${jarFile.get().asFile.absolutePath}")
 }
 
 graalvmNative {

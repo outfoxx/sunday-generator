@@ -26,12 +26,6 @@ val generatedCodeClasspath by configurations.creating {
 }
 configurations.testImplementation { extendsFrom(generatedCodeClasspath) }
 
-// Native OpenAPI consumers can exclude AMF and all of its transitive runtime dependencies.
-val nativeOpenApiRuntime by configurations.creating {
-  extendsFrom(configurations.implementation.get(), configurations.runtimeOnly.get())
-  exclude(group = "com.github.amlorg", module = "amf-api-contract_2.12")
-}
-
 dependencies {
 
   javaxValidationRuntime("org.hibernate.validator:hibernate-validator:6.2.5.Final")
@@ -192,11 +186,6 @@ tasks.withType<Test>().configureEach {
       compilerClasspath.from(layout.buildDirectory.dir("compiler-fixtures"), generatedCodeClasspath)
     },
   )
-  jvmArgumentProviders.add(
-    objects.newInstance<NativeOpenApiClasspathArguments>().apply {
-      runtimeClasspath.from(sourceSets.main.get().output, nativeOpenApiRuntime)
-    },
-  )
   systemProperty(
     "sunday.validation.metrics-dir",
     layout.buildDirectory
@@ -230,13 +219,4 @@ abstract class GeneratedCodeClasspathArguments : org.gradle.process.CommandLineA
 
   override fun asArguments(): Iterable<String> =
     listOf("-Dsunday.validation.kotlin.classpath=${compilerClasspath.asPath}")
-}
-
-/** Supplies only production dependencies to the isolated native OpenAPI consumer regression. */
-abstract class NativeOpenApiClasspathArguments : org.gradle.process.CommandLineArgumentProvider {
-  @get:Classpath
-  abstract val runtimeClasspath: ConfigurableFileCollection
-
-  override fun asArguments(): Iterable<String> =
-    listOf("-Dsunday.validation.native-openapi.classpath=${runtimeClasspath.asPath}")
 }
