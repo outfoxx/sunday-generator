@@ -15,6 +15,7 @@ kover = "0.9.7"
 githubRelease = "2.5.2"
 graalNative = "0.11.1"
 hamcrest = "3.0"
+handyUriTemplates = "2.1.8"
 jackson = "2.21.0"
 jacksonKotlin = "2.21.0"
 jakartaJaxrs = "4.0.0"
@@ -78,6 +79,7 @@ diffutils = { module = "io.github.java-diff-utils:java-diff-utils", version.ref 
 dockerJava = { module = "com.github.docker-java:docker-java-core", version.ref = "dockerJava" }
 dockerJavaTransport = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "dockerJava" }
 hamcrest = { module = "org.hamcrest:hamcrest-library", version.ref = "hamcrest" }
+handyUriTemplates = { module = "com.damnhandy:handy-uri-templates", version.ref = "handyUriTemplates" }
 jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jacksonJavaTime = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 jacksonKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonKotlin" }
