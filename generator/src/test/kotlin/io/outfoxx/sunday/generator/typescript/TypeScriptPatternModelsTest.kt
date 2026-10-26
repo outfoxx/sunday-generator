@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
 import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
@@ -37,10 +38,10 @@ import java.nio.file.Path
 @Tag("models")
 class TypeScriptPatternModelsTest {
   @ParameterizedTest
-  @CsvSource("false,true", "true,true", "false,false", "true,false")
+  @CsvSource("false,On", "true,On", "false,Schema", "true,Schema", "false,Off", "true,Off")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
@@ -52,7 +53,7 @@ class TypeScriptPatternModelsTest {
         "http://example.com/",
         listOf("application/json"),
         "API",
-        preserveUnknownFields = preserve,
+        preserveUnknownFields = mode,
       ),
     ).generateServiceTypes()
     val check =

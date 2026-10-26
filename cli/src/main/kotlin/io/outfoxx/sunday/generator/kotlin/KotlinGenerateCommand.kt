@@ -22,6 +22,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.flags
 import io.outfoxx.sunday.generator.grouped
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
@@ -86,7 +87,13 @@ abstract class KotlinGenerateCommand(
 
   fun allRegistryOptions() =
     registryOptions + implyRegistryOptions() +
-      if (preserveUnknownFields) setOf(KotlinTypeRegistry.Option.PreserveUnknownFields) else emptySet()
+      if (preserveUnknownFields ==
+        UnknownFieldPreservation.On
+      ) {
+        setOf(KotlinTypeRegistry.Option.PreserveUnknownFields)
+      } else {
+        emptySet()
+      }
 
   protected open fun effectiveProblemLibrary(): KotlinProblemLibrary = problemLibrary
 

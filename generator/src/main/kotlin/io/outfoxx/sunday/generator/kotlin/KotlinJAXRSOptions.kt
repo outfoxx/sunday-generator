@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin
 
 import io.outfoxx.sunday.generator.GenerationOptions
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 
@@ -43,7 +44,7 @@ class KotlinJAXRSOptions(
   val resourceAdapters: Boolean = false,
   /** Enforce complete scheme and permission requirements through generated resources and application authenticators. */
   val enforceSecuritySchemes: Boolean = false,
-  preserveUnknownFields: Boolean = false,
+  preserveUnknownFields: UnknownFieldPreservation = UnknownFieldPreservation.Schema,
   profile: String? = null,
   defaultTolerance: Tolerance = Tolerance.Response,
   /** Default server SSE representation, overridable per operation and ignored for clients. */

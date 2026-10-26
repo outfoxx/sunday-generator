@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.closedModelsApi
@@ -57,7 +58,8 @@ class KotlinClosedModelsTest {
   ) {
     val api = closedModelsApi(frontend, directory)
     for (jaxrs in listOf(false, true)) {
-      for (preserve in listOf(false, true)) {
+      for (mode in UnknownFieldPreservation.entries) {
+        val preserve = mode == UnknownFieldPreservation.On
         val registry =
           KotlinTypeRegistry(
             null,
@@ -85,7 +87,7 @@ class KotlinClosedModelsTest {
               listOf("application/json"),
               "API",
               false,
-              preserveUnknownFields = preserve,
+              preserveUnknownFields = mode,
             ),
           ).generateServiceTypes()
         } else {
@@ -97,7 +99,7 @@ class KotlinClosedModelsTest {
               "http://example.com/",
               listOf("application/json"),
               "API",
-              preserveUnknownFields = preserve,
+              preserveUnknownFields = mode,
             ),
           ).generateServiceTypes()
         }
@@ -131,8 +133,16 @@ class KotlinClosedModelsTest {
         for (name in listOf("ExplicitRecord", "ExplicitChild", "ExplicitLeaf")) {
           val type = result.classLoader.loadClass("io.test.$name")
           val value = mapper.readValue("""{"name":"known","future":{"value":null}}""", type)
-          assertEquals(true, type.methods.any { it.name == "getAdditionalProperties" }, name)
-          assertEquals(true, mapper.readTree(mapper.writeValueAsBytes(value)).has("future"), name)
+          assertEquals(
+            mode != UnknownFieldPreservation.Off,
+            type.methods.any { it.name == "getAdditionalProperties" },
+            name,
+          )
+          assertEquals(
+            mode != UnknownFieldPreservation.Off,
+            mapper.readTree(mapper.writeValueAsBytes(value)).has("future"),
+            name,
+          )
         }
         val closed = result.classLoader.loadClass("io.test.ClosedRecord")
         mapper.readValue("""{"display-name":"valid","choice":{"kind":"cat","name":"cat"}}""", closed)

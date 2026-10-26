@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.closedModelsApi
@@ -34,33 +35,44 @@ import java.nio.file.Path
 class PythonClosedModelsTest : PythonTest() {
   @ParameterizedTest
   @CsvSource(
-    "raml,false",
-    "raml,true",
-    "openapi,false",
-    "openapi,true",
-    "asyncapi,false",
-    "asyncapi,true",
-    "composed,false",
-    "composed,true",
-    "openapi-unevaluated,false",
-    "openapi-unevaluated,true",
-    "asyncapi-unevaluated,false",
-    "asyncapi-unevaluated,true",
-    "composed-unevaluated,false",
-    "composed-unevaluated,true",
+    "raml,Schema",
+    "raml,On",
+    "raml,Off",
+    "openapi,Schema",
+    "openapi,On",
+    "openapi,Off",
+    "asyncapi,Schema",
+    "asyncapi,On",
+    "asyncapi,Off",
+    "composed,Schema",
+    "composed,On",
+    "composed,Off",
+    "openapi-unevaluated,Schema",
+    "openapi-unevaluated,On",
+    "openapi-unevaluated,Off",
+    "asyncapi-unevaluated,Schema",
+    "asyncapi-unevaluated,On",
+    "asyncapi-unevaluated,Off",
+    "composed-unevaluated,Schema",
+    "composed-unevaluated,On",
+    "composed-unevaluated,Off",
   )
   fun `closed objects retain unknown field rejection`(
     frontend: String,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
+    val preserve = mode == UnknownFieldPreservation.On
     val api = closedModelsApi(frontend, directory)
     assertTrue(
       compileModules(
         compiler,
         listOf(
-          PythonModelRenderer("test_api", preserve).renderModels(api.models),
+          PythonModelRenderer(
+            "test_api",
+            mode,
+          ).renderModels(api.models),
           PythonModuleBuilder("test_api/__init__.py").build(),
         ),
         importModules = listOf("test_api.models"),
@@ -84,7 +96,7 @@ class PythonClosedModelsTest : PythonTest() {
           assert ("extra" in open_value.model_dump()) == ${if (preserve) "True" else "False"}
           from test_api.models import ExplicitRecord, ExplicitChild, ExplicitLeaf
           for model in [ExplicitRecord, ExplicitChild, ExplicitLeaf]:
-              assert model.model_validate({"extra": 1}).model_dump()["extra"] == 1
+              assert ("extra" in model.model_validate({"extra": 1}).model_dump()) == ${if (mode != UnknownFieldPreservation.Off) "True" else "False"}
           """.trimIndent(),
       ),
     )

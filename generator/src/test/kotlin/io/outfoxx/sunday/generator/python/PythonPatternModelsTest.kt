@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
@@ -37,10 +38,10 @@ import java.nio.file.Path
 @Tag("models")
 class PythonPatternModelsTest : PythonTest() {
   @ParameterizedTest
-  @CsvSource("false,true", "true,true", "false,false", "true,false")
+  @CsvSource("false,On", "true,On", "false,Schema", "true,Schema", "false,Off", "true,Off")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
@@ -49,7 +50,10 @@ class PythonPatternModelsTest : PythonTest() {
       compileModules(
         compiler,
         listOf(
-          PythonModelRenderer("test_api", preserve).renderModels(api.models),
+          PythonModelRenderer(
+            "test_api",
+            mode,
+          ).renderModels(api.models),
           PythonModuleBuilder("test_api/__init__.py").build(),
         ),
         importModules = listOf("test_api.models"),

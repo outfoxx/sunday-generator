@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationOptions
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 
 /**
  * Options for Swift/Sunday generation.
@@ -30,7 +31,7 @@ class SwiftSundayOptions(
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = false,
-  preserveUnknownFields: Boolean = false,
+  preserveUnknownFields: UnknownFieldPreservation = UnknownFieldPreservation.Schema,
   profile: String? = null,
   defaultTolerance: Tolerance = Tolerance.Response,
   /** Generate server configurations and application-supplied transport factories. */

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir.emit
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -106,13 +107,13 @@ internal class GeneratedModelProperties(
     return closed(model)
   }
 
-  /** Explicit dynamic fields opt in to storage; the generator option supplies only the implicit-open default. */
+  /** Resolve catch-all storage without suppressing declared pattern fields or schema closure. */
   fun preservesUnknownFields(
     model: GeneratedModel,
-    default: Boolean,
+    preservation: UnknownFieldPreservation,
   ): Boolean {
     if (patternProperties(model).isNotEmpty()) return true
-    if (isClosed(model)) return false
+    if (isClosed(model) || preservation == UnknownFieldPreservation.Off) return false
     val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
 
     fun explicit(candidate: GeneratedModel): Boolean =
@@ -122,7 +123,7 @@ internal class GeneratedModelProperties(
             candidate.additionalProperties?.type != null ||
             candidate.inherits.mapNotNull(modelFor).any(::explicit)
         )
-    return default || explicit(model)
+    return preservation == UnknownFieldPreservation.On || explicit(model)
   }
 
   /** All pattern assertions applying to a model, including inherited constraints. */

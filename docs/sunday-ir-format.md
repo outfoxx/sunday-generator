@@ -497,9 +497,10 @@ semantics, and every matching pattern applies, including to named properties.
 Kotlin/Jackson, Swift decoding, TypeScript/Zod, and Python/Pydantic validate the
 matching value types and emitted constraints. Closed schemas still reject
 unmatched keys with null, scalar, array, or object values. Every target preserves
-explicitly declared dynamic fields. Implicit preservation defaults to off;
-`-preserve-unknown-fields` enables it for implicitly open models. Neither setting
-relaxes closed schemas or value constraints. See
+pattern-matched fields. The default `schema` preservation mode also retains
+explicit `additionalProperties` fields. `-preserve-unknown-fields on` enables
+implicit preservation; `off` suppresses catch-all storage. All modes enforce
+closed schemas and value constraints. See
 [dynamic model fields](unknown-fields.md) for configuration and model access.
 
 

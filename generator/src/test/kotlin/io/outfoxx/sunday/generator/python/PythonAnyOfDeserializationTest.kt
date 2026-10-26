@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.anyOfDeserializationApi
@@ -44,7 +45,7 @@ class PythonAnyOfDeserializationTest : PythonTest() {
       compileModules(
         compiler,
         listOf(
-          PythonModelRenderer("test_api", preserveUnknownFields = true).renderModels(api.models),
+          PythonModelRenderer("test_api", preserveUnknownFields = UnknownFieldPreservation.On).renderModels(api.models),
           PythonModuleBuilder("test_api/__init__.py").build(),
         ),
         importModules = listOf("test_api.models"),

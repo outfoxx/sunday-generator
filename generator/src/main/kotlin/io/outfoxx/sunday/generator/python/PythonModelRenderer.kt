@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -40,7 +41,7 @@ private const val FALLBACK_TAG = "__unknown__"
 /** Renders IR models into a Python Pydantic models module. */
 class PythonModelRenderer(
   private val packageName: String,
-  private val preserveUnknownFields: Boolean = false,
+  private val preserveUnknownFields: UnknownFieldPreservation = UnknownFieldPreservation.Schema,
   private val defaultTolerance: Tolerance = Tolerance.Response,
   private val moduleName: String = "$packageName.models",
 ) {

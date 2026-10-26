@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
@@ -340,7 +341,7 @@ class KotlinPatternModelsTest {
   ) {
     val api = patternModelsApi(directory, composed)
     for (jaxrs in listOf(false, true)) {
-      for (preserve in listOf(false, true)) {
+      for (mode in UnknownFieldPreservation.entries) {
         val registry =
           KotlinTypeRegistry(
             null,
@@ -348,7 +349,7 @@ class KotlinPatternModelsTest {
             buildSet {
               add(KotlinTypeRegistry.Option.ImplementModel)
               add(KotlinTypeRegistry.Option.JacksonAnnotations)
-              if (preserve) add(KotlinTypeRegistry.Option.PreserveUnknownFields)
+              if (mode == UnknownFieldPreservation.On) add(KotlinTypeRegistry.Option.PreserveUnknownFields)
             },
             problemLibrary = KotlinProblemLibrary.SUNDAY,
           )
@@ -368,7 +369,7 @@ class KotlinPatternModelsTest {
               listOf("application/json"),
               "API",
               false,
-              preserveUnknownFields = preserve,
+              preserveUnknownFields = mode,
             ),
           ).generateServiceTypes()
         } else {
@@ -380,7 +381,7 @@ class KotlinPatternModelsTest {
               "http://example.com/",
               listOf("application/json"),
               "API",
-              preserveUnknownFields = preserve,
+              preserveUnknownFields = mode,
             ),
           ).generateServiceTypes()
         }

@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.closedModelsApi
@@ -35,32 +36,45 @@ import java.nio.file.Path
 class SwiftClosedModelsTest {
   @ParameterizedTest
   @CsvSource(
-    "raml,false",
-    "raml,true",
-    "openapi,false",
-    "openapi,true",
-    "asyncapi,false",
-    "asyncapi,true",
-    "composed,false",
-    "composed,true",
-    "openapi-unevaluated,false",
-    "openapi-unevaluated,true",
-    "asyncapi-unevaluated,false",
-    "asyncapi-unevaluated,true",
-    "composed-unevaluated,false",
-    "composed-unevaluated,true",
+    "raml,Schema",
+    "raml,On",
+    "raml,Off",
+    "openapi,Schema",
+    "openapi,On",
+    "openapi,Off",
+    "asyncapi,Schema",
+    "asyncapi,On",
+    "asyncapi,Off",
+    "composed,Schema",
+    "composed,On",
+    "composed,Off",
+    "openapi-unevaluated,Schema",
+    "openapi-unevaluated,On",
+    "openapi-unevaluated,Off",
+    "asyncapi-unevaluated,Schema",
+    "asyncapi-unevaluated,On",
+    "asyncapi-unevaluated,Off",
+    "composed-unevaluated,Schema",
+    "composed-unevaluated,On",
+    "composed-unevaluated,Off",
   )
   fun `closed objects reject unknown fields`(
     frontend: String,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: SwiftCompiler,
     @TempDir directory: Path,
   ) {
+    val preserve = mode == UnknownFieldPreservation.On
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(
       closedModelsApi(frontend, directory),
       registry,
-      SwiftSundayOptions("http://example.com/", listOf("application/json"), "API", preserveUnknownFields = preserve),
+      SwiftSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = mode,
+      ),
     ).generateServiceTypes()
     registry.generateFiles(
       GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
@@ -105,7 +119,7 @@ class SwiftClosedModelsTest {
             try JSONEncoder().encode(JSONDecoder().decode(ExplicitChild.self, from: Data(#"{"future":1}"#.utf8))),
             try JSONEncoder().encode(JSONDecoder().decode(ExplicitLeaf.self, from: Data(#"{"future":1}"#.utf8)))
           ] {
-            XCTAssertEqual((try JSONSerialization.jsonObject(with: data) as! NSDictionary)["future"] as? Int, 1)
+            XCTAssertEqual((try JSONSerialization.jsonObject(with: data) as! NSDictionary)["future"] != nil, ${mode != UnknownFieldPreservation.Off})
           }
           ${if (frontend.startsWith("composed")) "try check(EventRecord.self, \"\")" else ""}
           _ = try JSONDecoder().decode(OpenRecord.self, from: Data(#"{"name":"valid","extra":1}"#.utf8))

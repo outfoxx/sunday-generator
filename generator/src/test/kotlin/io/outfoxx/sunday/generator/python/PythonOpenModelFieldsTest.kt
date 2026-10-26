@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -169,7 +170,8 @@ class PythonOpenModelFieldsTest : PythonTest() {
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
-    val renderer = PythonModelRenderer("test_api", preserve)
+    val renderer =
+      PythonModelRenderer("test_api", if (preserve) UnknownFieldPreservation.On else UnknownFieldPreservation.Schema)
     assertTrue(
       compileModules(
         compiler,

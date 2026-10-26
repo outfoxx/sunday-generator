@@ -32,6 +32,7 @@ import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
@@ -43,7 +44,7 @@ internal fun addOpenModelProperties(
   modelTypes: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   options: Set<KotlinTypeRegistry.Option>,
   properties: GeneratedModelProperties,
-  preserveUnknownFields: Boolean,
+  preserveUnknownFields: UnknownFieldPreservation,
   nativeTypes: BeanValidationTypes?,
   register: (GeneratedModel, ClassName, TypeSpec.Builder) -> Unit,
   typeName: (GeneratedTypeRef) -> TypeName,

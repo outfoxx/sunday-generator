@@ -92,8 +92,9 @@ abstract class CommonGenerateCommand(
   /** Controls storage of dynamic fields without relaxing schema validation. */
   val preserveUnknownFields by option(
     "-preserve-unknown-fields",
-    help = "Preserve dynamic fields on implicitly open models; explicit schema declarations take precedence",
-  ).flag("-no-preserve-unknown-fields", default = false, defaultForHelp = "disabled")
+    help = "Catch-all storage: on for open models, off for none, schema for explicit additionalProperties",
+  ).enum<UnknownFieldPreservation> { it.name.lowercase() }
+    .default(UnknownFieldPreservation.Schema)
 
   /** Derives patch companions for merge-patch request bodies without requiring a schema annotation. */
   val autoPatchable by option(

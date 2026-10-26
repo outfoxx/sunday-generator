@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.tools.kotlinPlacement
 
@@ -32,5 +33,5 @@ val kotlinJAXRSTestOptions =
     listOf("application/json"),
     "API",
     false,
-    preserveUnknownFields = true,
+    preserveUnknownFields = UnknownFieldPreservation.On,
   )

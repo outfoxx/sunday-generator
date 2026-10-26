@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -42,7 +43,12 @@ class SwiftFreeformPatchesTest {
     val registry = SwiftTypeRegistry(emptySet())
     val api = GeneratedApiIrExporter().export(uri)
     val options =
-      SwiftSundayOptions("http://example.com/", listOf("application/json"), "API", preserveUnknownFields = preserve)
+      SwiftSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = if (preserve) UnknownFieldPreservation.On else UnknownFieldPreservation.Schema,
+      )
     SwiftSundayIrGenerator(api, registry, options).generateServiceTypes()
     registry.generateFiles(
       GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),

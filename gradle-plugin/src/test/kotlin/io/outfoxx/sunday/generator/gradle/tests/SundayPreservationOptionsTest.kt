@@ -16,26 +16,28 @@
 
 package io.outfoxx.sunday.generator.gradle.tests
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.gradle.SundayGenerate
 import io.outfoxx.sunday.generator.gradle.SundayGenerations
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class SundayPreservationOptionsTest {
   @Test
-  fun `task and DSL default to no implicit preservation and allow enabling it`() {
+  fun `task and DSL default to schema preservation and propagate every mode`() {
     val project = ProjectBuilder.builder().build()
     project.pluginManager.apply("java")
     project.pluginManager.apply("io.outfoxx.sunday-generator")
     @Suppress("UNCHECKED_CAST")
     val generations = project.extensions.getByName("sundayGenerations") as SundayGenerations
     val generation = generations.create("client")
-    assertFalse(generation.preserveUnknownFields.get())
+    assertEquals(UnknownFieldPreservation.Schema, generation.preserveUnknownFields.get())
     val task = project.tasks.named("sundayGenerate_client", SundayGenerate::class.java).get()
-    assertFalse(task.preserveUnknownFields.get())
-    generation.preserveUnknownFields.set(true)
-    assertTrue(task.preserveUnknownFields.get())
+    assertEquals(UnknownFieldPreservation.Schema, task.preserveUnknownFields.get())
+    for (mode in UnknownFieldPreservation.entries) {
+      generation.preserveUnknownFields.set(mode)
+      assertEquals(mode, task.preserveUnknownFields.get())
+    }
   }
 }

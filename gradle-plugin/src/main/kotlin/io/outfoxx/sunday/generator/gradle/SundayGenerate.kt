@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSource
@@ -215,9 +216,10 @@ abstract class SundayGenerate
     @get:Optional
     val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    /** Preserve fields on implicitly open models. Disabled by default; explicit schema declarations take precedence. */
+    /** Catch-all storage policy; defaults to explicit schema declarations. */
     @get:Input
-    val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+    val preserveUnknownFields: Property<UnknownFieldPreservation> =
+      objects.property(UnknownFieldPreservation::class.java).convention(UnknownFieldPreservation.Schema)
 
     /** Generates structural value equality for implemented Kotlin models. Enabled by default. */
     @get:Input
@@ -339,7 +341,7 @@ abstract class SundayGenerate
       if (!modelValueEquality.get()) {
         options.remove(KotlinTypeRegistry.Option.ModelValueEquality)
       }
-      if (!preserveUnknownFields.get()) {
+      if (preserveUnknownFields.get() != UnknownFieldPreservation.On) {
         options.remove(KotlinTypeRegistry.Option.PreserveUnknownFields)
       }
       if (disableJacksonAnnotations.get()) {

@@ -76,5 +76,6 @@ Models with `additionalProperties: false` inspect all input keys using an unrest
 allowed names include inherited wire properties. A finite `CodingKeys` enum alone
 cannot detect unknown input keys. Explicit `additionalProperties` declarations
 opt models into dynamic field storage, including nested JSON objects and nulls.
-Implicit preservation defaults to off; `-preserve-unknown-fields` enables it. See
+The default `schema` mode omits implicit storage; `-preserve-unknown-fields on`
+enables it, while `off` suppresses catch-all storage. See
 [dynamic model fields](unknown-fields.md).

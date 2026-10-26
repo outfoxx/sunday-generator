@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
@@ -45,10 +46,10 @@ import java.nio.file.Path
 @Tag("models")
 class SwiftPatternModelsTest {
   @ParameterizedTest
-  @CsvSource("false,true", "true,true", "false,false", "true,false")
+  @CsvSource("false,On", "true,On", "false,Schema", "true,Schema", "false,Off", "true,Off")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: SwiftCompiler,
     @TempDir directory: Path,
   ) {
@@ -161,7 +162,12 @@ class SwiftPatternModelsTest {
     SwiftSundayIrGenerator(
       api,
       registry,
-      SwiftSundayOptions("http://example.com/", listOf("application/json"), "API", preserveUnknownFields = preserve),
+      SwiftSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = mode,
+      ),
     ).generateServiceTypes()
     registry.generateFiles(
       // The pattern regression also exercises anonymous request declarations owned by the service.

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.tools.closedModelsApi
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
@@ -93,27 +94,35 @@ class TypeScriptClosedModelsTest {
 
   @ParameterizedTest
   @CsvSource(
-    "raml,false",
-    "raml,true",
-    "openapi,false",
-    "openapi,true",
-    "asyncapi,false",
-    "asyncapi,true",
-    "composed,false",
-    "composed,true",
-    "openapi-unevaluated,false",
-    "openapi-unevaluated,true",
-    "asyncapi-unevaluated,false",
-    "asyncapi-unevaluated,true",
-    "composed-unevaluated,false",
-    "composed-unevaluated,true",
+    "raml,Schema",
+    "raml,On",
+    "raml,Off",
+    "openapi,Schema",
+    "openapi,On",
+    "openapi,Off",
+    "asyncapi,Schema",
+    "asyncapi,On",
+    "asyncapi,Off",
+    "composed,Schema",
+    "composed,On",
+    "composed,Off",
+    "openapi-unevaluated,Schema",
+    "openapi-unevaluated,On",
+    "openapi-unevaluated,Off",
+    "asyncapi-unevaluated,Schema",
+    "asyncapi-unevaluated,On",
+    "asyncapi-unevaluated,Off",
+    "composed-unevaluated,Schema",
+    "composed-unevaluated,On",
+    "composed-unevaluated,Off",
   )
   fun `closed objects reject unknown fields`(
     frontend: String,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
+    val preserve = mode == UnknownFieldPreservation.On
     val registry = TypeScriptTypeRegistry(setOf())
     TypeScriptSundayIrGenerator(
       closedModelsApi(frontend, directory),
@@ -122,7 +131,7 @@ class TypeScriptClosedModelsTest {
         "http://example.com/",
         listOf("application/json"),
         "API",
-        preserveUnknownFields = preserve,
+        preserveUnknownFields = mode,
       ),
     ).generateServiceTypes()
     val check =
@@ -143,7 +152,7 @@ class TypeScriptClosedModelsTest {
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
             for (const declaration of [ExplicitRecordSchema, ExplicitChildSchema, ExplicitLeafSchema]) {
               const value = runtime.resolveSchema(declaration).parse({extra: 1}) as Record<string, unknown>;
-              if (value.extra !== 1) throw new Error('explicit additional fields discarded');
+              if (Object.hasOwn(value, 'extra') !== ${mode != UnknownFieldPreservation.Off}) throw new Error('incorrect explicit preservation');
             }
             const implicit = runtime.resolveSchema(OpenRecordSchema).parse({name: 'known', extra: 1});
             if (Object.hasOwn(implicit, 'extra') !== $preserve) throw new Error('incorrect implicit preservation');

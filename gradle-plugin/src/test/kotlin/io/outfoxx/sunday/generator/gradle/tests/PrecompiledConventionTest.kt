@@ -110,7 +110,7 @@ class PrecompiledConventionTest {
             mode.set(GenerationMode.Server)
 
             outputCategories.set(setOf(io.outfoxx.sunday.generator.GeneratedTypeCategory.Model, io.outfoxx.sunday.generator.GeneratedTypeCategory.Problem))
-            preserveUnknownFields.set(true)
+            preserveUnknownFields.set(io.outfoxx.sunday.generator.UnknownFieldPreservation.On)
           }
         }
         """.trimIndent(),

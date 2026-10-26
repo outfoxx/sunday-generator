@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.swift.SwiftSundayOptions
 
 val swiftSundayTestOptions =
@@ -23,5 +24,5 @@ val swiftSundayTestOptions =
     "http://example.com/",
     listOf("application/json"),
     "API",
-    preserveUnknownFields = true,
+    preserveUnknownFields = UnknownFieldPreservation.On,
   )

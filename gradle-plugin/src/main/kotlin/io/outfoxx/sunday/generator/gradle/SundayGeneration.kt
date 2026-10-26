@@ -21,6 +21,7 @@ package io.outfoxx.sunday.generator.gradle
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedSseServerResponseMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
@@ -124,8 +125,9 @@ class SundayGeneration(
   val disableContainerElementValid: Property<Boolean> = objects.property(Boolean::class.java)
   val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)
 
-  /** Preserve fields on implicitly open models. Disabled by default; explicit schema declarations take precedence. */
-  val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+  /** Catch-all storage policy; defaults to explicit schema declarations. */
+  val preserveUnknownFields: Property<UnknownFieldPreservation> =
+    objects.property(UnknownFieldPreservation::class.java).convention(UnknownFieldPreservation.Schema)
 
   /** Generates structural value equality for implemented Kotlin models. Enabled by default. */
   val modelValueEquality: Property<Boolean> = objects.property(Boolean::class.java).convention(true)

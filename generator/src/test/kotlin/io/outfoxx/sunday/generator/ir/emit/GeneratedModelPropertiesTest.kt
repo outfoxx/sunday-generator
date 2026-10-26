@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.ir.emit
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -57,13 +58,14 @@ class GeneratedModelPropertiesTest {
         it.name
       }
     val properties = GeneratedModelProperties { models[it.name] }
-    for (default in listOf(false, true)) {
-      assertEquals(default, properties.preservesUnknownFields(implicit, default))
-      for (model in listOf(explicit, typed, pattern, child, explicitChild)) {
-        assertTrue(properties.preservesUnknownFields(model, default), model.name)
+    for (mode in UnknownFieldPreservation.entries) {
+      assertEquals(mode == UnknownFieldPreservation.On, properties.preservesUnknownFields(implicit, mode))
+      for (model in listOf(explicit, typed, child, explicitChild)) {
+        assertEquals(mode != UnknownFieldPreservation.Off, properties.preservesUnknownFields(model, mode), model.name)
       }
+      assertTrue(properties.preservesUnknownFields(pattern, mode))
       for (model in listOf(closed, closedChild)) {
-        assertEquals(false, properties.preservesUnknownFields(model, default), model.name)
+        assertEquals(false, properties.preservesUnknownFields(model, mode), model.name)
       }
     }
   }

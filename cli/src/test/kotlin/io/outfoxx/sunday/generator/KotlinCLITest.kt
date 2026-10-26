@@ -154,7 +154,11 @@ class KotlinCLITest {
   }
 
   @ParameterizedTest
-  @EnumSource(KotlinTypeRegistry.Option::class)
+  @EnumSource(
+    value = KotlinTypeRegistry.Option::class,
+    names = ["PreserveUnknownFields"],
+    mode = EnumSource.Mode.EXCLUDE,
+  )
   fun `type registry defaults agree with help`(option: KotlinTypeRegistry.Option) {
     if (option in KotlinGenerateCommand.impliedRegistryOptions) {
       return
@@ -187,7 +191,11 @@ class KotlinCLITest {
   }
 
   @ParameterizedTest
-  @EnumSource(KotlinTypeRegistry.Option::class)
+  @EnumSource(
+    value = KotlinTypeRegistry.Option::class,
+    names = ["PreserveUnknownFields"],
+    mode = EnumSource.Mode.EXCLUDE,
+  )
   fun `enable type registry options`(option: KotlinTypeRegistry.Option) {
     // Skip implied options
     if (option in KotlinGenerateCommand.impliedRegistryOptions) {
@@ -200,7 +208,11 @@ class KotlinCLITest {
   }
 
   @ParameterizedTest
-  @EnumSource(KotlinTypeRegistry.Option::class)
+  @EnumSource(
+    value = KotlinTypeRegistry.Option::class,
+    names = ["PreserveUnknownFields"],
+    mode = EnumSource.Mode.EXCLUDE,
+  )
   fun `disable type registry options`(option: KotlinTypeRegistry.Option) {
     // Skip implied options
     if (option in KotlinGenerateCommand.impliedRegistryOptions) {
