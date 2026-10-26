@@ -1,15 +1,18 @@
 # Kotlin model value equality
 
-Kotlin/Sunday and Kotlin/JAX-RS can generate structural `equals` and `hashCode`
-for implemented data models. This is opt-in so regenerating an existing SDK does
-not silently change its collection or state-comparison behavior.
+Kotlin/Sunday and Kotlin/JAX-RS generate structural `equals` and `hashCode`
+for implemented data models by default in the CLI and Gradle plugin.
+Regenerating an existing SDK enables value comparison, which can change its
+collection or state-comparison behavior. Disable the option to retain the
+previous equality behavior.
 
 ## Configuration
 
 - CLI: `-model-value-equality` enables the policy; `-no-model-value-equality`
-  disables it. The default is disabled.
-- Kotlin Gradle plugin: set `modelValueEquality.set(true)` in a generation block
-  or on a `SundayGenerate` task. The default is `false`.
+  disables it. The default is enabled.
+- Kotlin Gradle plugin: `modelValueEquality` defaults to `true`. Set
+  `modelValueEquality.set(false)` in a generation block or on a `SundayGenerate`
+  task to disable it.
 - Generator API: include `KotlinTypeRegistry.Option.ModelValueEquality` in the
   registry options.
 

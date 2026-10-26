@@ -164,6 +164,7 @@ class KotlinCLITest {
       option in
         setOf(
           KotlinTypeRegistry.Option.ImplementModel,
+          KotlinTypeRegistry.Option.ModelValueEquality,
           KotlinTypeRegistry.Option.JacksonAnnotations,
           KotlinTypeRegistry.Option.ValidationConstraints,
           KotlinTypeRegistry.Option.ContainerElementValid,

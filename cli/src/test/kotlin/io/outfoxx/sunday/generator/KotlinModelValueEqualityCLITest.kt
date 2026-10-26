@@ -25,11 +25,13 @@ import org.junit.jupiter.api.Test
 
 class KotlinModelValueEqualityCLITest {
   @Test
-  fun `value equality is opt in for both Kotlin targets`() {
+  fun `value equality defaults to enabled and can be overridden for both Kotlin targets`() {
     val source = requireNotNull(javaClass.getResource("/empty.raml")).toURI()
     for ((flags, expected) in listOf(
-      emptyList<String>() to false,
+      emptyList<String>() to true,
       listOf("-model-value-equality") to true,
+      listOf("-no-model-value-equality") to false,
+      listOf("-no-model-value-equality", "-model-value-equality") to true,
       listOf("-model-value-equality", "-no-model-value-equality") to false,
     )) {
       val commands =

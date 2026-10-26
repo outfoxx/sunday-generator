@@ -219,9 +219,9 @@ abstract class SundayGenerate
     @get:Input
     val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
-    /** Opts ordinary implemented Kotlin models into structural value equality. */
+    /** Generates structural value equality for implemented Kotlin models. Enabled by default. */
     @get:Input
-    val modelValueEquality: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+    val modelValueEquality: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
     @get:Input
     @get:Optional

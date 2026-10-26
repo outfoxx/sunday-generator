@@ -278,7 +278,7 @@ class KotlinModelValueEqualityTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["sunday", "jaxrs"])
-  fun `default generation retains ordinary reference equality`(
+  fun `disabling value equality retains ordinary reference equality`(
     framework: String,
     @ResourceUri("openapi/ir/open-model-fields.yaml") source: URI,
   ) {

@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test
 
 class SundayModelValueEqualityOptionsTest {
   @Test
-  fun `value equality is opt in and propagated from DSL to task`() {
+  fun `value equality defaults to enabled and overrides propagate from DSL to task`() {
     val project = ProjectBuilder.builder().build()
     project.pluginManager.apply("java")
     project.pluginManager.apply("io.outfoxx.sunday-generator")
@@ -33,11 +33,11 @@ class SundayModelValueEqualityOptionsTest {
     val generations = project.extensions.getByName("sundayGenerations") as SundayGenerations
     val generation = generations.create("client")
     val task = project.tasks.named("sundayGenerate_client", SundayGenerate::class.java).get()
-    assertFalse(generation.modelValueEquality.get())
-    assertFalse(task.modelValueEquality.get())
-    generation.modelValueEquality.set(true)
+    assertTrue(generation.modelValueEquality.get())
     assertTrue(task.modelValueEquality.get())
     generation.modelValueEquality.set(false)
     assertFalse(task.modelValueEquality.get())
+    generation.modelValueEquality.set(true)
+    assertTrue(task.modelValueEquality.get())
   }
 }
