@@ -54,6 +54,69 @@ import kotlin.io.path.writeText
 @Tag("models")
 class KotlinModelValueEqualityTest {
   @ParameterizedTest
+  @ValueSource(strings = ["sunday", "jaxrs", "server", "quarkus"])
+  fun `equality return values stay attached at class and property wrapping boundaries`(
+    framework: String,
+    @TempDir directory: Path,
+  ) {
+    val reportedName = "BackgroundProcessingTaskCompletedEvent"
+    val declarations =
+      listOf(reportedName.dropLast(1), reportedName, "${reportedName}s")
+        .associateWith { listOf("message") } +
+        ("LongProperties" to (16..32).map { "message" + "X".repeat(it - 7) })
+    val source = directory.resolve("events.yaml")
+    source.writeText(
+      buildString {
+        appendLine(
+          """
+          openapi: 3.1.0
+          info: {title: Equality formatting reproduction, version: 1.0.0}
+          paths:
+            /events:
+              get:
+                operationId: getEvent
+                responses:
+                  '200':
+                    description: An event
+                    content:
+                      application/json:
+                        schema: {${'$'}ref: '#/components/schemas/$reportedName'}
+          components:
+            schemas:
+          """.trimIndent(),
+        )
+        declarations.forEach { (name, fields) ->
+          appendLine("    $name:")
+          appendLine("      type: object")
+          appendLine("      required: [${fields.joinToString()}]")
+          appendLine("      properties:")
+          fields.forEach { appendLine("        $it: {type: string}") }
+        }
+      },
+    )
+    val registry = generate(GeneratedApiIrExporter().export(source.toUri()), framework)
+    val compiled = compileTypesResult(registry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+    val mapper = jacksonObjectMapper()
+    val instances =
+      declarations.map { (name, fields) ->
+        val type = compiled.classLoader.loadClass("io.test.$name")
+        val values = fields.associateWith { "value" }
+
+        fun decode(values: Map<String, String>) = mapper.readValue(mapper.writeValueAsString(values), type)
+        val first = decode(values)
+        assertEqualValues(first, first)
+        assertEqualValues(first, decode(values))
+        assertFalse(first.equals(null))
+        assertFalse(first.equals("value"))
+        fields.forEach { field -> assertNotEquals(first, decode(values + (field to "changed"))) }
+        first
+      }
+    assertNotEquals(instances[0], instances[1])
+    assertNotEquals(instances[1], instances[0])
+  }
+
+  @ParameterizedTest
   @CsvSource(
     "raml, sunday",
     "raml, jaxrs",
