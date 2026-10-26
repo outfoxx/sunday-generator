@@ -18,6 +18,56 @@ class ProblemUriResolutionTest {
   @TempDir
   lateinit var directory: Path
 
+  @Test
+  fun `problem enum aliases retain nullability and intersect local constraints without mutating shared types`() {
+    val source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "file:///problems.yaml")
+    val enum =
+      GeneratedModel("ProblemType", GeneratedModel.Kind.ENUM, source, values = listOf("missing", "unavailable"))
+    val alias =
+      GeneratedModel(
+        "ProblemTypeAlias",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        source,
+        aliases = listOf(GeneratedTypeRef.named(enum.name, nullable = true)),
+      )
+    val problem =
+      GeneratedModel(
+        "Problem",
+        GeneratedModel.Kind.OBJECT,
+        source,
+        properties =
+          listOf(
+            GeneratedModelProperty(
+              "type",
+              GeneratedTypeRef.named(alias.name),
+              defaultValue = "missing",
+              allowedValues = listOf("missing", null),
+            ),
+            GeneratedModelProperty("title", GeneratedTypeRef.scalar("string")),
+            GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer")),
+            GeneratedModelProperty("code", GeneratedTypeRef.named(alias.name), defaultValue = "missing"),
+          ),
+      )
+    val child =
+      GeneratedModel(
+        "ChildProblem",
+        GeneratedModel.Kind.OBJECT,
+        source,
+        inherits = listOf(GeneratedTypeRef.named("Problem")),
+      )
+    val api = GeneratedApi(name = "Problems", source = source, models = listOf(enum, alias, problem, child))
+    val resolved = api.resolveProblemUris("https://example.com/problems/")
+    val fields = GeneratedModelProperties(GeneratedApiIndex(resolved)::modelOrNull)
+    val type = fields.fields(resolved.models.last()).single { it.wireName == "type" }.effective
+    assertEquals(GeneratedTypeRef.scalar("string", nullable = true, format = "uri"), type.type)
+    assertEquals("https://example.com/problems/missing", type.defaultValue)
+    assertEquals(listOf("https://example.com/problems/missing", null), type.allowedValues)
+    assertEquals(enum, resolved.models[0])
+    assertEquals(alias, resolved.models[1])
+    assertEquals(problem.properties.last(), resolved.models[2].properties.last())
+    assertEquals(resolved, resolved.resolveProblemUris("https://example.com/problems/"))
+  }
+
   @ParameterizedTest
   @ValueSource(
     strings = [

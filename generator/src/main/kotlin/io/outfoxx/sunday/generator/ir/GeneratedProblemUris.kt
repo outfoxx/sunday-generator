@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.ir
 
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelIndex
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import java.net.URI
 
@@ -39,6 +40,7 @@ fun GeneratedApi.resolveProblemUris(defaultBaseUri: String): GeneratedApi =
 /** Resolves source problem literals using the base of each declaring document before composition. */
 internal fun GeneratedApi.resolveSchemaProblemUris(baseUri: (GeneratedModel) -> URI): GeneratedApi {
   val index = GeneratedModelIndex(models)
+  val properties = GeneratedModelProperties(index::modelOrNull)
 
   fun isProblem(model: GeneratedModel): Boolean {
     val parent = model.inherits.firstOrNull()?.let(index::modelOrNull)
@@ -75,9 +77,24 @@ internal fun GeneratedApi.resolveSchemaProblemUris(baseUri: (GeneratedModel) -> 
                 if ((property.serializationName ?: property.name) != "type") {
                   property
                 } else {
+                  val enum = properties.declarationModel(property.type)?.takeIf { it.kind == GeneratedModel.Kind.ENUM }
+                  val allowedValues = property.allowedValues?.map { if (it is String) resolve(model, it) else it }
+                  val nullable = properties.acceptsNull(property.type)
+                  val enumValues =
+                    enum?.values?.map { resolve(model, it) }?.let {
+                      if (nullable) it + null else it
+                    }
+                  // The same enum may also describe ordinary fields whose wire values must stay unchanged.
                   property.copy(
+                    type =
+                      if (enum == null) {
+                        property.type
+                      } else {
+                        GeneratedTypeRef.scalar("string", nullable = nullable, format = "uri")
+                      },
                     defaultValue = property.defaultValue?.let { resolve(model, it) },
-                    allowedValues = property.allowedValues?.map { if (it is String) resolve(model, it) else it },
+                    allowedValues =
+                      enumValues?.filter { allowedValues == null || it in allowedValues } ?: allowedValues,
                   )
                 }
               }

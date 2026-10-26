@@ -45,6 +45,66 @@ import kotlin.io.path.writeText
 @Tag("models")
 @Tag("responses")
 class PythonInheritedProblemTest : PythonTest() {
+  @ParameterizedTest
+  @CsvSource("sunday,false", "sunday,true", "litestar,false", "litestar,true")
+  fun `problem enum defaults resolve without changing shared enum uses`(
+    target: String,
+    multipleValues: Boolean,
+    @ResourceUri("openapi/ir/problem-type-enum.yaml") source: URI,
+    @TempDir directory: Path,
+    compiler: PythonCompiler,
+  ) {
+    val specification = directory.resolve("problems.yaml")
+    specification.writeText(
+      source.toURL().readText().let {
+        if (multipleValues) it.replace("enum: [missing]", "enum: [missing, unavailable]") else it
+      },
+    )
+    val api = GeneratedApiIrExporter().export(specification.toUri())
+    val options =
+      PythonGeneratorOptions(placement = pythonPlacement("test_api"), defaultProblemBaseUri = "https://example.com/")
+    val modules =
+      if (target == "litestar") {
+        PythonLitestarIrGenerator(api, options).generateModules()
+      } else {
+        PythonSundayIrGenerator(api, options).generateModules()
+      }
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        smokeCode =
+          """
+          from pydantic import ValidationError
+          from test_api.models import Problem, ChildProblem, Ordinary, ProblemType
+          from test_api.models_problems import ChildProblem as ChildError
+          expected = 'https://example.com/problems/missing'
+          for cls in [Problem, ChildProblem]:
+              value = cls()
+              assert value.model_dump(mode='json', by_alias=True)['type'] == expected
+              assert value.model_dump(mode='json', by_alias=True)['code'] == 'missing'
+              assert cls.model_validate(value.model_dump()).model_dump() == value.model_dump()
+              if "$multipleValues" == "true":
+                  override = cls(type='https://example.com/problems/unavailable')
+                  assert override.model_dump(mode='json')['type'] == 'https://example.com/problems/unavailable'
+              for invalid in ['missing', 'https://example.com/problems/unknown']:
+                  try:
+                      cls(type=invalid)
+                  except ValidationError:
+                      pass
+                  else:
+                      raise AssertionError('Invalid problem type was accepted')
+          assert Ordinary().model_dump(mode='json')['type'] == 'missing'
+          assert ProblemType('missing').value == 'missing'
+          try:
+              raise ChildError()
+          except ChildError as error:
+              assert error.model_dump(mode='json', by_alias=True)['type'] == expected
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @Test
   fun `problem extensions cannot shadow wrapper payload members`(
     @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,

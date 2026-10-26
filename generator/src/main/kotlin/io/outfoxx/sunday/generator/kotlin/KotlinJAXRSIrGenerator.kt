@@ -3131,6 +3131,12 @@ class KotlinJAXRSIrGenerator(
     property: GeneratedModelProperty,
     methodName: String,
   ) {
+    // Fixed fields have no constructor parameter after decoding defaults are applied.
+    val constant = property.allowedValues?.singleOrNull()?.let { property.type.parameterDefaultCode(it) }
+    if (constant != null) {
+      addStatement("builder.%L(%L)", methodName, constant)
+      return
+    }
     val name = property.name.kotlinIdentifierName
     if (property.problemConstructorTypeName().isNullable) {
       beginControlFlow("if (%N != null)", name)

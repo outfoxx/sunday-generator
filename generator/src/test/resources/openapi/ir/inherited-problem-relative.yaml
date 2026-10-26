@@ -136,3 +136,19 @@ components:
       anyOf:
         - {$ref: '#/components/schemas/TeamNotFoundProblem'}
         - {$ref: '#/components/schemas/UserNotFoundProblem'}
+    ProblemType:
+      type: string
+      enum: [missing]
+      default: missing
+    EnumProblem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: {$ref: '#/components/schemas/ProblemType'}
+        title: {type: string, default: Missing}
+        status: {type: integer, default: 404}
+        code: {$ref: '#/components/schemas/ProblemType'}
+    Ordinary:
+      type: object
+      properties:
+        type: {$ref: '#/components/schemas/ProblemType'}
