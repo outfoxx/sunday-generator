@@ -1169,7 +1169,11 @@ class PythonModelRenderer(
 
     val payload =
       if (fallback == null) {
-        renderStandardUnionAlias(aliases, unionType, unionName)
+        if (unionMode == GeneratedModel.UnionMode.ONE_OF && aliases.size > 1) {
+          renderOneOfUnionAlias(aliases, unionType, unionName)
+        } else {
+          renderStandardUnionAlias(aliases, unionType, unionName)
+        }
       } else if (fallback.externallyDiscriminated || isExternallyDiscriminatedUnion()) {
         val fallbackType = PythonCodeBlock.of("%L", fallback.modelName.pythonTypeName)
         PythonCodeBlock.of("type %L = %C | %C", unionName, unionType, fallbackType)
@@ -1204,6 +1208,99 @@ class PythonModelRenderer(
   }
 
   private fun GeneratedModel.hasUnionCommonRules(): Boolean = modelProperties.hasUnionCommonRules(this)
+
+  private fun GeneratedModel.renderOneOfUnionAlias(
+    aliases: List<GeneratedTypeRef>,
+    unionType: PythonCodeBlock,
+    unionName: String,
+  ): PythonCodeBlock {
+    val alternativesName = "_${name.pythonTypeName}Alternatives"
+    val validatorName = "_validate_${name.pythonIdentifierName}_one_of"
+    // Check original presence before defaults, accepting both generated input names.
+    // The branch adapter still owns alias precedence, constraints, and value conversion.
+    return PythonCodeBlock.join(
+      listOf(
+        renderStandardUnionAlias(aliases, unionType, alternativesName),
+        PythonCodeBlock.of(
+          """
+          def %L(value: object, info: %T) -> object:
+              adapters: tuple[tuple[%T[%T], tuple[tuple[str, ...], ...]], ...] = (
+          %C
+              )
+              matches = 0
+              for adapter, required in adapters:
+                  if isinstance(value, dict) and any(not any(key in value for key in names) for names in required):
+                      continue
+                  try:
+                      if info.mode == "json":
+                          adapter.validate_json(%T(value), context=info.context)
+                      else:
+                          adapter.validate_python(value, context=info.context)
+                  except %T:
+                      continue
+                  matches += 1
+              if matches != 1:
+                  raise ValueError(%S)
+              return value
+          """.trimIndent(),
+          validatorName,
+          PythonSymbol("pydantic", "ValidationInfo"),
+          PythonSymbol("pydantic", "TypeAdapter"),
+          PythonSymbol("typing", "Any"),
+          PythonCodeBlock.join(
+            aliases.map { alias ->
+              val model = modelIndex[alias.name]
+              val required =
+                model
+                  ?.let(modelProperties::fields)
+                  .orEmpty()
+                  .filter { it.effective.required }
+                  .map { field ->
+                    val names =
+                      if (model?.targets?.get("python")?.typeName != null) {
+                        listOf(field.wireName)
+                      } else {
+                        listOf(field.wireName, field.effective.name.pythonIdentifierName).distinct()
+                      }
+                    PythonCodeBlock.of(
+                      if (names.size == 1) "(%C,)" else "(%C)",
+                      PythonCodeBlock.join(names.map { PythonCodeBlock.of("%S", it) }, ", "),
+                    )
+                  }
+              PythonCodeBlock.of(
+                "        (\n            %T(%C),\n            %C,\n        ),",
+                PythonSymbol("pydantic", "TypeAdapter"),
+                alias.renderPythonType(nullable = false),
+                if (required.isEmpty()) {
+                  PythonCodeBlock.of("()")
+                } else if (required.size == 1) {
+                  PythonCodeBlock.of("(%C,)", required.single())
+                } else {
+                  PythonCodeBlock.of(
+                    "(\n%C\n            )",
+                    PythonCodeBlock.join(required.map { PythonCodeBlock.of("                %C,", it) }, "\n"),
+                  )
+                },
+              )
+            },
+            "\n",
+          ),
+          PythonSymbol("pydantic_core", "to_json"),
+          PythonSymbol("pydantic", "ValidationError"),
+          "Expected exactly one matching branch for $name",
+        ),
+        PythonCodeBlock.of(
+          "type %L = %T[\n    %L,\n    %T(%L),\n]",
+          unionName,
+          PythonSymbol("typing", "Annotated"),
+          alternativesName,
+          PythonSymbol("pydantic", "BeforeValidator"),
+          validatorName,
+        ),
+      ),
+      "\n\n\n",
+    )
+  }
 
   private fun GeneratedModel.renderStandardUnionAlias(
     aliases: List<GeneratedTypeRef>,

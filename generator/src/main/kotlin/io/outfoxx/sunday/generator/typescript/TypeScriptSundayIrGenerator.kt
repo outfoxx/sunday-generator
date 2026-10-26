@@ -2569,18 +2569,19 @@ class TypeScriptSundayIrGenerator(
             },
           )
         }
-        val checked =
-          applyUnionCommonConstraints(
-            model,
-            typeName,
-            if (model.discriminator !=
-              null
-            ) {
-              "discriminatedSchema"
-            } else {
-              "branchesSchema"
-            },
+        var selectedSchema = if (model.discriminator != null) "discriminatedSchema" else "branchesSchema"
+        if (model.unionMode == GeneratedModel.UnionMode.ONE_OF) {
+          // Count matches on the wire value before branch codecs construct model instances.
+          add("  const oneOfSchema = %T.custom<%T.input<typeof branchesSchema>>(value => [", Z, Z)
+          add(schemas.joinToCode(", "))
+          add(
+            "].filter(schema => schema.safeParse(value).success).length === 1, {error: %S}).pipe(%L);\n",
+            "Expected exactly one matching branch for ${model.name}",
+            selectedSchema,
           )
+          selectedSchema = "oneOfSchema"
+        }
+        val checked = applyUnionCommonConstraints(model, typeName, selectedSchema)
         add("  const wireSchema = %L;\n", checked)
         if (fallbackSchema != null) {
           add(

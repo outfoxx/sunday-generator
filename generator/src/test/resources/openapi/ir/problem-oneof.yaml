@@ -1,0 +1,86 @@
+openapi: 3.1.0
+info: {title: Problem unions, version: '1'}
+paths:
+  /items:
+    get:
+      operationId: getItem
+      responses:
+        '404':
+          description: Missing resource
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/CollectionMissingProblem'}
+                  - {$ref: '#/components/schemas/ItemMissingProblem'}
+components:
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string, minLength: 2}
+    CollectionProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.org/problems/collection-missing'}
+            title: {type: string, const: Collection missing}
+            status: {type: integer, const: 404}
+    CollectionMissingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/CollectionProblem'}
+        - type: object
+    ItemMissingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.org/problems/item-missing'}
+            title: {type: string, const: Item missing}
+            status: {type: integer, const: 404}
+    Problems:
+      oneOf:
+        - {$ref: '#/components/schemas/CollectionMissingProblem'}
+        - {$ref: '#/components/schemas/ItemMissingProblem'}
+    ReversedProblems:
+      oneOf:
+        - {$ref: '#/components/schemas/ItemMissingProblem'}
+        - {$ref: '#/components/schemas/CollectionMissingProblem'}
+    TaggedProblems:
+      oneOf:
+        - {$ref: '#/components/schemas/CollectionMissingProblem'}
+        - {$ref: '#/components/schemas/ItemMissingProblem'}
+      discriminator:
+        propertyName: type
+        mapping:
+          https://example.org/problems/collection-missing: '#/components/schemas/CollectionMissingProblem'
+          https://example.org/problems/item-missing: '#/components/schemas/ItemMissingProblem'
+    DuplicateCollectionMissingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/CollectionProblem'}
+        - type: object
+    AmbiguousProblems:
+      oneOf:
+        - {$ref: '#/components/schemas/CollectionMissingProblem'}
+        - {$ref: '#/components/schemas/DuplicateCollectionMissingProblem'}
+    ShortDetailProblem:
+      allOf:
+        - {$ref: '#/components/schemas/CollectionProblem'}
+        - type: object
+          properties:
+            detail: {type: string, maxLength: 5}
+    LongDetailProblem:
+      allOf:
+        - {$ref: '#/components/schemas/CollectionProblem'}
+        - type: object
+          properties:
+            detail: {type: string, minLength: 6}
+    ConstrainedProblems:
+      oneOf:
+        - {$ref: '#/components/schemas/ShortDetailProblem'}
+        - {$ref: '#/components/schemas/LongDetailProblem'}

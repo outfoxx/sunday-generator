@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedTolerance
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -37,6 +38,54 @@ import kotlin.io.path.writeText
 @Tag("models")
 @Tag("validation")
 class PythonDirectionalToleranceTest : PythonTest() {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `object oneOf rejects overlap while anyOf keeps overlapping branches`(
+    frontend: String,
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val api = objectUnionValidationApi(frontend, directory)
+    val choice = api.models.single { it.name == "Choice" }
+    val models = api.models + choice.copy(name = "AnyChoice", unionMode = GeneratedModel.UnionMode.ANY_OF)
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          PythonModelRenderer("test_api").renderModels(models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        smokeCode =
+          """
+          import json
+          from pydantic import TypeAdapter, ValidationError
+          from test_api.models import Choice, AnyChoice, Holder
+          for mode in ("request", "response"):
+              context = {"mode": mode}
+              for native in (False, True):
+                  def decode(adapter, value):
+                      if native:
+                          return adapter.validate_python(value, context=context)
+                      return adapter.validate_json(json.dumps(value), context=context)
+                  adapter = TypeAdapter(Choice)
+                  for number in (1, 9):
+                      value = decode(adapter, {"value": number})
+                      assert value.value == number
+                      assert json.loads(adapter.dump_json(value)) == {"value": number}
+                  assert decode(TypeAdapter(AnyChoice), {"value": 2}).value == 2
+                  for number in ${if (frontend == "raml") "(0, 10)" else "(0, 2, 10)"}:
+                      for target, raw in ((adapter, {"value": number}), (TypeAdapter(Holder), {"choice": {"value": number}})):
+                          try:
+                              decode(target, raw)
+                          except ValidationError:
+                              pass
+                          else:
+                              raise AssertionError(f"Invalid union accepted: {raw}")
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = [false, true])
   fun `named oneOf cases retain parent requirements without property declarations`(

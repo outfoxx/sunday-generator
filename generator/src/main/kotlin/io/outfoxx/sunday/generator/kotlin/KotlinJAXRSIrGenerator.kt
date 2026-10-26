@@ -141,6 +141,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinNativePayloads
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinNativeSchema
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinNominalTypes
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinOneOfSelection
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinPolicyAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
@@ -3310,7 +3311,6 @@ class KotlinJAXRSIrGenerator(
     val unionTypeName = kotlinClassName()
     val cases = unionCaseModels()
     val directCases = usesDirectUnionCases(unionTypeName, cases)
-    val propertyBranches = cases.map { model -> UnionPropertyBranch(model, model.uniqueRequiredWireNames(cases)) }
 
     return TypeSpec
       .interfaceBuilder(unionTypeName)
@@ -3330,7 +3330,7 @@ class KotlinJAXRSIrGenerator(
           }
         }
         if (typeRegistry.options.contains(JacksonAnnotations)) {
-          addType(deserializerType(unionTypeName, cases, propertyBranches, directCases))
+          addType(deserializerType(unionTypeName, cases, directCases))
         }
       }
   }
@@ -3383,7 +3383,6 @@ class KotlinJAXRSIrGenerator(
   private fun GeneratedModel.deserializerType(
     unionTypeName: ClassName,
     cases: List<GeneratedModel>,
-    propertyBranches: List<UnionPropertyBranch>,
     directCases: Boolean,
   ): TypeSpec {
     val deserialize =
@@ -3422,6 +3421,15 @@ class KotlinJAXRSIrGenerator(
             addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminator.wireName)
             discriminator.cases.forEach { case ->
               beginControlFlow("if (discriminatorValue == %S)", case.value)
+              if (unionMode == GeneratedModel.UnionMode.ONE_OF) {
+                beginControlFlow("if (!(%L))", KotlinOneOfSelection.matches(case.model, modelProperties))
+                addStatement(
+                  "throw %T.from(parser, %S)",
+                  JACKSON_JSON_MAPPING_EXCEPTION,
+                  "invalid union case for \"$name\"",
+                )
+                endControlFlow()
+              }
               addStatement("return %L", case.model.unionCaseDecodeCode(unionTypeName, directCases))
               endControlFlow()
             }
@@ -3467,26 +3475,10 @@ class KotlinJAXRSIrGenerator(
             addStatement("failures.forEach(failure::addSuppressed)")
             addStatement("throw failure")
           } else {
-            propertyBranches
-              .filter { branch -> branch.uniqueRequiredWireNames.isNotEmpty() }
-              .forEach { branch ->
-                beginControlFlow("if (%L)", branch.uniqueRequiredWireNames.presenceExpression("||"))
-                addStatement("return %L", branch.model.unionCaseDecodeCode(unionTypeName, directCases))
-                endControlFlow()
-              }
-
-            propertyBranches
-              .filter { branch -> branch.uniqueRequiredWireNames.isEmpty() }
-              .forEach { branch ->
-                beginControlFlow("if (%L)", branch.model.requiredWireNames().presenceExpression("&&"))
-                addStatement("return %L", branch.model.unionCaseDecodeCode(unionTypeName, directCases))
-                endControlFlow()
-              }
-
-            addStatement(
-              "throw %T.from(parser, %S)",
-              JACKSON_JSON_MAPPING_EXCEPTION,
-              "unable to determine union case for \"$name\"",
+            addCode(
+              KotlinOneOfSelection.decode(name, unionTypeName, cases, modelProperties) { model ->
+                model.unionCaseDecodeCode(unionTypeName, directCases)
+              },
             )
           }
         }.build()
@@ -3700,9 +3692,6 @@ class KotlinJAXRSIrGenerator(
       .mapNotNull(modelProperties::declarationModel)
       .firstOrNull { parent -> modelProperties.fields(parent).any { it.wireName == wireName } }
       ?.patchableProperty(wireName) ?: patchable
-
-  private fun GeneratedModel.allModelProperties(): List<GeneratedModelProperty> =
-    inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() } + properties
 
   private fun GeneratedModel.inheritedModelProperties(): List<GeneratedModelProperty> =
     modelProperties.fields(this).filter { it.inherited }.map { it.storage }
@@ -4174,30 +4163,6 @@ class KotlinJAXRSIrGenerator(
   private fun GeneratedModel.unionCaseTypeName(unionTypeName: ClassName): ClassName =
     unionTypeName.nestedClass("${name.toUpperCamelCase()}Value")
 
-  private fun GeneratedModel.allWireNames(): Set<String> =
-    allModelProperties()
-      .map { property -> property.wireName }
-      .toSet()
-
-  private fun GeneratedModel.requiredWireNames(): List<String> =
-    allModelProperties()
-      .filter { property -> property.required }
-      .map { property -> property.wireName }
-
-  private fun GeneratedModel.uniqueRequiredWireNames(cases: List<GeneratedModel>): List<String> {
-    val otherNames =
-      cases
-        .filterNot { model -> model == this }
-        .flatMap { model -> model.allWireNames() }
-        .toSet()
-    return requiredWireNames().filterNot { name -> name in otherNames }
-  }
-
-  private data class UnionPropertyBranch(
-    val model: GeneratedModel,
-    val uniqueRequiredWireNames: List<String>,
-  )
-
   private data class UnionDiscriminator(
     val wireName: String,
     val cases: List<UnionDiscriminatorCase>,
@@ -4273,13 +4238,6 @@ class KotlinJAXRSIrGenerator(
       model.properties.firstNotNullOfOrNull { property ->
         property.externalDiscriminator.takeIf { property.type.name == name }
       }
-    }
-
-  private fun List<String>.presenceExpression(operator: String): CodeBlock =
-    if (isEmpty()) {
-      CodeBlock.of("true")
-    } else {
-      map { wireName -> CodeBlock.of("tree.has(%S)", wireName) }.joinToCode(" $operator ")
     }
 
   private companion object {
