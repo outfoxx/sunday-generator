@@ -225,7 +225,7 @@ class PythonClientConfigurationTest : PythonTest() {
               "server-profile",
             )
           ) {
-            ", credentials=${service.pythonServiceBaseName.pythonTypeName}Credentials(identity=BearerCredentials(\"secret\"), access_key=ApiKeyCredentials(\"key\")), security_selection={\"listItems\": ${service.pythonServiceBaseName.pythonTypeName}SecurityAlternative.ACCESS_KEY_AND_IDENTITY}"
+            ", credentials=${service.pythonServiceBaseName.pythonTypeName}Credentials(identity=BearerCredentials(\"secret\"), access_key=ApiKeyCredentials(\"key\")), security_selection={\"listItems\": ${service.pythonServiceBaseName.pythonTypeName}SecurityAlternative.access_key_and_identity}"
           } else if (frontend in setOf("security", "server-security", "server-profile")) {
             ", credentials=${service.pythonServiceBaseName.pythonTypeName}Credentials(identity=BearerCredentials(\"secret\"))"
           } else {
@@ -305,7 +305,7 @@ class PythonClientConfigurationTest : PythonTest() {
                           return HttpxTransport.from_settings(settings, native)
                       client = create_example_api(ExampleAPIDevelopmentConfig(), factory,
                           credentials=ExampleAPICredentials(identity=ProviderCredentials(Provider())),
-                          security_selection={"listProjects": ExampleAPISecurityAlternative.IDENTITY},
+                          security_selection={"listProjects": ExampleAPISecurityAlternative.identity},
                           **({"security_profile": "external"} if override else {}))
                       assert len(calls) == 1 and not acquired
                       assert client.users.transport is client.transport and client.projects.transport is client.transport

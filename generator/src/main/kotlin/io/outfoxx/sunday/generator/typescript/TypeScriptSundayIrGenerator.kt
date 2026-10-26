@@ -118,6 +118,7 @@ import io.outfoxx.sunday.generator.typescript.utils.recordType
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
 import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
+import io.outfoxx.sunday.generator.utils.enumUpperCamelCase
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.typescriptpoet.AnyTypeSpecBuilder
@@ -4941,19 +4942,7 @@ class TypeScriptSundayIrGenerator(
       )
     }
 
-  private fun String.typeScriptEnumConstantName(): String =
-    split(enumNameDelimiter)
-      .filter { part -> part.isNotBlank() }
-      .joinToString("") { part ->
-        part.normalizedEnumSegment().replaceFirstChar { char -> char.titlecase() }
-      }
-
-  private fun String.normalizedEnumSegment(): String =
-    if (any { it.isLetter() } && all { !it.isLetter() || it.isUpperCase() }) {
-      lowercase()
-    } else {
-      this
-    }
+  private fun String.typeScriptEnumConstantName(): String = enumUpperCamelCase()
 
   private fun literal(value: Any?): CodeBlock =
     when (value) {
@@ -4974,7 +4963,6 @@ class TypeScriptSundayIrGenerator(
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val requiredBaseProblemProperties = setOf("type", "title", "status")
     val optionalBaseProblemProperties = setOf("detail", "instance")
-    val enumNameDelimiter = Regex("[^A-Za-z0-9]+")
     val typeScriptEnumMemberIdentifierRegex = Regex("[A-Za-z_$][A-Za-z0-9_$]*")
     val typeScriptReservedWords =
       setOf(

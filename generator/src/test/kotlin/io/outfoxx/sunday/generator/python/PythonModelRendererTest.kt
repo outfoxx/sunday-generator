@@ -653,7 +653,7 @@ class PythonModelRendererTest : PythonTest() {
           assert str(project.home_page) == "https://turnpost.example/projects/project-1"
           assert project.avatar == b"python"
           assert project.display_name == "Turnpost"
-          assert project.status == ProjectStatus.ACTIVE
+          assert project.status == ProjectStatus.active
           assert project.model_dump(by_alias=True)["display-name"] == "Turnpost"
 
           user_response = TypeAdapter(UserResponse).validate_python(
@@ -768,9 +768,9 @@ class PythonModelRendererTest : PythonTest() {
               },
           )
 
-          assert notification.type == NotificationType.PULL_REQUEST_REVIEW_REQUESTED
+          assert notification.type == NotificationType.pull_request_review_requested
           assert notification.type.value == "notification.pull_request.review_requested"
-          assert notification.fallback == FallbackType.MIXED_KEBAB_CASE
+          assert notification.fallback == FallbackType.mixed_kebab_case
 
           activity = TypeAdapter(NotificationActivity).validate_python(
               {
@@ -780,24 +780,24 @@ class PythonModelRendererTest : PythonTest() {
               },
           )
           assert isinstance(activity, PullRequestReviewRequestedNotification)
-          assert activity.kind == NotificationType.PULL_REQUEST_REVIEW_REQUESTED
+          assert activity.kind == NotificationType.pull_request_review_requested
           """.trimIndent(),
       ),
     )
 
     val modelSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
     assertTrue(
-      modelSource.contains("PULL_REQUEST_REVIEW_REQUESTED = \"notification.pull_request.review_requested\""),
+      modelSource.contains("pull_request_review_requested = \"notification.pull_request.review_requested\""),
       modelSource,
     )
-    assertTrue(modelSource.contains("PULL_REQUEST_MERGED = \"notification.pull_request.merged\""), modelSource)
-    assertTrue(modelSource.contains("TEAM_MEMBER_ADDED = \"notification.team.member_added\""), modelSource)
-    assertTrue(modelSource.contains("OPEN = \"OPEN\""), modelSource)
-    assertTrue(modelSource.contains("LOWER_SNAKE = \"lower_snake\""), modelSource)
-    assertTrue(modelSource.contains("UPPER_INTER_CAPS = \"UpperInterCaps\""), modelSource)
-    assertTrue(modelSource.contains("LOWER_INTER_CAPS = \"lowerInterCaps\""), modelSource)
-    assertTrue(modelSource.contains("DOTTED_CASE = \"dotted.case\""), modelSource)
-    assertTrue(modelSource.contains("MIXED_KEBAB_CASE = \"mixed-kebab.case\""), modelSource)
+    assertTrue(modelSource.contains("pull_request_merged = \"notification.pull_request.merged\""), modelSource)
+    assertTrue(modelSource.contains("team_member_added = \"notification.team.member_added\""), modelSource)
+    assertTrue(modelSource.contains("open = \"OPEN\""), modelSource)
+    assertTrue(modelSource.contains("lower_snake = \"lower_snake\""), modelSource)
+    assertTrue(modelSource.contains("upper_inter_caps = \"UpperInterCaps\""), modelSource)
+    assertTrue(modelSource.contains("lower_inter_caps = \"lowerInterCaps\""), modelSource)
+    assertTrue(modelSource.contains("dotted_case = \"dotted.case\""), modelSource)
+    assertTrue(modelSource.contains("mixed_kebab_case = \"mixed-kebab.case\""), modelSource)
     assertTrue(
       modelSource.contains("kind: Literal[\"notification.pull_request.review_requested\"]"),
       modelSource,
@@ -822,7 +822,7 @@ class PythonModelRendererTest : PythonTest() {
           )
       }
 
-    assertTrue(error.message!!.contains("member name 'SAME' is used for multiple values"), error.message)
+    assertTrue(error.message!!.contains("member name 'same' is used for multiple values"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
   }
 
@@ -877,8 +877,8 @@ class PythonModelRendererTest : PythonTest() {
             same_unknown = adapter.validate_python("refunded")
             other_unknown = adapter.validate_python("other")
 
-            assert known is TaskState.PENDING
-            assert unknown.name == "UNKNOWN"
+            assert known is TaskState.pending
+            assert unknown.name == "unknown"
             assert unknown.value == "refunded"
             assert unknown == same_unknown
             assert hash(unknown) == hash(same_unknown)
@@ -894,7 +894,7 @@ class PythonModelRendererTest : PythonTest() {
     }
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
     assertTrue(source.contains("class TaskState(TolerantStrEnum):"), source)
-    assertTrue(source.contains("__unknown_member_name__ = \"UNKNOWN\""), source)
+    assertTrue(source.contains("__unknown_member_name__ = \"unknown\""), source)
     assertTrue(!source.contains("def _missing_("), source)
   }
 
@@ -1035,7 +1035,7 @@ class PythonModelRendererTest : PythonTest() {
           raw = {"jobPhase": "future", "job-id": "job-1", "detail": {"attempt": 2}}
           unknown = adapter.validate_python(raw)
           assert isinstance(unknown, JobProgressUnknown)
-          assert unknown.phase.name == "UNKNOWN"
+          assert unknown.phase.name == "unknown"
           assert unknown.phase.value == "future"
           assert unknown.job_id == "job-1"
           assert unknown.actor is None
@@ -1216,7 +1216,7 @@ class PythonModelRendererTest : PythonTest() {
   @Test
   fun `prefixes digit leading Python enum member names`() {
     assertEquals("_123", "123".pythonEnumMemberName)
-    assertEquals("_123_ABC", "123ABC".pythonEnumMemberName)
+    assertEquals("_123_abc", "123ABC".pythonEnumMemberName)
   }
 
   @Test

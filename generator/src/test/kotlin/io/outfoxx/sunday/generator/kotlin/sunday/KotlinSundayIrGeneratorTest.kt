@@ -1467,7 +1467,7 @@ class KotlinSundayIrGeneratorTest {
     assertContains(notificationTypeSource, "TeamMemberAdded(\"notification.team.member_added\")")
     assertContains(notificationTypeSource, "@JsonValue")
     assertContains(notificationTypeSource, "@JsonCreator")
-    assertContains(fallbackTypeSource, "OPEN(\"OPEN\")")
+    assertContains(fallbackTypeSource, "Open(\"OPEN\")")
     assertContains(fallbackTypeSource, "LowerSnake(\"lower_snake\")")
     assertContains(fallbackTypeSource, "UpperInterCaps(\"UpperInterCaps\")")
     assertContains(fallbackTypeSource, "LowerInterCaps(\"lowerInterCaps\")")

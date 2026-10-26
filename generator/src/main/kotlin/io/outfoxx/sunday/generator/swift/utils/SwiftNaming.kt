@@ -16,24 +16,13 @@
 
 package io.outfoxx.sunday.generator.swift.utils
 
+import io.outfoxx.sunday.generator.utils.enumUpperCamelCase
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 
-private val enumSplitRegex = """[^A-Za-z0-9]+""".toRegex()
-
+/** Converts an enum wire value to a lowerCamelCase Swift case name. */
 val String.swiftEnumCaseName: String
-  get() =
-    split(enumSplitRegex)
-      .filter { segment -> segment.isNotBlank() }
-      .joinToString("") { segment -> segment.normalizedEnumSegment().replaceFirstChar { it.titlecase() } }
-      .replaceFirstChar { it.lowercase() }
-
-private fun String.normalizedEnumSegment(): String =
-  if (any { it.isLetter() } && all { !it.isLetter() || it.isUpperCase() }) {
-    lowercase()
-  } else {
-    this
-  }
+  get() = enumUpperCamelCase().replaceFirstChar { it.lowercase() }
 
 val String.swiftTypeName: String get() = toUpperCamelCase()
 val String.swiftIdentifierName: String get() = toLowerCamelCase()

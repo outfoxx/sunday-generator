@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.utils.enumNameWords
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 
 private val nonIdentifierChars = "[^A-Za-z0-9]+".toRegex()
@@ -79,14 +80,13 @@ val String.pythonIdentifierName: String
       .let { if (it.first().isDigit()) "_$it" else it }
       .let { if (it in pythonKeywords) "${it}_" else it }
 
-/** Converts an enum wire value to a Python enum member name. */
+/** Converts an enum wire value to lower_snake_case, escaping keywords, reserved enum names, and digits. */
 val String.pythonEnumMemberName: String
   get() =
-    replace(camelBoundary, "_")
-      .replace(nonIdentifierChars, "_")
-      .trim('_')
-      .uppercase()
+    enumNameWords()
+      .joinToString("_")
       .let { if (it.isNotEmpty() && it.first().isDigit()) "_$it" else it }
+      .let { if (it in pythonKeywords || it == "mro") "${it}_" else it }
 
 internal val GeneratedService.pythonServiceBaseName: String
   get() = name.removeSuffix("Service").removeSuffix("API")

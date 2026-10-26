@@ -2346,7 +2346,7 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(notificationTypeSource.contains("TeamMemberAdded(\"notification.team.member_added\")"))
     assertTrue(notificationTypeSource.contains("@JsonValue"), notificationTypeSource)
     assertTrue(notificationTypeSource.contains("@JsonCreator"), notificationTypeSource)
-    assertTrue(fallbackTypeSource.contains("OPEN(\"OPEN\")"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("Open(\"OPEN\")"), fallbackTypeSource)
     assertTrue(fallbackTypeSource.contains("LowerSnake(\"lower_snake\")"), fallbackTypeSource)
     assertTrue(fallbackTypeSource.contains("UpperInterCaps(\"UpperInterCaps\")"), fallbackTypeSource)
     assertTrue(fallbackTypeSource.contains("LowerInterCaps(\"lowerInterCaps\")"), fallbackTypeSource)

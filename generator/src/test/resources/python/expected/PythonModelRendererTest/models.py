@@ -36,9 +36,9 @@ __all__ = [
 
 
 class ProjectStatus(StrEnum):
-    ACTIVE = "active"
-    ARCHIVED = "archived"
-    PENDING_REVIEW = "pending-review"
+    active = "active"
+    archived = "archived"
+    pending_review = "pending-review"
 
 
 type UniqueId = str

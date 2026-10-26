@@ -268,7 +268,7 @@ class PythonPlacementRegressionTest : PythonTest() {
           from example_shared import Shared
           from example_consumer.models import Item
           value = Item.model_validate({"shared": "one"})
-          assert value.shared is Shared.ONE
+          assert value.shared is Shared.one
           assert value.model_dump(mode="json") == {"shared": "one"}
           """.trimIndent(),
       ),
@@ -395,8 +395,8 @@ class PythonPlacementRegressionTest : PythonTest() {
           """
           from sdk.models import First
           from sdk.other.models import Second
-          assert First.ONE.value == 'one'
-          assert Second.THREE.value == 'three'
+          assert First.one.value == 'one'
+          assert Second.three.value == 'three'
           """.trimIndent(),
       ),
     )
