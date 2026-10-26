@@ -219,6 +219,10 @@ abstract class SundayGenerate
     @get:Input
     val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
+    /** Opts ordinary implemented Kotlin models into structural value equality. */
+    @get:Input
+    val modelValueEquality: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
     @get:Input
     @get:Optional
     val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
@@ -332,6 +336,9 @@ abstract class SundayGenerate
         GeneratedOutputSelection(outputCategories.get(), resolvedOutputOwners.map(java.net.URI::create).toSet())
 
       val options = EnumSet.allOf(KotlinTypeRegistry.Option::class.java)
+      if (!modelValueEquality.get()) {
+        options.remove(KotlinTypeRegistry.Option.ModelValueEquality)
+      }
       if (!preserveUnknownFields.get()) {
         options.remove(KotlinTypeRegistry.Option.PreserveUnknownFields)
       }

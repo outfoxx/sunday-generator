@@ -58,6 +58,9 @@ class KotlinTypeRegistry(
 
   enum class Option {
     ImplementModel,
+
+    /** Opts ordinary implemented models into structural equality and matching hash codes. */
+    ModelValueEquality,
     ValidationConstraints,
     ContainerElementValid,
     JacksonAnnotations,

@@ -51,6 +51,7 @@ abstract class KotlinGenerateCommand(
 
   val registryOptions by flags<KotlinTypeRegistry.Option> {
     ImplementModel to "Generate classes for model types, instead of interfaces".default(true)
+    KotlinTypeRegistry.Option.ModelValueEquality to "Compare implemented model values structurally".default(false)
     JacksonAnnotations to "Add Jackson annotations to model classes".default(true)
     ValidationConstraints to "Add validation constraints to model classes".default(true)
     ContainerElementValid to "Use container element @Valid for cascaded validation".default(true)
