@@ -57,7 +57,8 @@ class InheritedProblemTest {
           """{"type":"https://example.com/problems/rebuilding","title":"Resource Rebuilding","status":409,
             "detail":"Resource A is rebuilding","instance":"/inherited-problems","traceId":"trace-A",
             "nullableParent":null,"resourceKey":"A","retryAfterSeconds":1,"nullableChild":null,
-            "metadata":{"region":"west"},"queuePosition":2,"queue-name":"rebuilds"}""",
+            "metadata":{"region":"west"},"queuePosition":2,"queue-name":"rebuilds",
+            "future":null,"nested":{"value":[1,true]}}""",
         ),
         mapper.readTree(response.body()),
       )

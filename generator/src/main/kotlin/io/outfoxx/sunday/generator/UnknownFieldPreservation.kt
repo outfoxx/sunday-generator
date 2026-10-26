@@ -16,7 +16,10 @@
 
 package io.outfoxx.sunday.generator
 
-/** Controls catch-all storage independently of schema validation and declared pattern fields. */
+/**
+ * Controls ordinary model catch-all storage independently of schema validation and declared pattern fields.
+ * Kotlin problem extension handling is independent of this setting.
+ */
 enum class UnknownFieldPreservation {
   /** Preserve fields on open models unless the schema forbids additional properties. */
   On,

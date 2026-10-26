@@ -47,6 +47,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
   typeName: (GeneratedTypeRef) -> TypeName,
   properties: GeneratedModelProperties,
   nativeTypes: BeanValidationTypes?,
+  runtimeWriter: String? = null,
 ): OpenModelExtensionStorage {
   val names = NameAllocator()
   knownNames.forEach { names.newName(it) }
@@ -65,7 +66,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
       nativeTypes = nativeTypes,
     )
   val constructorStorage = preserve && parent?.preserves != true && KModifier.DATA in build().modifiers
-  if (preserve && parent?.preserves != true) {
+  if (preserve && parent?.preserves != true && runtimeWriter == null) {
     addExtensionStorage(storageName, any)
     addProperty(
       PropertySpec
@@ -114,14 +115,14 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
           addModifiers(KModifier.OPEN)
         }
         if (preserve) {
-          if (parent?.preserves != true) {
-            if (constructorStorage) {
-              addStatement("%N = %N + (name to value)", storageName, storageName)
-            } else {
-              addStatement("%N[name] = value", storageName)
-            }
-          } else {
+          if (parent?.preserves == true) {
             addStatement("super.%N(name, value)", parent.setterName)
+          } else if (runtimeWriter != null) {
+            addStatement("%N(name, value)", runtimeWriter)
+          } else if (constructorStorage) {
+            addStatement("%N = %N + (name to value)", storageName, storageName)
+          } else {
+            addStatement("%N[name] = value", storageName)
           }
         }
       }.build(),
@@ -183,7 +184,6 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
     setterName,
     parent?.valueType ?: any,
     preserves = preserve,
-    fieldName = parent?.fieldName ?: storageName,
   )
 }
 

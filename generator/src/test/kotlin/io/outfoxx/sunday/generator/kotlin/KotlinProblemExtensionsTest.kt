@@ -139,8 +139,7 @@ class KotlinProblemExtensionsTest {
           )
           value.extension("added", null)
           value.extensions["scalar"] = "updated"
-          val fields = value.javaClass.getMethod("getAdditionalProperties").invoke(value)
-          assertEquals(value.extensions, fields)
+          assertTrue(value.javaClass.methods.none { it.name == "getAdditionalProperties" })
           val encoded = mapper.readTree(mapper.writeValueAsString(value))
           assertTrue(encoded.has("added"))
           assertTrue(encoded["added"].isNull)

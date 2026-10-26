@@ -1,6 +1,6 @@
 # Dynamic model fields
 
-All generation targets use the schema to choose dynamic field storage: Kotlin
+All generation targets use the schema to choose ordinary model dynamic field storage: Kotlin
 Sunday and JAX-RS, Swift Sunday, TypeScript Sunday, and Python Sunday and Litestar.
 
 | Schema declaration | `on` | `off` | `schema` (default) |
@@ -22,7 +22,7 @@ of their declared data and are unaffected by this option.
 - Generator API: language options and Python's model renderer expose
   `preserveUnknownFields: UnknownFieldPreservation = UnknownFieldPreservation.Schema`.
 - `on` preserves permitted fields on open models by default; explicit closure still
-  prevents new catch-all storage. `off` never introduces catch-all storage.
+  prevents new catch-all storage. `off` never introduces catch-all storage on ordinary models.
   `schema` requires an explicit `additionalProperties: true` or value schema.
 - The existing `KotlinTypeRegistry.Option.PreserveUnknownFields` remains source
   compatible; language generation options control the storage policy.
@@ -38,8 +38,7 @@ keys. Accepted fields are discarded when storage is disabled and a dynamic-value
 validation handler is required. Unconstrained Kotlin models without catch-all
 storage generate no `@JsonAnySetter`: Jackson's `FAIL_ON_UNKNOWN_PROPERTIES`
 setting determines whether unknown input fields fail or are ignored. This also
-applies to inherited models and masks Sunday's runtime problem catch-all when
-no generated handler is required. Other targets discard permitted fields when
+applies to inherited ordinary models. Other targets discard permitted fields when
 storage is disabled. Declared properties, aliases and discriminator fields retain
 their normal behavior.
 
@@ -54,7 +53,7 @@ so they do not need to be redeclared beside the closing keyword. Explicit
 and keeps those keys allowed. Schema-valued `unevaluatedProperties` is not mapped
 to dynamic-value validation.
 
-Models selected for storage expose the following language APIs.
+Ordinary models selected for storage expose the following language APIs.
 
 Kotlin Jackson models expose a read-only `additionalProperties` map and
 `setAdditionalProperty` method. Data-class copies retain these fields with
@@ -81,6 +80,23 @@ ignore extras after validation. Closed models continue to forbid extras.
 Generated storage names receive a suffix when a schema property would collide.
 Dynamic data never replaces declared fields when encoding. Unknown discriminator
 fallback bodies remain the explicit raw payload of that fallback variant.
+
+## Kotlin problem types
+
+`preserveUnknownFields` does not affect generated Kotlin problem classes in
+Sunday or JAX-RS, including Quarkus and the Sunday, Quarkiverse, and Zalando
+problem libraries. No separate `additionalProperties` map is generated for problems.
+Use the native `extensions` (Sunday) or `parameters` (Quarkiverse/Zalando) API.
+Open problems preserve extension parameters in all three modes, even when
+`additionalProperties` is omitted. Explicit schema closure, pattern rules, and
+value constraints still apply.
+
+Sunday's runtime already captures extensions through an any-setter. Generated
+schema-aware bindings retain that behavior and share its extension map.
+Quarkiverse extensions use its native parameter map so serialization
+and `HttpProblem.builder(existing)` copies retain them. Zalando exposes accepted
+extensions through its native parameters API. Ordinary models referenced by
+problem properties continue to follow the configured preservation mode.
 
 ## Inheritance and migration
 

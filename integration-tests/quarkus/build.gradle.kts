@@ -417,6 +417,8 @@ val generateInheritedProblems by tasks.registering(JavaExec::class) {
     "server",
     "-quarkus",
     "-use-jakarta-packages",
+    "-preserve-unknown-fields",
+    "off",
     "-problem-library",
     "quarkus",
     "-category",

@@ -77,22 +77,38 @@ internal fun addOpenModelProperties(
             .propertySpecs
         }.mapTo(mutableSetOf()) { it.name }
     }
+  classes.keys.groupBy(::root).forEach { (root, _) ->
+    if (parents[root] in setOf(SUNDAY_HTTP_PROBLEM, QUARKUS_HTTP_PROBLEM, ZALANDO_ABSTRACT_THROWABLE_PROBLEM)) {
+      val names = NameAllocator()
+      namesByRoot.getValue(root).forEach { names.newName(it) }
+      val builder = classes.getValue(root).second
+      builder.tag(ProblemExtensionWriter::class, ProblemExtensionWriter(names.newName("registerProblemExtension")))
+    }
+  }
   val completed = mutableMapOf<ClassName, OpenModelExtensionStorage?>()
 
   fun decorate(type: ClassName): OpenModelExtensionStorage? {
     if (type in completed) return completed[type]
     val (model, builder) = classes.getValue(type)
     val parent = parents[type]?.takeIf { it in classes }?.let(::decorate)
+    val runtimeWriter =
+      classes
+        .getValue(root(type))
+        .second
+        .build()
+        .tag(ProblemExtensionWriter::class)
+        ?.name
     return builder
       .addOpenModelStorage(
         type,
         model.copy(patternProperties = properties.patternProperties(model)),
         namesByRoot.getValue(root(type)),
         parent,
-        properties.preservesUnknownFields(model, preserveUnknownFields),
+        if (runtimeWriter != null) true else properties.preservesUnknownFields(model, preserveUnknownFields),
         typeName,
         properties,
         nativeTypes,
+        runtimeWriter,
       ).also {
         completed[type] = it
       }
@@ -202,7 +218,10 @@ internal fun addOpenModelProperties(
         type,
         binding,
         storage?.setterName,
-        storage?.fieldName,
+        entry.second
+          .build()
+          .tag(ProblemExtensionWriter::class)
+          ?.name,
         setOf("type", "title", "status", "detail", "instance").filterTo(mutableSetOf()) { name ->
           val field = properties.fields(entry.first).firstOrNull { it.wireName == name }?.effective
           field == null || !field.required && !properties.acceptsNull(field.type)
@@ -221,7 +240,6 @@ internal data class OpenModelExtensionStorage(
   val setterName: String,
   val valueType: TypeName,
   val preserves: Boolean,
-  val fieldName: String? = null,
 )
 
 private fun TypeSpec.Builder.addOpenModelStorage(
@@ -233,6 +251,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   typeName: (GeneratedTypeRef) -> TypeName,
   properties: GeneratedModelProperties,
   nativeTypes: BeanValidationTypes?,
+  runtimeWriter: String?,
 ): OpenModelExtensionStorage? {
   val closed = model.closed == true || model.additionalProperties?.allowed == false || parent?.closed == true
   if (closed) {
@@ -257,6 +276,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
       nativeTypes?.takeIf {
         model.patternProperties.isNotEmpty() || model.additionalProperties?.type != null || closed
       },
+      runtimeWriter,
     )
   }
   if (parent != null) {
@@ -338,29 +358,37 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   val decoder =
     if (model.additionalProperties?.type != null) extensionDecoder(className, storageType, valueType) else null
   val mapType = MAP.parameterizedBy(STRING, storageType)
-  val constructorStorage = addExtensionStorage(storageName, storageType)
-  addProperty(
-    PropertySpec
-      .builder(accessorName, mapType, KModifier.PUBLIC)
-      .addKdoc("Permitted fields not declared by this version of the contract, at their original JSON level.\n")
-      .addAnnotation(
-        AnnotationSpec
-          .builder(ClassName("com.fasterxml.jackson.annotation", "JsonAnyGetter"))
-          .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
-          .build(),
-      ).addAnnotation(
-        AnnotationSpec
-          .builder(JACKSON_JSON_INCLUDE)
-          .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
-          .addMember(
-            "value = %T.ALWAYS, content = %T.ALWAYS",
-            JACKSON_JSON_INCLUDE_INCLUDE,
-            JACKSON_JSON_INCLUDE_INCLUDE,
-          ).build(),
-      ).getter(
-        FunSpec.getterBuilder().addStatement("return %T.unmodifiableMap(%N)", Collections::class, storageName).build(),
-      ).build(),
-  )
+  val constructorStorage = runtimeWriter == null && addExtensionStorage(storageName, storageType)
+  if (runtimeWriter == null) {
+    addProperty(
+      PropertySpec
+        .builder(accessorName, mapType, KModifier.PUBLIC)
+        .addKdoc("Permitted fields not declared by this version of the contract, at their original JSON level.\n")
+        .addAnnotation(
+          AnnotationSpec
+            .builder(ClassName("com.fasterxml.jackson.annotation", "JsonAnyGetter"))
+            .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+            .build(),
+        ).addAnnotation(
+          AnnotationSpec
+            .builder(JACKSON_JSON_INCLUDE)
+            .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+            .addMember(
+              "value = %T.ALWAYS, content = %T.ALWAYS",
+              JACKSON_JSON_INCLUDE_INCLUDE,
+              JACKSON_JSON_INCLUDE_INCLUDE,
+            ).build(),
+        ).getter(
+          FunSpec
+            .getterBuilder()
+            .addStatement(
+              "return %T.unmodifiableMap(%N)",
+              Collections::class,
+              storageName,
+            ).build(),
+        ).build(),
+    )
+  }
   addFunction(
     FunSpec
       .builder(setterName)
@@ -374,10 +402,14 @@ private fun TypeSpec.Builder.addOpenModelStorage(
           addModifiers(KModifier.OPEN)
           addStatement("require(%N) { %S + name }", permitsName, "Additional properties are not allowed: ")
         }
-      }.addStatement(
-        if (constructorStorage) "%N = %N + (name to value)" else "%N[name] = value",
-        *if (constructorStorage) arrayOf(storageName, storageName) else arrayOf(storageName),
-      ).build(),
+        if (runtimeWriter != null) {
+          addStatement("%N(name, value)", runtimeWriter)
+        } else if (constructorStorage) {
+          addStatement("%N = %N + (name to value)", storageName, storageName)
+        } else {
+          addStatement("%N[name] = value", storageName)
+        }
+      }.build(),
   )
   return OpenModelExtensionStorage(
     permitsName,
@@ -385,7 +417,6 @@ private fun TypeSpec.Builder.addOpenModelStorage(
     setterName,
     storageType,
     preserves = true,
-    fieldName = storageName,
   )
 }
 

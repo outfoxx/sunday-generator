@@ -40,7 +40,7 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
   owner: ClassName,
   binding: ClassName,
   setterName: String?,
-  fieldName: String?,
+  writerName: String?,
   omittedNullProperties: Set<String>,
   nestedModelNames: Set<String>,
   register: (ClassName, TypeSpec.Builder) -> Unit,
@@ -112,12 +112,20 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
         FunSpec
           .builder("extensions")
           .addModifiers(KModifier.ABSTRACT)
-          .addKdoc("Uses the generated getter to preserve explicit null extension values.\n")
+          .addKdoc("Exposes the runtime map including explicit null extension values.\n")
           .addAnnotation(
             AnnotationSpec
               .builder(ClassName("com.fasterxml.jackson.annotation", "JsonAnyGetter"))
-              .addMember("enabled = false")
+              .addMember("enabled = true")
               .build(),
+          ).addAnnotation(
+            AnnotationSpec
+              .builder(JACKSON_JSON_INCLUDE)
+              .addMember(
+                "value = %T.ALWAYS, content = %T.ALWAYS",
+                JACKSON_JSON_INCLUDE_INCLUDE,
+                JACKSON_JSON_INCLUDE_INCLUDE,
+              ).build(),
           ).returns(MAP.parameterizedBy(STRING, any))
           .build(),
       ),
@@ -125,14 +133,17 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
   // Without a generated handler, leave unknown-field decisions to Jackson instead of the runtime catch-all.
   if (setterName == null) return
   addSuperclassConstructorParameter("extensions = %T()", storage)
-  // Existing generated accessors and setters use this backing map. The runtime receives a guarded view
-  // so its final extension() API cannot bypass declared-field or closed-descendant checks.
-  propertySpecs.replaceAll { property ->
-    if (property.name == fieldName) {
-      property.toBuilder().initializer("(extensions as %T).fields", storage).build()
-    } else {
-      property
-    }
+  if (writerName != null) {
+    addFunction(
+      FunSpec
+        .builder(writerName)
+        .addModifiers(KModifier.PROTECTED)
+        .addKdoc("Stores a validated extension in the runtime problem map.\n")
+        .addParameter("name", STRING)
+        .addParameter("value", any)
+        .addStatement("(extensions as %T).fields[name] = value", storage)
+        .build(),
+    )
   }
   addInitializerBlock(
     CodeBlock.of("(extensions as %T).write = ::%N\n", storage, setterName),

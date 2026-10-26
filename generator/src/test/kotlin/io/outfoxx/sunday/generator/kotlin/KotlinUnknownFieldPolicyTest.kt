@@ -25,15 +25,11 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedApi
-import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
-import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
-import io.outfoxx.sunday.generator.tools.TEAM_NOT_FOUND_JSON
 import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.openModelFieldsApi
 import io.outfoxx.sunday.generator.tools.patchableApi
-import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -42,7 +38,6 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.net.URI
 import java.nio.file.Path
 
 @KotlinTest
@@ -110,42 +105,6 @@ class KotlinUnknownFieldPolicyTest {
         assertEquals(frontend == "raml", mapper.readTree(mapper.writeValueAsBytes(value)).has("future"))
         assertThrows(JsonMappingException::class.java) {
           mapper.readValue("""{"id":"one","future":"wrong"}""", type)
-        }
-      }
-    }
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = [false, true])
-  fun `problem hierarchies mask the runtime catch-all without storage`(
-    jaxrs: Boolean,
-    @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
-  ) {
-    val original = GeneratedApiIrExporter().export(source)
-    for (mode in listOf(UnknownFieldPreservation.Off, UnknownFieldPreservation.Schema)) {
-      val api =
-        if (mode == UnknownFieldPreservation.Schema) {
-          original.copy(models = original.models.map { it.copy(additionalProperties = null) })
-        } else {
-          original
-        }
-      val loader = compile(api, mode, jaxrs)
-      for ((name, fields) in listOf(
-        "Problem" to """"type":"https://example.com/problem","title":"Problem","status":400""",
-        "QueuedProblem" to INHERITED_PROBLEM_JSON.removeSurrounding("{", "}"),
-        "TeamNotFoundProblem" to TEAM_NOT_FOUND_JSON.removeSurrounding("{", "}"),
-      )) {
-        val type = loader.loadClass("io.test.inherited.$name")
-        for (strict in listOf(false, true)) {
-          val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, strict)
-          mapper.readValue("{$fields}", type)
-          val wire = "{" + listOf(fields, "\"misspelled\":null").filter { it.isNotEmpty() }.joinToString(",") + "}"
-          if (strict) {
-            assertThrows(UnrecognizedPropertyException::class.java) { mapper.readValue(wire, type) }
-          } else {
-            val value = mapper.readValue(wire, type)
-            assertFalse(mapper.readTree(mapper.writeValueAsBytes(value)).has("misspelled"))
-          }
         }
       }
     }
