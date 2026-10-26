@@ -184,5 +184,6 @@ class SwiftPolymorphicPatchTest {
     assertTrue(patch.contains("var favorite: PatchOp<any Animal>"), patch)
     assertTrue(patch.contains("var choice: PatchOp<any Animal>"), patch)
     assertTrue(patch.contains("var nullableAnimals: PatchOp<[any Animal]>"), patch)
+    assertTrue(patch.contains("var byName: PatchOp<[String : (any Animal)?]>"), patch)
   }
 }

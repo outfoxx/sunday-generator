@@ -137,6 +137,7 @@ import io.outfoxx.swiftpoet.ARRAY
 import io.outfoxx.swiftpoet.BOOL
 import io.outfoxx.swiftpoet.CASE_ITERABLE
 import io.outfoxx.swiftpoet.CodeBlock
+import io.outfoxx.swiftpoet.ComposedTypeName
 import io.outfoxx.swiftpoet.DATA
 import io.outfoxx.swiftpoet.DICTIONARY
 import io.outfoxx.swiftpoet.DOUBLE
@@ -4729,7 +4730,8 @@ class SwiftSundayIrGenerator(
     val baseType = makeNonOptional()
     val existentialType =
       when (baseType) {
-        is DeclaredTypeName -> DeclaredTypeName.typeName(".any ${baseType.canonicalName}")
+        // SwiftPoet parenthesizes composed types when optional, as required for existentials before Swift 6.4.
+        is DeclaredTypeName -> ComposedTypeName.composed(".any ${baseType.canonicalName}")
         else -> baseType
       }
     return if (optional) {
