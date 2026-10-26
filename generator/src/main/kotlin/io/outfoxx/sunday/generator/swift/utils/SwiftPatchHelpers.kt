@@ -39,7 +39,6 @@ internal class SwiftPatchHelpers(
     io.outfoxx.sunday.generator.ir.emit
       .GeneratedModelIndex(models)
 
-  val enabled = models.any { it.patchOf != null }
   private val names =
     NameAllocator().apply {
       models
@@ -282,9 +281,12 @@ internal class SwiftPatchHelpers(
       )
   }
 
-  /** Merge decoding bypasses schema defaults so deleted members remain absent. */
-  fun decodingDefault(default: CodeBlock): CodeBlock =
-    if (enabled) {
+  /** Reachable optional storage bypasses defaults so a merge deletion remains absent. */
+  fun decodingDefault(
+    default: CodeBlock,
+    mergeDecoded: Boolean,
+  ): CodeBlock =
+    if (mergeDecoded) {
       CodeBlock.of(
         "(decoder.userInfo[.init(rawValue: %S)!] as? Bool == true ? nil : %L)",
         "io.outfoxx.sunday.mergePatch",

@@ -1,0 +1,95 @@
+openapi: 3.1.0
+info: {title: Problem default reproduction, version: '1.0.0'}
+paths:
+  /settings:
+    patch:
+      operationId: patchSettings
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema: {$ref: '#/components/schemas/Settings'}
+      responses:
+        '204': {description: Updated}
+  /records:
+    get:
+      operationId: getRecord
+      responses:
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/RecordNotFoundProblem'}
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/DefaultedProblem'}
+components:
+  schemas:
+    Settings:
+      type: object
+      properties:
+        label: {type: string, default: initial}
+        count: {type: integer, default: 3}
+        nested: {$ref: '#/components/schemas/NestedSettings'}
+        items: {$ref: '#/components/schemas/ItemList'}
+    NestedSettings:
+      type: object
+      properties:
+        label: {type: string, default: nested}
+    RecordNotFoundProblem:
+      type: object
+      required: [title, status]
+      properties:
+        type: {type: string, format: uri, const: 'about:blank', default: 'about:blank'}
+        title: {type: string, const: Not Found}
+        status: {type: integer, const: 404}
+        detail: {type: string, default: Details}
+    DefaultedProblem:
+      type: object
+      properties:
+        type: {type: string, format: uri, const: 'about:blank', default: 'about:blank'}
+        title: {type: string, const: Bad Request, default: Bad Request}
+        status: {type: integer, const: 400, default: 400}
+        detail: {type: string, default: Details}
+    ItemList:
+      type: array
+      items: {$ref: '#/components/schemas/Item'}
+    ItemBase:
+      type: object
+      properties:
+        baseLabel: {type: string, default: base}
+    Item:
+      allOf:
+        - $ref: '#/components/schemas/ItemBase'
+        - type: object
+          properties:
+            label: {type: string, default: item}
+            variant: {$ref: '#/components/schemas/Variant'}
+    Variant:
+      type: object
+      required: [kind]
+      discriminator:
+        propertyName: kind
+        mapping:
+          named: '#/components/schemas/NamedVariant'
+      properties:
+        kind: {type: string}
+    NamedVariant:
+      allOf:
+        - $ref: '#/components/schemas/Variant'
+        - type: object
+          properties:
+            label: {type: string, default: variant}
+    UnrelatedRecord:
+      type: object
+      properties:
+        label: {type: string, default: unrelated}
+        count: {type: integer, default: 7}
+    UnrelatedChild:
+      allOf:
+        - $ref: '#/components/schemas/ItemBase'
+        - type: object
+          properties:
+            localLabel: {type: string, default: unrelated}
