@@ -77,7 +77,8 @@ class TypeScriptDiscriminatedPatchTest {
             try { Animal.merge(base, schema.parse({'$tag': 'dog'})); } catch { rejected = true; }
             if (!rejected) throw new Error('cross subtype merge');
             for (const value of [true, null, false]) {
-              if (schema.safeParse({'$tag': 'cat', trained: value}).success) throw new Error('wrong variant field');
+              const input = {'$tag': 'cat', trained: value};
+              if (JSON.stringify(z.encode(schema, schema.parse(input))) !== JSON.stringify(input)) throw new Error('open variant lost extension');
             }
             for (const data of [{}, {'$tag': null}, {'$tag': 'lizard'}, {'$tag': 'cat', name: null}, {'$tag': 'cat', detail: null}]) {
               if (schema.safeParse(data).success) throw new Error('invalid accepted');

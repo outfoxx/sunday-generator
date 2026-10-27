@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info: {title: Identity patches, version: 1.0.0}
+paths:
+  /identity:
+    patch:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IdentityUpdate'}
+      responses:
+        '204': {description: Updated}
+components:
+  schemas:
+    IdentityUpdate:
+      type: object
+      x-sunday-patchable: true
+      required: [type]
+      discriminator:
+        propertyName: type
+        mapping:
+          character: '#/components/schemas/CharacterIdentityUpdate'
+          prop: '#/components/schemas/PropIdentityUpdate'
+          location: '#/components/schemas/LocationIdentityUpdate'
+      properties:
+        type: {type: string, enum: [character, prop, location]}
+        label: {type: string}
+        name: {type: string}
+    CharacterIdentityUpdate:
+      allOf:
+        - {$ref: '#/components/schemas/IdentityUpdate'}
+        - type: object
+          properties:
+            knownAliases: {type: array, items: {type: string}}
+    PropIdentityUpdate:
+      allOf: [{$ref: '#/components/schemas/IdentityUpdate'}]
+    LocationIdentityUpdate:
+      allOf: [{$ref: '#/components/schemas/IdentityUpdate'}]

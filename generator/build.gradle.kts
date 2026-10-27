@@ -89,6 +89,7 @@ dependencies {
   // END: generated code dependencies
 
   testImplementation("io.quarkus:quarkus-jackson:${libs.versions.quarkus.rest.get()}")
+  testImplementation(libs.jacksonCbor)
   testImplementation("org.zalando:jackson-datatype-problem:${libs.versions.zalandoProblem.get()}")
   testImplementation(libs.slf4j)
 

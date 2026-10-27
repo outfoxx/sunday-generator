@@ -46,8 +46,6 @@ data class GeneratedModel(
   val patchable: Boolean = false,
   /** The ordinary schema represented by this merge-patch companion. */
   val patchOf: GeneratedTypeRef? = null,
-  /** Other variants' wire fields forbidden only on this patch, never inherited by descendants. */
-  val patchExcludedFields: List<String> = listOf(),
   val inherits: List<GeneratedTypeRef> = listOf(),
   val discriminator: String? = null,
   val discriminatorValue: String? = null,

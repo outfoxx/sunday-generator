@@ -29,6 +29,12 @@ of their declared data and are unaffected by this option.
 
 These are generation-time settings. Regenerate models to change the behavior.
 
+PATCH companions derive their properties and dynamic-field rules from their own
+schema and explicit inheritance. Fields declared only by sibling variants do not
+create synthetic exclusions, pattern constraints, storage, or catch-all handlers.
+For example, `knownAliases` on a character variant has no effect on a prop variant;
+on the prop it follows the same unknown-field policy as any other undeclared name.
+
 ## Validation and access
 
 All three modes enforce closed schemas, pattern matches and dynamic-value

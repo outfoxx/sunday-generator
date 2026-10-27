@@ -936,9 +936,7 @@ class PythonModelRenderer(
   private fun GeneratedModel.renderWireValueValidator(): PythonCodeBlock? {
     val patterns = modelProperties.patternProperties(this)
     val additional = modelProperties.additionalProperties(this)
-    val validatesAdditionalProperties = patterns.isNotEmpty() || additional.isNotEmpty()
-    // Override an inherited validator even when this variant has no exclusions of its own.
-    if (!validatesAdditionalProperties && !(patchOf != null && properties.any { it.patchDiscriminator })) return null
+    if (patterns.isEmpty() && additional.isEmpty()) return null
 
     val statements = mutableListOf<PythonCodeBlock>()
     statements +=

@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.discriminatedPatchApi
@@ -43,10 +44,15 @@ class PythonDiscriminatedPatchTest : PythonTest() {
     val api = discriminatedPatchApi(frontend, directory)
     val tag = if (frontend == "renamed") "animal-kind" else "kind"
     val modules =
-      PythonSundayIrGenerator(api, PythonGeneratorOptions(placement = pythonPlacement("test_api")))
-        .generateModules(
-          GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
-        )
+      PythonSundayIrGenerator(
+        api,
+        PythonGeneratorOptions(
+          placement = pythonPlacement("test_api"),
+          preserveUnknownFields = UnknownFieldPreservation.On,
+        ),
+      ).generateModules(
+        GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),
+      )
     assertTrue(
       compileModules(
         compiler,
@@ -57,11 +63,11 @@ class PythonDiscriminatedPatchTest : PythonTest() {
           from test_api.models import Cat, CatPatch, DogPatch, AnimalPatch
           from pydantic import TypeAdapter
           adapter = TypeAdapter(AnimalPatch)
-          for data in [{"$tag": "cat"}, {"$tag": "cat", "nickname": None}, {"$tag": "cat", "name": "Misty"}, {"$tag": "cat", "custom": "extension"}, {"$tag": "cat", "indoor": True}, {"$tag": "cat", "indoor": None}]:
+          for data in [{"$tag": "cat"}, {"$tag": "cat", "nickname": None}, {"$tag": "cat", "name": "Misty"}, {"$tag": "cat", "custom": "extension"}, {"$tag": "cat", "indoor": True}, {"$tag": "cat", "indoor": None}, {"$tag": "cat", "trained": True}, {"$tag": "cat", "trained": None}]:
               patch = adapter.validate_python(data)
               assert isinstance(patch, CatPatch)
               assert patch.model_dump(mode="json", by_alias=True) == data
-          for data in [{}, {"$tag": None}, {"$tag": "lizard"}, {"$tag": "cat", "name": None}, {"$tag": "cat", "detail": None}, {"$tag": "cat", "trained": True}, {"$tag": "cat", "trained": None}]:
+          for data in [{}, {"$tag": None}, {"$tag": "lizard"}, {"$tag": "cat", "name": None}, {"$tag": "cat", "detail": None}]:
               try:
                   adapter.validate_python(data)
               except ValueError:
@@ -72,12 +78,8 @@ class PythonDiscriminatedPatchTest : PythonTest() {
               from test_api.models import MammalPatch
               assert isinstance(MammalPatch.model_validate({"$tag": "Mammal", "custom": "extension"}), MammalPatch)
               for value in [True, None]:
-                  try:
-                      MammalPatch.model_validate({"$tag": "Mammal", "indoor": value})
-                  except ValueError:
-                      pass
-                  else:
-                      raise AssertionError("parent accepted child field")
+                  data = {"$tag": "Mammal", "indoor": value}
+                  assert MammalPatch.model_validate(data).model_dump(mode="json", by_alias=True) == data
           base = Cat.model_validate({"$tag": "cat", "name": "Misty", "detail": None, "nickname": "Kit", "indoor": True})
           assert base.patch(from_model=base).model_dump(mode="json", by_alias=True) == {"$tag": "cat"}
           assert base.merge(CatPatch.model_validate({"$tag": "cat", "nickname": None})).model_dump(mode="json", by_alias=True) == {"$tag": "cat", "name": "Misty", "detail": None, "indoor": True}

@@ -27,8 +27,21 @@ import kotlin.io.path.writeText
 internal fun discriminatedPatchApi(
   frontend: String,
   directory: Path,
+  extraDogField: String? = null,
 ): GeneratedApi {
-  val openapi = requireNotNull(GeneratedApi::class.java.getResource("/openapi/discriminated-patch.yaml")).readText()
+  val openapi =
+    requireNotNull(GeneratedApi::class.java.getResource("/openapi/discriminated-patch.yaml"))
+      .readText()
+      .let { source ->
+        if (extraDogField == null) {
+          source
+        } else {
+          source.replace(
+            "trained: {type: boolean}",
+            "trained: {type: boolean}\n            $extraDogField: {type: string}",
+          )
+        }
+      }
   val marked = openapi.replace("    Animal:\n", "    Animal:\n      x-sunday-patchable: true\n")
   val asyncapi =
     """
@@ -96,7 +109,15 @@ internal fun discriminatedPatchApi(
             "    Cat:\n      allOf:\n        - {${'$'}ref: '#/components/schemas/Animal'}",
             "    Cat:\n      allOf:\n        - {${'$'}ref: '#/components/schemas/Mammal'}",
           )
-      "raml" -> raml
+      "raml" ->
+        if (extraDogField == null) {
+          raml
+        } else {
+          raml.replace(
+            "trained?: boolean",
+            "trained?: boolean\n      $extraDogField?: string",
+          )
+        }
       "asyncapi" -> asyncapi
       "explicit", "composed" -> marked
       "tolerant" ->

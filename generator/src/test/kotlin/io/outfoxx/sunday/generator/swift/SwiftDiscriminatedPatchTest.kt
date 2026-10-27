@@ -81,7 +81,8 @@ class SwiftDiscriminatedPatchTest {
         let typedMerge: (CatPatch) throws -> Cat = base.merge
         _ = try typedMerge(unchanged)
         for json in [#"{"$tag":"cat","trained":true}"#, #"{"$tag":"cat","trained":null}"#] {
-            #expect(throws: (any Error).self) { try decoder.decode(CatPatch.self, from: Data(json.utf8)) }
+            let patch = try decoder.decode(CatPatch.self, from: Data(json.utf8))
+            #expect(try JSONSerialization.jsonObject(with: encoder.encode(patch)) as? NSDictionary == JSONSerialization.jsonObject(with: Data(json.utf8)) as? NSDictionary)
         }
         for json in ["{}", #"{"$tag":null}"#, #"{"$tag":"lizard"}"#, #"{"$tag":"cat","name":null}"#, #"{"$tag":"cat","detail":null}"#] {
           #expect(throws: (any Error).self) { try decoder.decode(CatPatch.self, from: Data(json.utf8)) }

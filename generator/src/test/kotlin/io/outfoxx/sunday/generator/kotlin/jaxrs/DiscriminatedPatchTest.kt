@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayIrGenerator
@@ -85,6 +86,7 @@ class DiscriminatedPatchTest {
           "https://test/",
           listOf("application/json"),
           "API",
+          preserveUnknownFields = UnknownFieldPreservation.On,
         ),
       ).generateServiceTypes()
     } else {
@@ -103,6 +105,7 @@ class DiscriminatedPatchTest {
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
           quarkus = true,
+          preserveUnknownFields = UnknownFieldPreservation.On,
           resourceAdapters = target == "resource",
         ),
       ).generateServiceTypes()
@@ -162,7 +165,8 @@ class DiscriminatedPatchTest {
     val dog = mapper.readValue("""{"$tag":"dog","name":"Rex","detail":null}""", ordinary)
     assertThrows(java.lang.reflect.InvocationTargetException::class.java) { diff.invoke(dog, base, mapper) }
     for (value in listOf("true", "null", "false")) {
-      assertThrows(Exception::class.java) { mapper.readValue("""{"$tag":"cat","trained":$value}""", patch) }
+      val wire = """{"$tag":"cat","trained":$value}"""
+      assertEquals(mapper.readTree(wire), mapper.valueToTree(mapper.readValue(wire, patch)))
     }
   }
 }

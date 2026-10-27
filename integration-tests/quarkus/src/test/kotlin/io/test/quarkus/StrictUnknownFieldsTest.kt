@@ -70,4 +70,33 @@ class StrictUnknownFieldsTest {
       }
     }
   }
+
+  @Test
+  fun `all patch variants reject unrelated unknown fields with preservation off`() {
+    HttpClient.newHttpClient().use { client ->
+      for (type in listOf("character", "prop", "location")) {
+        for ((field, value, status) in listOf(
+          Triple("name", "\"valid\"", 204),
+          Triple("knownAliases", "[]", if (type == "character") 204 else 400),
+          Triple("knownAliases", "null", if (type == "character") 204 else 400),
+          Triple("state", "\"active\"", 400),
+          Triple("state", "null", 400),
+          Triple("parent", "{}", 400),
+          Triple("parent", "[]", 400),
+        )) {
+          val json = """{"type":"$type","$field":$value}"""
+          val response =
+            client.send(
+              HttpRequest
+                .newBuilder(baseUri.resolve("/identity"))
+                .header("Content-Type", "application/json")
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(json))
+                .build(),
+              HttpResponse.BodyHandlers.ofString(),
+            )
+          assertEquals(status, response.statusCode(), "$json: ${response.body()}")
+        }
+      }
+    }
+  }
 }

@@ -260,7 +260,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   if (model.patternProperties.isNotEmpty() ||
     model.additionalProperties?.validation?.isNotEmpty() == true ||
     model.additionalProperties?.allowedValues != null ||
-    (!preserve && model.additionalProperties?.type != null) ||
+    (!preserve && model.additionalProperties?.type?.let { typeName(it).copy(nullable = false) != ANY } == true) ||
     (preserve && parent?.preserves == false) ||
     (closed && parent?.closed == false && parent.permitsName.isEmpty())
   ) {
