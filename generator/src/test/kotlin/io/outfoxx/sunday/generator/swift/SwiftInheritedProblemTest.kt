@@ -142,10 +142,27 @@ class SwiftInheritedProblemTest {
             XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(model)) as? NSDictionary, expected)
           }
           for (field, invalid) in [("resourceKey", "" as Any), ("retryAfterSeconds", 2),
-            ("queuePosition", 0), ("type", "https://example.com/wrong"), ("nullableChild", "missing"), ("queuePosition", "missing"), ("resourceKey", "missing"), ("detail", NSNull())] {
+            ("queuePosition", 0), ("type", "https://example.com/wrong"), ("nullableChild", "missing"), ("queuePosition", "missing"), ("resourceKey", "missing")] {
             var object = try XCTUnwrap(JSONSerialization.jsonObject(with: raw) as? [String: Any])
             if invalid as? String == "missing" { object.removeValue(forKey: field) } else { object[field] = invalid }
             XCTAssertThrowsError(try JSONDecoder().decode(QueuedProblem.self, from: JSONSerialization.data(withJSONObject: object)))
+          }
+          for member in ["type", "title", "status", "detail", "instance"] {
+            var missing = try XCTUnwrap(JSONSerialization.jsonObject(with: raw) as? [String: Any])
+            missing.removeValue(forKey: member)
+            func decoded(_ value: [String: Any]) -> NSDictionary? {
+              do {
+                let body = try JSONSerialization.data(withJSONObject: value)
+                let problem = try JSONDecoder().decode(QueuedProblem.self, from: body)
+                return try JSONSerialization.jsonObject(with: JSONEncoder().encode(problem)) as? NSDictionary
+              } catch { return nil }
+            }
+            let baseline = decoded(missing)
+            let wrong: [Any] = member == "status" ? [NSNull(), true, "401", [], [:]] : [NSNull(), true, 42, [], [:]]
+            for value in wrong {
+              var input = missing; input[member] = value
+              XCTAssertEqual(decoded(input), baseline, member)
+            }
           }
           XCTAssertThrowsError(try QueuedProblem(resourceKey: "", nullableChild: nil,
             metadata: Metadata(region: "west"), queuePosition: 2))

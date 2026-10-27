@@ -170,6 +170,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusProblemExtensions
+import io.outfoxx.sunday.generator.kotlin.utils.addSundayProblemCreator
 import io.outfoxx.sunday.generator.kotlin.utils.addZalandoProblemExtensions
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
@@ -211,7 +212,17 @@ class KotlinJAXRSIrGenerator(
       ).resolve(sourceApi)
       .resolveProblemUris(options.defaultProblemBaseUri)
       .let {
-        it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
+        it.copy(
+          models =
+            GeneratedPatchModels.normalizeFields(it.models).let { models ->
+              if (typeRegistry.problemLibrary == KotlinProblemLibrary.SUNDAY) {
+                io.outfoxx.sunday.generator.ir.GeneratedProblemModels
+                  .normalizeFields(models)
+              } else {
+                models
+              }
+            },
+        )
       }
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
@@ -248,6 +259,7 @@ class KotlinJAXRSIrGenerator(
       discriminatorFallbacks = discriminatorFallbacks,
       jacksonAnnotations = typeRegistry.options.contains(JacksonAnnotations),
       typeName = { model -> model.kotlinClassName() },
+      isSundayProblem = { typeRegistry.problemLibrary == KotlinProblemLibrary.SUNDAY && it.isProblemModel() },
       commonValidation = { model ->
         beanValidationTypes.takeIf {
           typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
@@ -3403,11 +3415,34 @@ class KotlinJAXRSIrGenerator(
         .apply {
           if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
             addStatement(
-              "val tree = %T.read(parser, context)",
+              "val %L = %T.read(parser, context)",
+              if (typeRegistry.problemLibrary == KotlinProblemLibrary.SUNDAY &&
+                cases.all { it.isProblemModel() }
+              ) {
+                "rawTree"
+              } else {
+                "tree"
+              },
               ClassName("io.outfoxx.sunday.validation", "WireTree"),
             )
           } else {
-            addStatement("val tree = context.readTree(parser)")
+            addStatement(
+              "val %L = context.readTree(parser)",
+              if (typeRegistry.problemLibrary ==
+                KotlinProblemLibrary.SUNDAY &&
+                cases.all { it.isProblemModel() }
+              ) {
+                "rawTree"
+              } else {
+                "tree"
+              },
+            )
+          }
+          if (typeRegistry.problemLibrary == KotlinProblemLibrary.SUNDAY && cases.all { it.isProblemModel() }) {
+            addStatement(
+              "val tree = %T.normalized(rawTree)",
+              ClassName("io.outfoxx.sunday.problems", "ProblemDecoding"),
+            )
           }
         }.apply {
           if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
@@ -3877,12 +3912,21 @@ class KotlinJAXRSIrGenerator(
 
     typeBuilder
       .superclass(SUNDAY_HTTP_PROBLEM)
-      .primaryConstructor(constructorBuilder.addParameter(detailParameter()).build())
-      .addSuperclassConstructorParameter("TYPE_URI")
-      .addSuperclassConstructorParameter("%S", requiredTitle())
-      .addSuperclassConstructorParameter("%L", requiredStatus())
+      .primaryConstructor(
+        constructorBuilder
+          .addParameter(detailParameter())
+          .addParameter(ParameterSpec.builder("title", STRING.copy(nullable = true)).defaultValue("%S", title).build())
+          .addParameter(
+            ParameterSpec.builder("status", INT.copy(nullable = true)).defaultValue("%L", status ?: "null").build(),
+          ).build(),
+      ).addSuperclassConstructorParameter("TYPE_URI")
+      .addSuperclassConstructorParameter("title")
+      .addSuperclassConstructorParameter("status")
       .addSuperclassConstructorParameter("detail")
       .addSuperclassConstructorParameter("instance")
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)) {
+      typeBuilder.addSundayProblemCreator(typeName())
+    }
   }
 
   private fun GeneratedProblem.configureZalandoProblemType(

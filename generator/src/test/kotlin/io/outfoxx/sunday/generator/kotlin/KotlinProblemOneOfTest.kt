@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.generator.tools.problemOneOfCases
+import io.outfoxx.sunday.generator.tools.rfc9457ProblemOneOfCases
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.quarkus.jackson.ObjectMapperCustomizer
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -145,7 +146,17 @@ class KotlinProblemOneOfTest {
           registrar.customize(mapper)
         }
       }
-      val cases = mapper.readTree(problemOneOfCases).toList()
+      val cases =
+        mapper
+          .readTree(
+            if (library ==
+              KotlinProblemLibrary.SUNDAY
+            ) {
+              rfc9457ProblemOneOfCases
+            } else {
+              problemOneOfCases
+            },
+          ).toList()
       val inlineCases =
         cases.filter { it["union"].asText() == "Problems" }.map {
           it.deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>().put("union", "APIGetItemResponseBody")
@@ -161,6 +172,33 @@ class KotlinProblemOneOfTest {
           }
           if (case["error"].asText() == "constraints") assertEquals(2, failure.suppressed.size)
         } else {
+          if (library == KotlinProblemLibrary.SUNDAY) {
+            for (member in listOf("type", "title", "status", "detail", "instance")) {
+              val missing = raw.deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>().apply { remove(member) }
+              val baseline = runCatching { mapper.writeValueAsString(mapper.readValue(missing.toString(), union)) }
+              for (wrong in if (member ==
+                "status"
+              ) {
+                listOf("null", "true", "\"404\"", "[]", "{}")
+              } else {
+                listOf("null", "true", "42", "[]", "{}")
+              }) {
+                val changed =
+                  missing.deepCopy().set<com.fasterxml.jackson.databind.JsonNode>(
+                    member,
+                    mapper.readTree(wrong),
+                  )
+                val actual = runCatching { mapper.writeValueAsString(mapper.readValue(changed.toString(), union)) }
+                assertEquals(baseline.isSuccess, actual.isSuccess, "$member=$wrong")
+                if (baseline.isSuccess) {
+                  assertEquals(
+                    mapper.readTree(baseline.getOrThrow()),
+                    mapper.readTree(actual.getOrThrow()),
+                  )
+                }
+              }
+            }
+          }
           val decoded = mapper.readValue(raw.toString(), union)
           assertEquals(case["expected"].asText(), decoded.javaClass.simpleName, case.toString())
           val encoded = mapper.readTree(mapper.writeValueAsString(decoded))

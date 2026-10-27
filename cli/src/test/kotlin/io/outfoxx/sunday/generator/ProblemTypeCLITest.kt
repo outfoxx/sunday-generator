@@ -23,8 +23,7 @@ import io.outfoxx.sunday.generator.python.PythonLitestarGenerateCommand
 import io.outfoxx.sunday.generator.python.PythonSundayGenerateCommand
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerateCommand
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerateCommand
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -38,11 +37,11 @@ class ProblemTypeCLITest {
 
   @ParameterizedTest
   @ValueSource(strings = ["kotlin-sunday", "kotlin-jaxrs", "swift", "typescript", "python-sunday", "python-litestar"])
-  fun `every target rejects optional problem types without a compatible explicit default`(target: String) {
-    for ((schema, expected) in listOf(
-      "type: string" to "default of 'about:blank'",
-      "type: string, default: 'https://example.com/custom'" to "default of 'about:blank'",
-      "type: string, default: 'about:blank', enum: ['https://example.com/custom']" to "constraints",
+  fun `every target accepts Problem schemas without requiring authored RFC defaults`(target: String) {
+    for (schema in listOf(
+      "type: string",
+      "type: string, default: 'https://example.com/custom'",
+      "type: string, default: 'about:blank', enum: ['https://example.com/custom']",
     )) {
       val source = directory.resolve("problems.yaml")
       source.writeText(
@@ -71,21 +70,24 @@ class ProblemTypeCLITest {
             "python-sunday" -> PythonSundayGenerateCommand()
             else -> PythonLitestarGenerateCommand()
           }
-        val error =
-          assertThrows(IllegalArgumentException::class.java) {
-            command.parse(
-              (
-                selection +
-                  listOf(
-                    "-out",
-                    directory.resolve("out").createDirectories().toString(),
-                    source.toString(),
-                  )
-              ).toTypedArray(),
-            )
+        val placement =
+          if (target.startsWith("kotlin")) {
+            listOf("--placement-config", placementConfig("test.problems"))
+          } else {
+            emptyList()
           }
-        assertTrue(error.message.orEmpty().contains("Problem.type"), error.message)
-        assertTrue(error.message.orEmpty().contains(expected), error.message)
+        assertDoesNotThrow {
+          command.parse(
+            (
+              selection + placement +
+                listOf(
+                  "-out",
+                  directory.resolve("out").createDirectories().toString(),
+                  source.toString(),
+                )
+            ).toTypedArray(),
+          )
+        }
       }
     }
   }

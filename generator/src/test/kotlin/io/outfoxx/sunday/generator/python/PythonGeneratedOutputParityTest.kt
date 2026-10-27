@@ -199,7 +199,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
                   assert str(model.model_validate({}).type) == 'about:blank'
                   assert str(model.model_validate({'type': 'https://example.com/problems/custom'}).type) == \
                       'https://example.com/problems/custom'
-                  assert model.model_validate({'type': None}).type is None
+                  assert model.model_validate({'type': None}).type == 'about:blank'
               defaults = ScalarRestrictions.model_validate({'value': 'present'})
               assert defaults.zero == 0 and defaults.flag is False and str(defaults.mode) == 'character'
               for choice in (None, 0, False):
@@ -212,7 +212,9 @@ class PythonGeneratedOutputParityTest : PythonTest() {
                       raise AssertionError('invalid scalar restriction accepted')
                   except ValidationError:
                       pass
-              for status in (401, None, False):
+              for status in (None, False, '401', [], {}):
+                  assert BadRequestProblem.model_validate({'status': status}) == BadRequestProblem.model_validate({})
+              for status in (401, 400.5):
                   try:
                       BadRequestProblem.model_validate({'status': status})
                       raise AssertionError('invalid inherited constant accepted')

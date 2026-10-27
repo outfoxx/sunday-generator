@@ -43,6 +43,7 @@ internal fun TypeSpec.Builder.addNativeDynamicProperties(
   extensionField: String?,
   typeName: (GeneratedTypeRef) -> TypeName,
   common: Boolean = false,
+  nonNullProblemType: Boolean = false,
   isPatchField: (String) -> Boolean,
 ) {
   val patterns = properties.patternProperties(model)
@@ -203,7 +204,10 @@ internal fun TypeSpec.Builder.addNativeDynamicProperties(
             beginControlFlow("if (%L !is %T<*>)", value, PATCH_OP.nestedClass("None"))
             addStatement("put(%S, (%L as? %T<*>)?.value)", field.wireName, value, PATCH_SET_OP)
             endControlFlow()
-          } else if (!field.storage.required && !properties.acceptsNull(field.storage.type)) {
+          } else if (!field.storage.required &&
+            !properties.acceptsNull(field.storage.type) &&
+            !(nonNullProblemType && field.wireName == "type")
+          ) {
             beginControlFlow("if (%L != null)", value)
             addStatement("put(%S, %L)", field.wireName, value)
             endControlFlow()

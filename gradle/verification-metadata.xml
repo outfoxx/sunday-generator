@@ -102,6 +102,10 @@
          <trusted-key id="33F0D7AE129514007CDF67DE9F9358A769793D09" group="io.vertx"/>
          <trusted-key id="33FD4BFD33554634053D73C0C2148900BCD3C2AF" group="^org[.]jetbrains($|([.].*))" regex="true"/>
          <trusted-key id="34441E504A937F43EB0DAEF96A65176A0FB1CD0B" group="org.apache.groovy" name="groovy-bom" version="4.0.27"/>
+         <trusted-key id="346A419DB933840A2D8BD52F63F4AA73B78618C1">
+            <trusting group="org.zalando" name="problem" version="1.0.0"/>
+            <trusting group="org.zalando" name="problem-jackson2" version="1.0.0"/>
+         </trusted-key>
          <trusted-key id="35774B17C9836878845270F4119DF80E6BF8DBC3" group="org.zeroturnaround" name="zt-exec" version="1.12"/>
          <trusted-key id="3AC8633E97ACA1E8F2A7ED239052174975143979" group="org.glassfish.grizzly"/>
          <trusted-key id="4021EEEAFF5DE8404DCD0A270AA3E5C3D232E79B">

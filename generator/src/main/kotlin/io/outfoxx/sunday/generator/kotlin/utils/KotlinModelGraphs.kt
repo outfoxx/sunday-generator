@@ -69,6 +69,12 @@ internal fun addNativeModelGraphs(
       ZALANDO_ABSTRACT_THROWABLE_PROBLEM -> CodeBlock.of("this.status?.statusCode")
       else -> (parent as? ClassName)?.let { problemStatus(it) }
     }
+
+  fun isSundayProblem(name: ClassName): Boolean =
+    when (val parent = models[name]?.second?.build()?.superclass) {
+      SUNDAY_HTTP_PROBLEM -> true
+      else -> (parent as? ClassName)?.let(::isSundayProblem) ?: false
+    }
   models.forEach { (name, entry) ->
     val (model, builder) = entry
     if (properties.hasUnionCommonRules(model)) {
@@ -110,7 +116,15 @@ internal fun addNativeModelGraphs(
     }
     // Reusable discriminator interfaces do not own storage; their concrete payloads supply the field view.
     if (builder.build().kind == TypeSpec.Kind.INTERFACE) return@forEach
-    builder.addNativeDynamicProperties(name, model, properties, types, extensionField(name), typeName) {
+    builder.addNativeDynamicProperties(
+      name,
+      model,
+      properties,
+      types,
+      extensionField(name),
+      typeName,
+      nonNullProblemType = isSundayProblem(name),
+    ) {
       isPatchField(name, it)
     }
     val shapes = KotlinNativeShape(properties, types, typeName)
@@ -155,7 +169,10 @@ internal fun addNativeModelGraphs(
               value,
               PATCH_SET_OP,
             )
-          } else if (!field.storage.required && !properties.acceptsNull(field.storage.type)) {
+          } else if (!field.storage.required &&
+            !properties.acceptsNull(field.storage.type) &&
+            !(field.wireName == "type" && isSundayProblem(name))
+          ) {
             CodeBlock.of("%L?.let { %T(%S, it) }", value, Pair::class, field.wireName)
           } else {
             CodeBlock.of("%S to %L", field.wireName, value)

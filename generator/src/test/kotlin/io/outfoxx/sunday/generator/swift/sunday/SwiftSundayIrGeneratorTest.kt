@@ -190,7 +190,12 @@ class SwiftSundayIrGeneratorTest : SwiftSundayIrTestSupport() {
             XCTAssertEqual(parent.op, "addFact")
             let problem = try decoder.decode(BadRequestProblem.self, from: Data(#"{"type":"about:blank","title":"Bad request","status":400}"#.utf8))
             XCTAssertEqual(problem.detail, "Invalid request")
-            for status in ["401", "null", "false"] {
+            let missingStatus = try decoder.decode(BadRequestProblem.self, from: Data("{}".utf8))
+            for status in ["null", "false", "\"401\"", "[]", "{}"] {
+              let normalized = try decoder.decode(BadRequestProblem.self, from: Data("{\"status\":\(status)}".utf8))
+              XCTAssertEqual(normalized.status, missingStatus.status)
+            }
+            for status in ["401", "400.5"] {
               XCTAssertThrowsError(try decoder.decode(BadRequestProblem.self, from: Data("{\"status\":\(status)}".utf8)))
             }
             let defaults = try decoder.decode(ScalarRestrictions.self, from: Data(#"{"value":"present"}"#.utf8))

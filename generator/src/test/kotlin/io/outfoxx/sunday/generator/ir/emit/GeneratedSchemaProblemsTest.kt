@@ -41,15 +41,15 @@ class GeneratedSchemaProblemsTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["3.0.3", "3.1.0"])
-  fun `optional problem types require an explicit compatible about blank default`(version: String) {
-    for ((schema, expected) in listOf(
-      "type: string" to "default of 'about:blank'",
-      "type: string, default: 'https://example.com/custom'" to "default of 'about:blank'",
-      "type: string, enum: ['about:blank']" to "default of 'about:blank'",
-      "type: string, default: 'about:blank', enum: ['https://example.com/custom']" to "constraints",
-      "type: string, default: 'about:blank', pattern: '^https:'" to "constraints",
-      "type: string, default: 'about:blank', minLength: 12" to "constraints",
-      "type: string, default: 'about:blank', maxLength: 10" to "constraints",
+  fun `problem type defaults are normalized by emitters without discarding authored constraints`(version: String) {
+    for (schema in listOf(
+      "type: string",
+      "type: string, default: 'https://example.com/custom'",
+      "type: string, enum: ['about:blank']",
+      "type: string, default: 'about:blank', enum: ['https://example.com/custom']",
+      "type: string, default: 'about:blank', pattern: '^https:'",
+      "type: string, default: 'about:blank', minLength: 12",
+      "type: string, default: 'about:blank', maxLength: 10",
     )) {
       val source = directory.resolve("problem.yaml")
       source.writeText(
@@ -69,10 +69,22 @@ class GeneratedSchemaProblemsTest {
         """.trimIndent(),
       )
       val api = GeneratedApiIrExporter().export(source.toUri())
-      val error =
-        assertThrows(IllegalArgumentException::class.java) { GeneratedApiIndex(api).validateSchemaProblemResponses() }
-      assertTrue(error.message.orEmpty().contains("Problem.type"), error.message)
-      assertTrue(error.message.orEmpty().contains(expected), error.message)
+      GeneratedApiIndex(api).validateSchemaProblemResponses()
+      val normalized =
+        io.outfoxx.sunday.generator.ir.GeneratedProblemModels
+          .normalizeFields(api.models)
+      val type = normalized.single { it.name == "Problem" }.properties.single { it.name == "type" }
+      assertEquals("about:blank", type.defaultValue)
+      assertEquals(false, type.required)
+      assertEquals(
+        api.models
+          .single {
+            it.name == "Problem"
+          }.properties
+          .single { it.name == "type" }
+          .allowedValues,
+        type.allowedValues,
+      )
     }
   }
 

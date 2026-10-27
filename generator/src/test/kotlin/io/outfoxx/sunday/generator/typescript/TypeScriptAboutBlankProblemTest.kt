@@ -27,12 +27,72 @@ import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
 
 @TypeScriptTest
 @Tag("models")
 @Tag("responses")
 class TypeScriptAboutBlankProblemTest {
+  @Test
+  fun `named URI enum constraints survive Problem codecs`(
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("problems.yaml")
+    Files.writeString(
+      source,
+      """
+      openapi: 3.1.0
+      info: {title: Problem enum, version: '1'}
+      paths: {}
+      components:
+        schemas:
+          ProblemType: {type: string, enum: ['about:blank', 'https://example.com']}
+          HttpProblem:
+            type: object
+            properties:
+              type: {${'$'}ref: '#/components/schemas/ProblemType'}
+              title: {type: string}
+              status: {type: integer}
+      """.trimIndent(),
+    )
+    val registry = TypeScriptTypeRegistry(emptySet())
+    TypeScriptSundayIrGenerator(GeneratedApiIrExporter().export(source.toUri()), registry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+    val consumer =
+      ModuleSpec
+        .builder("Check", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {HttpProblemSchema} from './http-problem';
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601,
+              numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            const schema = runtime.resolveSchema(HttpProblemSchema);
+            for (const type of ['about:blank', 'https://example.com']) {
+              const output = schema.encode(schema.parse({type})) as Record<string, unknown>;
+              if (output.type !== type) throw new Error('Named URI enum changed on round trip');
+            }
+            if (schema.safeParse({type: 'https://example.org/wrong'}).success)
+              throw new Error('Named URI enum constraint lost');
+            if (schema.parse({type: null}).type.toString() !== 'about:blank')
+              throw new Error('Wrong category did not use RFC default');
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("Check", "!check") to consumer),
+        "check",
+      ),
+    )
+  }
+
   @Test
   fun `standard status models retain constraints while HTTP errors use generic problems`(
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
@@ -61,12 +121,12 @@ class TypeScriptAboutBlankProblemTest {
               [new BadRequestProblem({detail: 'Details', traceId: 'trace'}), BadRequestProblemSchema, 400, 'Bad Request'],
               [new NotFoundProblem({detail: 'Details', traceId: 'trace'}), NotFoundProblemSchema, 404, 'Not Found']
             ] as const) {
-              ok(value.type.href === 'about:blank' && value.status === status && value.title === title);
+              ok(value.type.toString() === 'about:blank' && value.status === status && value.title === title);
               const schema = runtime.resolveSchema(definition);
               const raw = {type: 'about:blank', status, title, detail: 'Details', traceId: 'trace'};
               ok(schema.safeParse(raw).success);
               const omitted = schema.parse({status, title, detail: 'Details', traceId: 'trace'});
-              ok(omitted.type.href === 'about:blank');
+              ok(omitted.type.toString() === 'about:blank');
               for (const [field, invalid] of [['status', 500], ['title', 'Wrong'], ['type', 'https://example.com/wrong']]) {
                 ok(!schema.safeParse({...raw, [field]: invalid}).success);
               }
@@ -76,13 +136,13 @@ class TypeScriptAboutBlankProblemTest {
             const required = runtime.resolveSchema(RequiredProblemSchema);
             const omitted = {title: 'Error', status: 400};
             const explicit = {...omitted, type: 'https://example.com/problems/custom'};
-            ok(generic.parse(omitted).type.href === 'about:blank');
-            ok(generic.parse(explicit).type.href === explicit.type);
-            ok(custom.parse(explicit).type.href === explicit.type);
+            ok(generic.parse(omitted).type.toString() === 'about:blank');
+            ok(generic.parse(explicit).type.toString() === explicit.type);
+            ok(custom.parse(explicit).type.toString() === explicit.type);
             ok(!custom.safeParse(omitted).success);
-            ok(!required.safeParse(omitted).success);
-            ok(required.parse(explicit).type.href === explicit.type);
-            ok(!generic.safeParse({...omitted, type: null}).success);
+            ok(required.parse(omitted).type.toString() === 'about:blank');
+            ok(required.parse(explicit).type.toString() === explicit.type);
+            ok(generic.parse({...omitted, type: null}).type.toString() === 'about:blank');
             async function check(): Promise<void> {
               for (const [status, title] of [[400, 'Bad Request'], [404, 'Not Found'], [503, 'Service Unavailable']] as const) {
                 for (const explicit of [false, true]) {
@@ -95,7 +155,7 @@ class TypeScriptAboutBlankProblemTest {
                   try { await client.getExample().execute(); } catch (error) {
                     if (!(error instanceof Problem)) throw error;
                     ok(!(error instanceof BadRequestProblem) && !(error instanceof NotFoundProblem));
-                    ok(error.type.href === 'about:blank' && error.status === status && error.title === title);
+                    ok(error.type.toString() === 'about:blank' && error.status === status && error.title === title);
                     ok(error.detail === 'Details' && error.parameters?.traceId === 'trace');
                     ok(JSON.stringify(error.parameters?.extra) === JSON.stringify({nested: [1, 2]}));
                     continue;

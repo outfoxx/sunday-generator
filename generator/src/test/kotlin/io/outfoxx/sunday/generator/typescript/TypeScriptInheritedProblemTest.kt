@@ -166,7 +166,7 @@ class TypeScriptInheritedProblemTest {
             ok(!Reflect.set(value, 'retryAfterSeconds', 2));
             ok(!Reflect.set(value, 'queueName', 'wrong'));
             ok(!Reflect.set(value, 'type', new URL('https://example.com/wrong')));
-            value.type.href = 'https://example.com/wrong';
+            if (value.type instanceof URL) value.type.href = 'https://example.com/wrong';
             deepStrictEqual(schema.encode(value), raw);
             throws(() => new QueuedProblem({...value, retryAfterSeconds: 2}));
             ok(value instanceof Problem);
@@ -175,11 +175,20 @@ class TypeScriptInheritedProblemTest {
             deepStrictEqual(schema.encode(schema.parse(raw)), raw);
             for (const invalid of [{...raw, resourceKey: ''}, {...raw, retryAfterSeconds: 2},
               {...raw, queuePosition: 0}, {...raw, type: 'https://example.com/wrong'}, {...raw, nullableChild: undefined},
-              {...raw, resourceKey: undefined}, {...raw, queuePosition: undefined}, {...raw, detail: null}]) {
+              {...raw, resourceKey: undefined}, {...raw, queuePosition: undefined}]) {
               ok(!schema.safeParse(invalid).success, JSON.stringify(invalid));
             }
             throws(() => new QueuedProblem({...value, resourceKey: ''}));
             throws(() => new QueuedProblem({...value, queuePosition: 0}));
+            for (const member of ['type', 'title', 'status', 'detail', 'instance']) {
+              const missing: Record<string, unknown> = {...raw}; delete missing[member];
+              const baseline = schema.safeParse(missing);
+              for (const wrong of member === 'status' ? [null, true, '401', [], {}] : [null, true, 42, [], {}]) {
+                const actual = schema.safeParse({...missing, [member]: wrong});
+                ok(actual.success === baseline.success, JSON.stringify({member, wrong, actual, baseline}));
+                if (actual.success && baseline.success) deepStrictEqual(schema.encode(actual.data), schema.encode(baseline.data));
+              }
+            }
             async function httpProblem(): Promise<void> {
               globalThis.fetch = async () => new Response(JSON.stringify(raw), {
                 status: 409, headers: {'Content-Type': 'application/problem+json'}
@@ -203,7 +212,7 @@ class TypeScriptInheritedProblemTest {
                 ok(!Reflect.set(value, 'errorCode', 'changed'));
                 const overridden = new TeamNotFoundProblem({detail: 'Override', resourceId: '123'});
                 ok(overridden.detail === 'Override' && overridden.resourceId === '123');
-                for (const field of ['type', 'status', 'error-code']) {
+                for (const field of ['type', 'error-code']) {
                   ok(!union.safeParse({...raw, [field]: 'wrong'}).success, field);
                 }
                 const {resourceId: _id, ...missingRequired} = raw;

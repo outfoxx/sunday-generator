@@ -21,7 +21,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
-import io.outfoxx.sunday.generator.tools.problemOneOfCases
+import io.outfoxx.sunday.generator.tools.rfc9457ProblemOneOfCases
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
@@ -55,7 +55,7 @@ class SwiftProblemOneOfTest {
       @testable import SundayGenTest
       final class ProblemOneOfTests: XCTestCase {
         func testAlternatives() throws {
-          let cases = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(#"$problemOneOfCases"#.utf8)) as? [[String: Any]])
+          let cases = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(#"$rfc9457ProblemOneOfCases"#.utf8)) as? [[String: Any]])
           for test in cases {
             let union = try XCTUnwrap(test["union"] as? String)
             let raw = try XCTUnwrap(test["wire"])
@@ -100,6 +100,22 @@ class SwiftProblemOneOfTest {
           if let expected {
             let value = try JSONDecoder().decode(type, from: data)
             XCTAssertEqual(kind(value), expected)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            for member in ["type", "title", "status", "detail", "instance"] {
+              var missing = object; missing.removeValue(forKey: member)
+              func outcome(_ raw: [String: Any]) -> NSDictionary? {
+                guard let data = try? JSONSerialization.data(withJSONObject: raw),
+                      let value = try? JSONDecoder().decode(type, from: data),
+                      let encoded = try? JSONEncoder().encode(value) else { return nil }
+                return (try? JSONSerialization.jsonObject(with: encoded)) as? NSDictionary
+              }
+              let wrongValues: [Any] = member == "status" ? [NSNull(), true, "404", [], [:]] : [NSNull(), true, 42, [], [:]]
+              for wrong in wrongValues {
+                var raw = missing; raw[member] = wrong
+                XCTAssertEqual(outcome(raw), outcome(missing), "\(member)=\(wrong)")
+              }
+            }
+
             XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as? NSDictionary,
               try JSONSerialization.jsonObject(with: data) as? NSDictionary)
           } else {

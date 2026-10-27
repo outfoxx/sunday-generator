@@ -59,14 +59,14 @@ class SwiftAboutBlankProblemTest {
           let notFound = try NotFoundProblem(detail: "Details", traceId: "trace")
           for (value, status, title) in [(badRequest as any Sunday.Problem, 400, "Bad Request"),
                                         (notFound as any Sunday.Problem, 404, "Not Found")] {
-            XCTAssertEqual(value.type.absoluteString, "about:blank")
+            XCTAssertEqual(value.type, "about:blank")
             XCTAssertEqual(value.status, status)
             XCTAssertEqual(value.title, title)
             let omitted = Data("{\"title\":\"\(title)\",\"status\":\(status)}".utf8)
             let decoded: any Sunday.Problem = status == 400
               ? try Foundation.JSONDecoder().decode(BadRequestProblem.self, from: omitted)
               : try Foundation.JSONDecoder().decode(NotFoundProblem.self, from: omitted)
-            XCTAssertEqual(decoded.type.absoluteString, "about:blank")
+            XCTAssertEqual(decoded.type, "about:blank")
             var raw = try XCTUnwrap(JSONSerialization.jsonObject(with: Foundation.JSONEncoder().encode(value)) as? [String: Any])
             for (field, invalid) in [("status", 500 as Any), ("title", "Wrong"), ("type", "https://example.com/wrong")] {
               let saved = raw[field]
@@ -84,18 +84,23 @@ class SwiftAboutBlankProblemTest {
         func testOptionalBaseAndRequiredCustomType() throws {
           let decoder = Foundation.JSONDecoder()
           let omitted = Data(#"{"title":"Error","status":400}"#.utf8)
-          XCTAssertEqual(try decoder.decode(FlexibleProblem.self, from: omitted).type.absoluteString, "about:blank")
+          XCTAssertEqual(try decoder.decode(FlexibleProblem.self, from: omitted).type, "about:blank")
           let custom = Data(#"{"type":"https://example.com/problems/custom","title":"Error","status":400}"#.utf8)
-          XCTAssertEqual(try decoder.decode(FlexibleProblem.self, from: custom).type.absoluteString,
+          XCTAssertEqual(try decoder.decode(FlexibleProblem.self, from: custom).type,
                          "https://example.com/problems/custom")
-          XCTAssertEqual(try decoder.decode(CustomProblem.self, from: custom).type.absoluteString,
+          XCTAssertEqual(try decoder.decode(CustomProblem.self, from: custom).type,
                          "https://example.com/problems/custom")
           XCTAssertThrowsError(try decoder.decode(CustomProblem.self, from: omitted))
-          XCTAssertThrowsError(try decoder.decode(RequiredProblem.self, from: omitted))
-          XCTAssertEqual(try decoder.decode(RequiredProblem.self, from: custom).type.absoluteString,
+          XCTAssertEqual(try decoder.decode(RequiredProblem.self, from: omitted).type, "about:blank")
+          XCTAssertEqual(try decoder.decode(RequiredProblem.self, from: custom).type,
                          "https://example.com/problems/custom")
+          let empty = try decoder.decode(FlexibleProblem.self, from: Data(#"{"type":""}"#.utf8))
+          XCTAssertEqual(empty.type, "")
+          XCTAssertNil(empty.typeURI)
+          let emptyEncoded = try XCTUnwrap(JSONSerialization.jsonObject(with: Foundation.JSONEncoder().encode(empty)) as? [String: Any])
+          XCTAssertEqual(emptyEncoded["type"] as? String, "")
           let explicitNull = Data(#"{"type":null,"title":"Error","status":400}"#.utf8)
-          XCTAssertThrowsError(try decoder.decode(FlexibleProblem.self, from: explicitNull))
+          XCTAssertEqual(try decoder.decode(FlexibleProblem.self, from: explicitNull).type, "about:blank")
         }
         func testCustomProblemOmitsAbsentDetail() throws {
           for detail: String? in [nil, "", "Details"] {
@@ -121,7 +126,7 @@ class SwiftAboutBlankProblemTest {
                 try await client.getExample().execute()
                 XCTFail("Expected generic HTTP problem")
               } catch let problem as Sunday.GenericProblem {
-                XCTAssertEqual(problem.type.absoluteString, "about:blank")
+                XCTAssertEqual(problem.type, "about:blank")
                 XCTAssertEqual(problem.status, status)
                 XCTAssertEqual(problem.title, title)
                 XCTAssertEqual(problem.detail, "Details")

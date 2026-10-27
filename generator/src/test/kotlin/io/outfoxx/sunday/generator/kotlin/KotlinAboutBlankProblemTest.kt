@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
@@ -232,10 +233,15 @@ class KotlinAboutBlankProblemTest {
       assertEquals(expected, mapper.readTree(mapper.writeValueAsBytes(decoded))["type"].asText())
     }
     assertThrows(JsonMappingException::class.java) { mapper.readValue(omitted, custom) }
-    assertThrows(JsonMappingException::class.java) { mapper.readValue(omitted, required) }
-    assertThrows(JsonMappingException::class.java) {
-      mapper.readValue("""{"type":null,"title":"Error","status":400}""", generic)
-    }
+    assertEquals("about:blank", mapper.valueToTree<JsonNode>(mapper.readValue(omitted, required))["type"].asText())
+    assertEquals(
+      "about:blank",
+      mapper
+        .valueToTree<JsonNode>(
+          mapper.readValue("""{"type":null,"title":"Error","status":400}""", generic),
+        )["type"]
+        .asText(),
+    )
     if (target == "sunday") consumerClass.getMethod("httpProblems").invoke(null)
   }
 }

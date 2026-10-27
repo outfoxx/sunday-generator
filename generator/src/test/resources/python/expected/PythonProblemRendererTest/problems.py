@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import AwareDatetime, Field
 from sunday import Problem as _Problem, ProblemPayload as _ProblemPayload, ProblemRegistrar
-from typing import ClassVar
+from typing import ClassVar, Literal
 from uuid import UUID
 
 __all__ = ["ProblemPayload", "Problem", "register_problems", "ProjectNotFoundProblemPayload", "ProjectNotFoundProblem"]
@@ -13,7 +13,9 @@ Problem = _Problem
 
 
 class ProjectNotFoundProblemPayload(ProblemPayload):
-    type: str = "https://turnpost.example/problems/project-not-found"
+    type: Literal["https://turnpost.example/problems/project-not-found"] = (
+        "https://turnpost.example/problems/project-not-found"
+    )
     title: str | None = "Project not found"
     status: int | None = 404
     project_id: UUID = Field(alias="projectId")
@@ -29,6 +31,7 @@ class ProjectNotFoundProblem(Problem):
         payload: ProjectNotFoundProblemPayload | None = None,
         **values: object,
     ) -> None:
+        values.setdefault("type", "https://turnpost.example/problems/project-not-found")
         super().__init__(payload or self.payload_type.model_validate(values))
 
     @property

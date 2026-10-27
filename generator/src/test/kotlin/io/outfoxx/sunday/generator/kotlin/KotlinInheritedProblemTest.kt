@@ -322,9 +322,46 @@ class KotlinInheritedProblemTest {
         expected.toString().replace("\"nullableChild\":null,", ""),
         expected.toString().replace("\"resourceKey\":\"A\",", ""),
         expected.toString().replace("\"queuePosition\":2,", ""),
-        expected.toString().replace("\"detail\":\"Resource A is rebuilding\"", "\"detail\":null"),
       )) {
         assertThrows(JsonMappingException::class.java) { mapper.readValue(json, problem.javaClass) }
+      }
+      if (library != KotlinProblemLibrary.SUNDAY) {
+        assertThrows(JsonMappingException::class.java) {
+          mapper.readValue(
+            expected.toString().replace("\"detail\":\"Resource A is rebuilding\"", "\"detail\":null"),
+            problem.javaClass,
+          )
+        }
+      }
+      if (library == KotlinProblemLibrary.SUNDAY) {
+        for (member in listOf("type", "title", "status", "detail", "instance")) {
+          val missing = expected.deepCopy<ObjectNode>().apply { remove(member) }
+          val baseline =
+            runCatching {
+              mapper.readTree(
+                mapper.writeValueAsBytes(mapper.readValue(missing.toString(), problem.javaClass)),
+              )
+            }
+          val wrong =
+            if (member ==
+              "status"
+            ) {
+              listOf("null", "true", "\"401\"", "[]", "{}")
+            } else {
+              listOf("null", "true", "42", "[]", "{}")
+            }
+          for (value in wrong) {
+            val input = missing.deepCopy().set<ObjectNode>(member, mapper.readTree(value))
+            val actual =
+              runCatching {
+                mapper.readTree(
+                  mapper.writeValueAsBytes(mapper.readValue(input.toString(), problem.javaClass)),
+                )
+              }
+            assertEquals(baseline.isSuccess, actual.isSuccess, "$member=$value")
+            if (baseline.isSuccess) assertEquals(baseline.getOrThrow(), actual.getOrThrow())
+          }
+        }
       }
       assertThrows(java.lang.reflect.InvocationTargetException::class.java) { create.invoke(null, "", 2) }
       assertThrows(java.lang.reflect.InvocationTargetException::class.java) { create.invoke(null, "A", 0) }

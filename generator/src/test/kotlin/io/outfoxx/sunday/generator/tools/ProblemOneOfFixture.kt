@@ -20,7 +20,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 /** Identical direct-decoding cases for every target and problem library (issue #319). */
-internal val problemOneOfCases: String =
+internal val problemOneOfCases: String = problemOneOfCases(false)
+
+/** RFC 9457 treats wrong-category and absent optional standard members alike. */
+internal val rfc9457ProblemOneOfCases: String = problemOneOfCases(true)
+
+private fun problemOneOfCases(rfc9457: Boolean): String =
   run {
     val mapper = jacksonObjectMapper()
     val cases = mapper.createArrayNode()
@@ -63,9 +68,9 @@ internal val problemOneOfCases: String =
           raw.deepCopy().put("status", true),
           raw.deepCopy().put("status", 404.5),
         )) {
-          add(union, invalid)
+          if (!rfc9457 || invalid["status"].isNumber || invalid["type"].isNull) add(union, invalid)
         }
-        for (required in listOf("type", "title", "status", "detail")) {
+        for (required in if (rfc9457) listOf("type") else listOf("type", "title", "status", "detail")) {
           add(union, raw.deepCopy().apply { remove(required) })
         }
         if (union == "Problems" && kind == "collection") {

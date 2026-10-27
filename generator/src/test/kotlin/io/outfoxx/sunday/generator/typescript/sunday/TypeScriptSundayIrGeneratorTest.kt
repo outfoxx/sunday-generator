@@ -262,7 +262,10 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                     |const problemSchema = runtime.resolveSchema(%T);
                     |const problem: %T = problemSchema.parse({});
                     |if (problem.detail !== 'Invalid request') throw new Error('inherited default lost');
-                    |for (const status of [401, null, false]) {
+                    |for (const status of [null, false, '401', [], {}]) {
+                    |  if (problemSchema.parse({status}).status !== problem.status) throw new Error('wrong status differs from missing');
+                    |}
+                    |for (const status of [401, 400.5]) {
                     |  if (problemSchema.safeParse({status}).success) throw new Error('invalid inherited constant accepted');
                     |}
                     |const scalarSchema = runtime.resolveSchema(%T);

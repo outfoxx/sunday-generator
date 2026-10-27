@@ -90,7 +90,7 @@ dependencies {
 
   testImplementation("io.quarkus:quarkus-jackson:${libs.versions.quarkus.rest.get()}")
   testImplementation(libs.jacksonCbor)
-  testImplementation("org.zalando:jackson-datatype-problem:${libs.versions.zalandoProblem.get()}")
+  testImplementation("org.zalando:problem-jackson2:${libs.versions.zalandoProblem.get()}")
   testImplementation(libs.slf4j)
 
   testImplementation(libs.junit)

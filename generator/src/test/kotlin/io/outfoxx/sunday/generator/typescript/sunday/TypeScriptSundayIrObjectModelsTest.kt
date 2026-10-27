@@ -263,7 +263,7 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
             if (!rejected) throw new Error('constructor bypassed native schema constraints');
             const dynamic = {nested: [null, true, {value: 'future'}]};
             const problem = schema.parse({detail: 'before', validation: {name: 'bad'}, future: dynamic, additionalProperties: {wire: true}});
-            if (problem.type.href !== 'about:blank') throw new Error('missing type did not use its declared default');
+            if (problem.type.toString() !== 'about:blank') throw new Error('missing type did not use its declared default');
             const copied = problem.copy({detail: 'after'});
             const output = schema.encode(copied) as Record<string, unknown>;
             if (output.detail !== 'after' || problem.detail !== 'before') throw new Error('copy changed declared fields');
@@ -296,7 +296,7 @@ class TypeScriptSundayIrObjectModelsTest : TypeScriptSundayIrTestSupport() {
       httpProblemOutput,
     )
     assertTrue(httpProblemOutput.contains("type: values.type ?? Problem.BLANK_URL"), httpProblemOutput)
-    assertTrue(httpProblemOutput.contains("detail: string;"), httpProblemOutput)
+    assertTrue(httpProblemOutput.contains("detail?: string;"), httpProblemOutput)
     assertFalse(httpProblemOutput.contains("type: URL | null | undefined;"), httpProblemOutput)
     assertTrue(
       badRequestOutput.contains("export class BadRequestProblem extends HttpProblem implements BadRequestProblemSpec"),

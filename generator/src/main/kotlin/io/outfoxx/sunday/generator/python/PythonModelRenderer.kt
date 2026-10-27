@@ -1030,7 +1030,13 @@ class PythonModelRenderer(
         "    def _validate_wire_values(cls, data: object, info: %T) -> object:\n" +
         "        if not isinstance(data, dict):\n" +
         "            return data\n" +
-        "        data = data.copy()\n" +
+        (
+          if (PythonProblemModels(modelIndex.values.toList()).isProblem(this)) {
+            "        data = cls.normalize_standard_members(data)\n"
+          } else {
+            "        data = data.copy()\n"
+          }
+        ) +
         "%C\n" +
         "        return data",
       PythonSymbol("pydantic", "model_validator"),
@@ -1306,6 +1312,50 @@ class PythonModelRenderer(
   }
 
   private fun GeneratedModel.renderStandardUnionAlias(
+    aliases: List<GeneratedTypeRef>,
+    unionType: PythonCodeBlock,
+    unionName: String,
+  ): PythonCodeBlock {
+    val problems = PythonProblemModels(modelIndex.values.toList())
+    if (discriminator != null &&
+      aliases.isNotEmpty() &&
+      aliases.all { modelIndex[it.name]?.let(problems::isProblem) == true }
+    ) {
+      val rawName = "_${unionName}Dispatch"
+      val declaration =
+        PythonCodeBlock.of(
+          "type %L = %T[%L, %T(%T.normalize_standard_members)]",
+          unionName,
+          PythonSymbol("typing", "Annotated"),
+          rawName,
+          PythonSymbol("pydantic", "BeforeValidator"),
+          PythonSymbol("sunday", "ProblemPayload"),
+        )
+      val formatted =
+        if (declaration.render(PythonRenderContext(PythonImportSet())).length <= 120) {
+          declaration
+        } else {
+          PythonCodeBlock.of(
+            "type %L = %T[\n    %L, %T(%T.normalize_standard_members)\n]",
+            unionName,
+            PythonSymbol("typing", "Annotated"),
+            rawName,
+            PythonSymbol("pydantic", "BeforeValidator"),
+            PythonSymbol("sunday", "ProblemPayload"),
+          )
+        }
+      return PythonCodeBlock.join(
+        listOf(
+          renderRawStandardUnionAlias(aliases, unionType, rawName),
+          formatted,
+        ),
+        "\n\n",
+      )
+    }
+    return renderRawStandardUnionAlias(aliases, unionType, unionName)
+  }
+
+  private fun GeneratedModel.renderRawStandardUnionAlias(
     aliases: List<GeneratedTypeRef>,
     unionType: PythonCodeBlock,
     unionName: String,
