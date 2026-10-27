@@ -5466,18 +5466,18 @@ class SwiftSundayIrGenerator(
               property.name.swiftIdentifierName,
             )
           } else if (property.type.containsFreeformMap()) {
-            addFreeformMapEncoder(property, patchable)
+            addFreeformMapEncoder(property, patchable, model)
           } else {
             addStatement(
               "try container.encode%L(self.%N, forKey: .%N)",
-              if (patchable) "" else property.swiftEncodingSuffix(),
+              if (patchable) "" else property.swiftEncodingSuffix(model),
               property.name.swiftIdentifierName,
               property.name.swiftIdentifierName,
             )
           }
         }
         localProperties.filter { property -> property.externalDiscriminator != null }.forEach { property ->
-          addExternalDiscriminatorEncoder(property)
+          addExternalDiscriminatorEncoder(property, model)
         }
       }.build()
 
@@ -5507,6 +5507,7 @@ class SwiftSundayIrGenerator(
   private fun FunctionSpec.Builder.addFreeformMapEncoder(
     property: GeneratedModelProperty,
     patchable: Boolean,
+    model: GeneratedModel,
   ) {
     val identifier = property.name.swiftIdentifierName
     if (patchable) {
@@ -5526,7 +5527,7 @@ class SwiftSundayIrGenerator(
     if (optional) beginControlFlow("if", "let value = self.%N", identifier)
     addFreeformValueEncoder(identifier, if (optional) CodeBlock.of("value") else CodeBlock.of("self.%N", identifier))
     if (optional) {
-      if (property.swiftEncodingSuffix().isEmpty()) {
+      if (property.swiftEncodingSuffix(model).isEmpty()) {
         nextControlFlow("else", "")
         addStatement("try container.encodeNil(forKey: .%N)", identifier)
       }
@@ -5600,13 +5601,16 @@ class SwiftSundayIrGenerator(
     if (propertyTypeName.optional) endControlFlow("if")
   }
 
-  private fun FunctionSpec.Builder.addExternalDiscriminatorEncoder(property: GeneratedModelProperty) {
+  private fun FunctionSpec.Builder.addExternalDiscriminatorEncoder(
+    property: GeneratedModelProperty,
+    model: GeneratedModel,
+  ) {
     // Canonical validation already selected the branch; opening the Codable existential preserves its concrete encoder.
     val identifier = property.name.swiftIdentifierName
     if (property.swiftTypeName().optional) {
       beginControlFlow("if", "let payload = self.%N", identifier)
       addStatement("try container.encode(payload, forKey: .%N)", identifier)
-      if (property.swiftEncodingSuffix().isEmpty()) {
+      if (property.swiftEncodingSuffix(model).isEmpty()) {
         nextControlFlow("else", "")
         addStatement("try container.encodeNil(forKey: .%N)", identifier)
       }
@@ -5699,8 +5703,19 @@ class SwiftSundayIrGenerator(
         }
       }.build()
 
-  private fun GeneratedModelProperty.swiftEncodingSuffix(): String =
-    if (!required && !modelProperties.acceptsNull(type)) "IfPresent" else ""
+  private fun GeneratedModelProperty.swiftEncodingSuffix(model: GeneratedModel? = null): String {
+    // Problem storage keeps the base type's nullability, but encoding honors the descendant's wire constraints.
+    val wireType =
+      model?.takeIf { it.isProblemModel }?.let {
+        modelProperties
+          .fields(it)
+          .firstOrNull { field -> field.wireName == wireName }
+          ?.effective
+          ?.type
+      }
+        ?: type
+    return if (!required && !modelProperties.acceptsNull(wireType)) "IfPresent" else ""
+  }
 
   private fun GeneratedModelProperty.swiftTypeName(): TypeName =
     type

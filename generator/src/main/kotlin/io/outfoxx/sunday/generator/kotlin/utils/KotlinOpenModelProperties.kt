@@ -211,9 +211,8 @@ internal fun addOpenModelProperties(
         properties.fields(entry.first).associate { it.storage.name.kotlinIdentifierName to it.wireName },
         modelTypes.keys.filter { it.enclosingClassName() == type }.mapTo(mutableSetOf()) { it.simpleName },
       )
-    }
-    if (entry.second.build().superclass == SUNDAY_HTTP_PROBLEM) {
-      val storage = completed[type]
+      // Descendants can narrow standard fields even though the runtime getters remain inherited and final.
+      val storage = completed[type].takeIf { entry.second.build().superclass == SUNDAY_HTTP_PROBLEM }
       val binding = ClassName(type.packageName, bindingNames.newName("${type.simpleName}RuntimeExtensionBinding"))
       entry.second.addSundayProblemExtensions(
         type,

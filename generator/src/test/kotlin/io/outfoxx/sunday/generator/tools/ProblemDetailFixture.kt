@@ -72,3 +72,49 @@ fun problemDetailApi(
     }
   }
 }
+
+/** Parses a problem whose nullable inherited detail is narrowed to an optional non-nullable string. */
+fun narrowedProblemDetailApi(
+  frontend: String,
+  directory: Path,
+): GeneratedApi {
+  val source = directory.resolve("problems.yaml")
+  val header =
+    if (frontend == "asyncapi") "asyncapi: 3.0.0\nchannels: {}\noperations: {}" else "openapi: 3.1.0\npaths: {}"
+  source.writeText(
+    header + "\n" +
+      """
+      info: {title: Problem encoding, version: '1.0'}
+      components:
+        schemas:
+          HttpProblem:
+            type: object
+            additionalProperties: true
+            properties:
+              type: {type: [string, 'null'], format: uri, default: 'about:blank'}
+              title: {type: [string, 'null']}
+              status: {type: [integer, 'null']}
+              detail: {type: [string, 'null']}
+              instance: {type: [string, 'null'], format: uri}
+          AccountFieldsInvalidProblem:
+            allOf:
+              - ${'$'}ref: '#/components/schemas/HttpProblem'
+              - type: object
+                required: [type, title, status]
+                properties:
+                  type: {type: string, format: uri, const: 'https://example.com/problems/account-fields-invalid'}
+                  title: {type: string, const: Bad Request}
+                  status: {type: integer, const: 400}
+                  detail: {type: string}
+      """.trimIndent(),
+  )
+  val sources = mutableListOf(source.toUri())
+  if (frontend == "composed") {
+    val events = directory.resolve("events.yaml")
+    events.writeText(
+      "asyncapi: 3.0.0\ninfo: {title: Problem encoding, version: '1.0'}\nchannels: {}\noperations: {}\n",
+    )
+    sources += events.toUri()
+  }
+  return GeneratedApiIrExporter().export(sources)
+}
