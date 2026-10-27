@@ -42,7 +42,15 @@ object GeneratedProblemModels {
       } else {
         model.copy(
           properties =
-            model.properties.map { property ->
+            model.properties.map { sourceProperty ->
+              val property =
+                if (stringReferences &&
+                  (sourceProperty.serializationName ?: sourceProperty.name) in setOf("type", "instance")
+                ) {
+                  sourceProperty.stringReference(index)
+                } else {
+                  sourceProperty
+                }
               when (property.serializationName ?: property.name) {
                 "type" ->
                   property.copy(
@@ -74,5 +82,27 @@ object GeneratedProblemModels {
         )
       }
     }
+  }
+
+  // Problem URI storage is a string even when an authored alias normally maps to URL or an enum.
+  private fun GeneratedModelProperty.stringReference(index: GeneratedModelIndex): GeneratedModelProperty {
+    var reference = type
+    var constraints = validation
+    var values = allowedValues
+    val visited = mutableSetOf<GeneratedModel>()
+    while (reference.kind == GeneratedTypeRef.Kind.NAMED) {
+      val declaration = index.modelOrNull(reference) ?: break
+      if (!visited.add(declaration)) break
+      constraints = declaration.validation + constraints
+      if (declaration.kind == GeneratedModel.Kind.ENUM && declaration.unknownValue == null) {
+        values = values?.filter { it in declaration.values } ?: declaration.values
+      }
+      reference = declaration.aliases.singleOrNull() ?: break
+    }
+    return copy(
+      type = GeneratedTypeRef.scalar("string", format = "problem-uri"),
+      validation = constraints,
+      allowedValues = values,
+    )
   }
 }
