@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedPlacement
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
@@ -400,19 +401,24 @@ class SwiftPlacementRegressionTest {
     kind: String,
     compiler: SwiftCompiler,
   ) {
+    val api = PlacementRegressionFixture(directory, kind).inheritance()
     compile(
-      PlacementRegressionFixture(directory, kind).inheritance(),
+      api.copy(
+        models = api.models.map { it.copy(additionalProperties = GeneratedAdditionalProperties(allowed = true)) },
+      ),
       compiler,
       true,
       """
-      let data = Data(#"{"next":{},"child":{"next":{}}}"#.utf8)
+      let data = Data(#"{"next":{},"child":{"next":{}},"extra":"retained"}"#.utf8)
       let value = try JSONDecoder().decode(Child.self, from: data)
       let base: Base = value
       XCTAssertNotNil(base.next)
       XCTAssertNotNil(value.child?.next)
+      XCTAssertNotNil(base.additionalProperties["extra"])
       let encoded = try JSONEncoder().encode(value)
       let copy = try JSONDecoder().decode(Child.self, from: encoded)
       XCTAssertNotNil(copy.child?.next)
+      XCTAssertNotNil(copy.additionalProperties["extra"])
       _ = value.withNext(next: nil)
       _ = value.debugDescription
       """.trimIndent(),

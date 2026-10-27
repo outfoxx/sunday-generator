@@ -4843,13 +4843,23 @@ class SwiftSundayIrGenerator(
     model: GeneratedModel,
     key: String,
   ): CodeBlock =
-    if (modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
+    if (!model.isSwiftClassModel && modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
       CodeBlock.of("")
     } else {
       CodeBlock.of(" && (%L)", retainedExtension(model, key))
     }
 
   private fun retainedExtension(
+    model: GeneratedModel,
+    key: String,
+  ): CodeBlock =
+    if (model.isSwiftClassModel) {
+      CodeBlock.of("Self._sundayRetainsAdditionalProperty(%L)", key)
+    } else {
+      extensionRetentionRule(model, key)
+    }
+
+  private fun extensionRetentionRule(
     model: GeneratedModel,
     key: String,
   ): CodeBlock =
@@ -5112,6 +5122,21 @@ class SwiftSundayIrGenerator(
           .build(),
       )
     }
+    if (model.isSwiftClassModel && model.preservesExtensions()) {
+      addFunction(
+        FunctionSpec
+          .builder("_sundayRetainsAdditionalProperty")
+          .addModifiers(CLASS)
+          .addDoc("Uses the concrete model's rules when filtering shared extension storage.\n")
+          .apply {
+            if (model.hasPublicSwiftSupport) addModifiers(model.swiftMemberAccess)
+            if (model.inheritsExtensionStorage()) addModifiers(OVERRIDE)
+          }.addParameter("_", "name", STRING)
+          .returns(BOOL)
+          .addStatement("return %L", extensionRetentionRule(model, "name"))
+          .build(),
+      )
+    }
   }
 
   private fun closedModelDecodeValidation(
@@ -5244,7 +5269,9 @@ class SwiftSundayIrGenerator(
         }
         if (!inherited) {
           addStatement("var extensionContainer = encoder.container(keyedBy: UnknownPropertyCodingKey.self)")
-          if (modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
+          if (!model.isSwiftClassModel &&
+            modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)
+          ) {
             beginControlFlow("for", "(key, value) in %N", extensionFieldName)
           } else {
             beginControlFlow("for", "(key, value) in %N where %L", extensionFieldName, retainedExtension(model, "key"))
