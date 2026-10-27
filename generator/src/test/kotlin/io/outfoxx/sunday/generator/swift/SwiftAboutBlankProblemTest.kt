@@ -97,6 +97,16 @@ class SwiftAboutBlankProblemTest {
           let explicitNull = Data(#"{"type":null,"title":"Error","status":400}"#.utf8)
           XCTAssertThrowsError(try decoder.decode(FlexibleProblem.self, from: explicitNull))
         }
+        func testCustomProblemOmitsAbsentDetail() throws {
+          for detail: String? in [nil, "", "Details"] {
+            let problem = try CustomProblem(title: "Error", status: 400, detail: detail)
+            let encoded = try Foundation.JSONEncoder().encode(problem)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+            XCTAssertEqual(object["detail"] as? String, detail)
+            XCTAssertEqual(object.keys.contains("detail"), detail != nil)
+            XCTAssertEqual(try Foundation.JSONDecoder().decode(CustomProblem.self, from: encoded).detail, detail)
+          }
+        }
         func testGenericHTTPProblems() async throws {
           for (status, title) in [(400, "Bad Request"), (404, "Not Found"), (503, "Service Unavailable")] {
             for explicit in [false, true] {

@@ -2900,6 +2900,14 @@ class KotlinJAXRSIrGenerator(
                       ) {
                         add("type")
                       }
+                      if (typeRegistry.problemLibrary == KotlinProblemLibrary.QUARKUS &&
+                        modelProperties.fields(this@classTypeSpec).any {
+                          it.wireName == "status" && it.effective.allowedValues?.size == 1
+                        }
+                      ) {
+                        // Removing the constant parameter exposes Quarkus's primitive status accessor.
+                        add("statusCode")
+                      }
                     }
                 } else {
                   emptySet()

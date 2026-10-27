@@ -141,6 +141,25 @@ internal fun addZalandoProblemExtensions(
       )
     }
     val fields = properties.fields(model).associateBy { it.storage.name.kotlinIdentifierName }
+    fields.values.firstOrNull { it.wireName == "detail" }?.let { field ->
+      builder.addFunction(
+        FunSpec
+          .builder("getDetail")
+          .addModifiers(KModifier.OVERRIDE)
+          .addKdoc("Preserves empty detail text while applying this schema's null inclusion rule.\n")
+          .addAnnotation(
+            AnnotationSpec
+              .builder(JACKSON_JSON_INCLUDE)
+              .addMember(
+                "%T.%L",
+                JACKSON_JSON_INCLUDE_INCLUDE,
+                if (properties.acceptsNull(field.effective.type)) "ALWAYS" else "NON_NULL",
+              ).build(),
+          ).returns(STRING.copy(nullable = true))
+          .addStatement("return super.getDetail()")
+          .build(),
+      )
+    }
     builder.propertySpecs.replaceAll { property ->
       val field = fields[property.name]
       if (field != null && properties.acceptsNull(field.effective.type)) {

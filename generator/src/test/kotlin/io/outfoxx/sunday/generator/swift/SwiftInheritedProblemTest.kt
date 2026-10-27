@@ -152,6 +152,16 @@ class SwiftInheritedProblemTest {
           XCTAssertThrowsError(try QueuedProblem(resourceKey: "A", nullableChild: nil,
             metadata: Metadata(region: "west"), queuePosition: 0))
         }
+        func testAbsentDetailIsOmittedWhileNullableFieldsRemainNull() throws {
+          let problem = try QueuedProblem(detail: nil, nullableChild: nil, metadata: Metadata(region: "west"))
+          let encoded = try JSONEncoder().encode(problem)
+          let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+          XCTAssertFalse(object.keys.contains("detail"))
+          XCTAssertFalse(object.keys.contains("instance"))
+          XCTAssertTrue(object["nullableChild"] is NSNull)
+          XCTAssertTrue(object["nullableParent"] is NSNull)
+          XCTAssertEqual(try JSONDecoder().decode(QueuedProblem.self, from: encoded).detail, "Resource A is rebuilding")
+        }
       }
       private final class ProblemProtocol: URLProtocol, @unchecked Sendable {
         override class func canInit(with request: URLRequest) -> Bool { true }

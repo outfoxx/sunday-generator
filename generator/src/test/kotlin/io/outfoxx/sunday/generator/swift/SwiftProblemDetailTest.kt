@@ -21,6 +21,9 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.narrowedProblemDetailApi
 import io.outfoxx.sunday.generator.tools.problemDetailApi
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
@@ -34,6 +37,50 @@ import kotlin.io.path.writeText
 @SwiftTest
 @Tag("responses")
 class SwiftProblemDetailTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["openapi", "asyncapi", "composed"])
+  fun `inherited problem encoding respects narrowed detail nullability`(
+    frontend: String,
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(
+      narrowedProblemDetailApi(frontend, directory),
+      registry,
+      swiftSundayTestOptions,
+    ).generateServiceTypes()
+    registry.generateFiles(GeneratedOutputSelection(), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    compiler.testsDir.resolve("ProblemEncodingTests.swift").writeText(
+      """
+      import Foundation
+      import XCTest
+      @testable import SundayGenTest
+      final class ProblemEncodingTests: XCTestCase {
+        func testNarrowedDetailEncoding() throws {
+          for detail: String? in [nil, "", "Invalid field"] {
+            let problem = try AccountFieldsInvalidProblem(detail: detail)
+            let encoded = try JSONEncoder().encode(problem)
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+            XCTAssertEqual(object.keys.contains("detail"), detail != nil)
+            XCTAssertEqual(object["detail"] as? String, detail)
+            XCTAssertTrue(object["instance"] is NSNull)
+            XCTAssertEqual(try JSONDecoder().decode(AccountFieldsInvalidProblem.self, from: encoded).detail, detail)
+            object["detail"] = NSNull()
+            XCTAssertThrowsError(try JSONDecoder().decode(AccountFieldsInvalidProblem.self,
+              from: JSONSerialization.data(withJSONObject: object)))
+          }
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+    val generated =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/AccountFieldsInvalidProblem.swift")
+    assertTrue(generated.contains("try container.encodeIfPresent(self.detail, forKey: .detail)"), generated)
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "composed"])
   fun `problem details are optional defaults and can be overridden`(
@@ -64,6 +111,13 @@ class SwiftProblemDetailTest {
           XCTAssertNil(WithDefaultProblem(detail: nil).detail)
           let encoded = try JSONEncoder().encode(WithDefaultProblem(detail: "Wire detail"))
           XCTAssertEqual(try JSONDecoder().decode(WithDefaultProblem.self, from: encoded).detail, "Wire detail")
+        }
+        func testAbsentDetailIsOmitted() throws {
+          for encoded in [try JSONEncoder().encode(WithoutDefaultProblem()),
+                          try JSONEncoder().encode(WithDefaultProblem(detail: nil))] {
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+            XCTAssertFalse(object.keys.contains("detail"))
+          }
         }
       }
       """.trimIndent(),
