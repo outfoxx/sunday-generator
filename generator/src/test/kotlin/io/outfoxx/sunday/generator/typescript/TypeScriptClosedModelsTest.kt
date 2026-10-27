@@ -106,15 +106,6 @@ class TypeScriptClosedModelsTest {
     "composed,Schema",
     "composed,On",
     "composed,Off",
-    "openapi-unevaluated,Schema",
-    "openapi-unevaluated,On",
-    "openapi-unevaluated,Off",
-    "asyncapi-unevaluated,Schema",
-    "asyncapi-unevaluated,On",
-    "asyncapi-unevaluated,Off",
-    "composed-unevaluated,Schema",
-    "composed-unevaluated,On",
-    "composed-unevaluated,Off",
   )
   fun `closed objects reject unknown fields`(
     frontend: String,

@@ -760,7 +760,7 @@ class OpenApiToGeneratedApi(
           kind = GeneratedModel.Kind.OBJECT,
           scope = scope,
           properties = properties(composed.localSchema, name, required, localModels, composed.inheritedProperties),
-          closed = true.takeIf { resolved.effectiveAdditionalProperties() == false },
+          closed = true.takeIf { resolved["additionalProperties"] == false },
           patternProperties = patternProperties(name, resolved, localModels),
           additionalProperties = additionalProperties(name, resolved, localModels, scope),
           inherits = composed.parents.map(GeneratedTypeRef::named),
@@ -838,7 +838,7 @@ class OpenApiToGeneratedApi(
       unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
       scope = scope,
       properties = generatedProperties,
-      closed = true.takeIf { schema.effectiveAdditionalProperties() == false },
+      closed = true.takeIf { schema["additionalProperties"] == false },
       additionalProperties = generatedAdditionalProperties,
       patternProperties = generatedPatternProperties,
       aliases = aliases,
@@ -941,7 +941,7 @@ class OpenApiToGeneratedApi(
     localModels: MutableMap<String, GeneratedModel>,
     scope: GeneratedModelScope?,
   ): GeneratedAdditionalProperties? =
-    when (val additionalProperties = schema.effectiveAdditionalProperties()) {
+    when (val additionalProperties = schema["additionalProperties"]) {
       true -> GeneratedAdditionalProperties(allowed = true)
       false -> GeneratedAdditionalProperties(allowed = false)
       is Map<*, *> -> {

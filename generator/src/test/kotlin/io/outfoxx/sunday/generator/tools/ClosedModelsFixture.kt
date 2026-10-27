@@ -23,20 +23,10 @@ import kotlin.io.path.writeText
 
 /** Closed and open objects shared by compile-backed decoding tests for every source frontend. */
 internal fun closedModelsApi(
-  sourceKind: String,
+  frontend: String,
   directory: Path,
 ): GeneratedApi {
-  val frontend = sourceKind.removeSuffix("-unevaluated")
-  val unevaluated = sourceKind.endsWith("-unevaluated")
-  val original = requireNotNull(GeneratedApi::class.java.getResource("/openapi/ir/closed-models.yaml")).readText()
-  val openapi =
-    if (unevaluated) {
-      original
-        .replace("additionalProperties: false", "unevaluatedProperties: false")
-        .replace("        name: {type: string}\n        count:", "        count:")
-    } else {
-      original
-    }
+  val openapi = requireNotNull(GeneratedApi::class.java.getResource("/openapi/ir/closed-models.yaml")).readText()
   val source = directory.resolve(if (frontend == "raml") "models.raml" else "models.yaml")
   val asyncapi =
     """
@@ -140,7 +130,7 @@ internal fun closedModelsApi(
         schemas:
           EventRecord:
             type: object
-            ${if (unevaluated) "unevaluatedProperties" else "additionalProperties"}: false
+            additionalProperties: false
             properties:
               name: {type: string}
       """.trimIndent(),

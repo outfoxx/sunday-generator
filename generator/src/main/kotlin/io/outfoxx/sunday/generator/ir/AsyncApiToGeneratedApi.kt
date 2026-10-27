@@ -618,7 +618,7 @@ class AsyncApiToGeneratedApi(
         unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
         source = source,
         properties = mergedProperties(name, listOf(schema), schema.requiredNames.toSet(), location, localModels),
-        closed = true.takeIf { schema.additionalPropertiesRule() == false },
+        closed = true.takeIf { schema["additionalProperties"] == false },
         additionalProperties = additionalProperties(name, schema, location, localModels),
         patternProperties = patternProperties(name, schema, location, localModels),
         aliases = aliases,
@@ -712,7 +712,7 @@ class AsyncApiToGeneratedApi(
       source = source,
       properties = properties,
       inherits = inherits,
-      closed = true.takeIf { schema.additionalPropertiesRule() == false },
+      closed = true.takeIf { schema["additionalProperties"] == false },
       additionalProperties = additionalProperties(name, schema, location, localModels),
       patternProperties = patternProperties(name, schema, location, localModels),
       discriminator = discriminator,
@@ -722,39 +722,13 @@ class AsyncApiToGeneratedApi(
     )
   }
 
-  private fun Map<*, *>.additionalPropertiesRule(): Any? {
-    if (containsKey("additionalProperties") || this["unevaluatedProperties"] != false) {
-      return effectiveAdditionalProperties()
-    }
-
-    // An explicit catch-all in an allOf branch has already evaluated the remaining keys.
-    fun evaluatesRemaining(
-      schema: Map<*, *>,
-      visited: Set<String> = emptySet(),
-    ): Boolean {
-      val reference = schema.refName()
-      if (reference != null) {
-        if (reference in visited) return false
-        return currentSourceDocument.schemas()[reference]?.let { evaluatesRemaining(it, visited + reference) } == true
-      }
-      val additional = schema["additionalProperties"]
-      val unevaluated = schema["unevaluatedProperties"]
-      return additional == true ||
-        additional is Map<*, *> ||
-        unevaluated == true ||
-        unevaluated is Map<*, *> ||
-        schema.schemaList("allOf").any { evaluatesRemaining(it, visited) }
-    }
-    return false.takeUnless { schemaList("allOf").any { evaluatesRemaining(it) } }
-  }
-
   private fun additionalProperties(
     owner: String,
     schema: Map<*, *>,
     location: String,
     localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedAdditionalProperties? =
-    when (val additional = schema.additionalPropertiesRule()) {
+    when (val additional = schema["additionalProperties"]) {
       is Boolean -> GeneratedAdditionalProperties(allowed = additional)
       is Map<*, *> -> {
         val effective = additional.resolvedSchema()
@@ -1205,9 +1179,7 @@ class AsyncApiToGeneratedApi(
           ?: "any"
       else ->
         when {
-          containsKey("properties") ||
-            containsKey("additionalProperties") ||
-            containsKey("unevaluatedProperties") -> "object"
+          containsKey("properties") || containsKey("additionalProperties") -> "object"
           containsKey("allOf") -> "object"
           containsKey("items") -> "array"
           this["const"] is String -> "string"
@@ -1343,8 +1315,7 @@ class AsyncApiToGeneratedApi(
         map.containsKey("allOf") ||
         map.containsKey("properties") ||
         map.containsKey("items") ||
-        map.containsKey("additionalProperties") ||
-        map.containsKey("unevaluatedProperties")
+        map.containsKey("additionalProperties")
     }
 
   private fun Map<*, *>.protocolBindings(kind: GeneratedProtocolBinding.Kind): List<GeneratedProtocolBinding> =

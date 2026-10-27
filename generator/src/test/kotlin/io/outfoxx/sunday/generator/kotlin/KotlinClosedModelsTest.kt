@@ -47,9 +47,6 @@ class KotlinClosedModelsTest {
       "openapi",
       "asyncapi",
       "composed",
-      "openapi-unevaluated",
-      "asyncapi-unevaluated",
-      "composed-unevaluated",
     ],
   )
   fun `closed objects reject unknown fields even with a lenient mapper`(

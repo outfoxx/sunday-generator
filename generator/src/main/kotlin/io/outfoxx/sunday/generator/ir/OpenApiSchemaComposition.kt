@@ -307,20 +307,12 @@ internal class OpenApiSchemaComposition(
       if (false in contributions) fail(schema, "OpenAPI false schema intersection cannot be represented")
       val parts = contributions.filterIsInstance<Map<*, *>>()
       parts.forEach { part -> result = merge(result, resolve(part), schema) }
-      val remainingEvaluated =
-        result["unevaluatedProperties"] == true ||
-          (result["unevaluatedProperties"] as? Map<*, *>)?.isUnconstrainedSchema() == true
       val own =
         schema.entries
           .filter { it.key is String && it.key !in setOf("\$ref", "allOf") }
           .associate { it.key as String to it.value }
       result = merge(result, normalizeAssertions(OpenApiSchemaBounds.normalize(own, schema)), schema)
       validate(result, schema)
-      // Close after collecting this scope's evaluated fields, so outer allOf closure permits inherited properties.
-      // Union alternatives receive the closure when their surrounding assertions are distributed.
-      if (result["unevaluatedProperties"] == false && result.keys.none { it in setOf("oneOf", "anyOf") }) {
-        result["additionalProperties"] = result["additionalProperties"] ?: remainingEvaluated
-      }
       // Effective schemas use numeric exclusive bounds, including across dialect boundaries.
       return ((schema as? OpenApiSchema)?.withFields(result, false) ?: result).also {
         resolved[schema] = it
@@ -335,10 +327,7 @@ internal class OpenApiSchemaComposition(
     schema: Map<*, *>,
     constraints: Map<*, *>,
     origin: Map<*, *>,
-  ): Map<String, Any?> {
-    val fields = constraints.entries.associate { it.key.toString() to it.value }
-    return resolve(located(origin, fields + ("allOf" to listOf(schema))))
-  }
+  ): Map<String, Any?> = resolve(located(origin, mapOf("allOf" to listOf(schema, constraints))))
 
   /** Comparison cannot expand a reference or allOf chain back into an operand still being composed. */
   fun resolveForComparison(schema: Map<*, *>): Map<String, Any?>? {

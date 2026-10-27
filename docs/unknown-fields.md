@@ -52,13 +52,6 @@ For example, Quarkus applications can enable strict handling with
 `quarkus.jackson.fail-on-unknown-properties=true`. Unknown fields then produce
 HTTP 400 responses for unconstrained models without storage.
 
-OpenAPI and AsyncAPI object schemas can also close unevaluated fields with
-`unevaluatedProperties: false`. An outer `allOf` closure includes inherited fields,
-so they do not need to be redeclared beside the closing keyword. Explicit
-`additionalProperties: true` or a value schema already evaluates remaining keys
-and keeps those keys allowed. Schema-valued `unevaluatedProperties` is not mapped
-to dynamic-value validation.
-
 Ordinary models selected for storage expose the following language APIs.
 
 Kotlin Jackson models expose a read-only `additionalProperties` map and
