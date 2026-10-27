@@ -1686,7 +1686,7 @@ class TypeScriptSundayIrGenerator(
   }
 
   private fun GeneratedModel.preservesExtensions(): Boolean =
-    modelProperties.preservesUnknownFields(this, options.preserveUnknownFields) ||
+    modelProperties.hasExtensionStorage(this, options.preserveUnknownFields) ||
       isProblemModel() &&
       inheritsExtensionStorage()
 
@@ -2738,7 +2738,7 @@ class TypeScriptSundayIrGenerator(
           index,
         )
       }
-      if (modelProperties.preservesUnknownFields(model, options.preserveUnknownFields) &&
+      if ((modelProperties.preservesUnknownFields(model, options.preserveUnknownFields) || matches.isNotEmpty()) &&
         !declaresPrototype
       ) {
         add("        entries.push(['__proto__', item]);\n")
@@ -2746,8 +2746,14 @@ class TypeScriptSundayIrGenerator(
       add("      }\n")
       if (!modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
         add("      const declared = new Set<string>([%L]);\n", model.declaredWireNames())
+        val matches =
+          modelProperties
+            .patternProperties(model)
+            .map { CodeBlock.of(" || new RegExp(%S).test(key)", it.pattern) }
+            .joinToCode("")
         add(
-          "      return Object.fromEntries(entries.filter(([key]) => declared.has(key))) as %T.%L<typeof %L>;\n",
+          "      return Object.fromEntries(entries.filter(([key]) => declared.has(key)%L)) as %T.%L<typeof %L>;\n",
+          matches,
           Z,
           if (encoding) "input" else "output",
           schema,

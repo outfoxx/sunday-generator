@@ -63,7 +63,8 @@ class GeneratedModelPropertiesTest {
       for (model in listOf(explicit, typed, child, explicitChild)) {
         assertEquals(mode != UnknownFieldPreservation.Off, properties.preservesUnknownFields(model, mode), model.name)
       }
-      assertTrue(properties.preservesUnknownFields(pattern, mode))
+      assertTrue(properties.hasExtensionStorage(pattern, mode))
+      assertEquals(false, properties.preservesUnknownFields(pattern, mode))
       for (model in listOf(closed, closedChild)) {
         assertEquals(false, properties.preservesUnknownFields(model, mode), model.name)
       }

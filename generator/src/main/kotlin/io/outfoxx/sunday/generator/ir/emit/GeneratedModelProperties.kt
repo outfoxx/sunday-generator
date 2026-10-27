@@ -107,12 +107,17 @@ internal class GeneratedModelProperties(
     return closed(model)
   }
 
-  /** Resolve catch-all storage without suppressing declared pattern fields or schema closure. */
+  /** Whether decoded dynamic fields need storage, including declared pattern fields. */
+  fun hasExtensionStorage(
+    model: GeneratedModel,
+    preservation: UnknownFieldPreservation,
+  ): Boolean = patternProperties(model).isNotEmpty() || preservesUnknownFields(model, preservation)
+
+  /** Whether unmatched fields are retained after schema validation. */
   fun preservesUnknownFields(
     model: GeneratedModel,
     preservation: UnknownFieldPreservation,
   ): Boolean {
-    if (patternProperties(model).isNotEmpty()) return true
     if (isClosed(model) || preservation == UnknownFieldPreservation.Off) return false
     val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
 

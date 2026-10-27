@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
@@ -44,6 +45,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
   parent: OpenModelExtensionStorage?,
   closed: Boolean,
   preserve: Boolean,
+  preserveUnmatched: Boolean,
   typeName: (GeneratedTypeRef) -> TypeName,
   properties: GeneratedModelProperties,
   nativeTypes: BeanValidationTypes?,
@@ -98,6 +100,46 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
         ).build(),
     )
   }
+  // Virtual selection lets inherited storage retain patterns introduced by the concrete child.
+  val retentionName = parent?.retentionName ?: names.newName("retainsAdditionalProperty")
+  if (preserve) {
+    addFunction(
+      FunSpec
+        .builder(retentionName)
+        .addModifiers(KModifier.PROTECTED)
+        .apply {
+          if (parent?.retentionName != null) {
+            addModifiers(KModifier.OVERRIDE)
+          } else if (inheritable) {
+            addModifiers(KModifier.OPEN)
+          }
+        }.addParameter("name", STRING)
+        .returns(BOOLEAN)
+        .addAnnotation(AnnotationSpec.builder(Suppress::class).addMember("%S", "UNUSED_PARAMETER").build())
+        .addCode(
+          if (preserveUnmatched) {
+            CodeBlock.of("return true\n")
+          } else {
+            CodeBlock.of(
+              "return %L\n",
+              model.patternProperties
+                .map { CodeBlock.of("%T(%S).containsMatchIn(name)", Regex::class, it.pattern) }
+                .let { matches ->
+                  CodeBlock
+                    .builder()
+                    .apply {
+                      if (matches.isEmpty()) add("false")
+                      matches.forEachIndexed { index, match ->
+                        if (index > 0) add(" || ")
+                        add(match)
+                      }
+                    }.build()
+                },
+            )
+          },
+        ).build(),
+    )
+  }
   addFunction(
     FunSpec
       .builder(setterName)
@@ -115,6 +157,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
           addModifiers(KModifier.OPEN)
         }
         if (preserve) {
+          addStatement("if (!%N(name)) return", retentionName)
           if (parent?.preserves == true) {
             addStatement("super.%N(name, value)", parent.setterName)
           } else if (runtimeWriter != null) {
@@ -184,6 +227,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
     setterName,
     parent?.valueType ?: any,
     preserves = preserve,
+    retentionName = retentionName.takeIf { preserve },
   )
 }
 

@@ -70,6 +70,8 @@ class TypeScriptPatternModelsTest {
               import {PatternClosedInheritedSchema} from './pattern-closed-inherited';
               import {PatternFieldInheritedSchema} from './pattern-field-inherited';
               import {NestedAdditionalPatternSchema} from './nested-additional-pattern';
+              import {UnmatchedPatternBaseSchema} from './unmatched-pattern-base';
+              import {UnmatchedPatternChildSchema} from './unmatched-pattern-child';
               import {OpenPatternSchema} from './open-pattern';
               const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
               const schema = runtime.resolveSchema(PatternRecordSchema);
@@ -94,6 +96,14 @@ class TypeScriptPatternModelsTest {
               runtime.resolveSchema(PatternInheritedSchema).parse({'x-valid':'ok'});
               for (const invalid of [{'x-invalid':'a'}, {extra:1}]) {
                 if (runtime.resolveSchema(PatternInheritedSchema).safeParse(invalid).success) throw new Error('inherited constraint ignored');
+              }
+              for (const [factory, child, explicit] of [[UnmatchedPatternBaseSchema, false, false], [UnmatchedPatternChildSchema, true, false], [OpenPatternSchema, false, true]] as const) {
+                const input: Record<string, unknown> = {'x-label':'ok', other:123};
+                if (child) input['y-label'] = 'child';
+                const schema = runtime.resolveSchema(factory);
+                const output = schema.encode(schema.parse(input)) as Record<string, unknown>;
+                const retain = ${mode == UnknownFieldPreservation.On} || (${mode == UnknownFieldPreservation.Schema} && explicit);
+                if (Object.hasOwn(output, 'other') !== retain || output['x-label'] !== 'ok' || (child && output['y-label'] !== 'child')) throw new Error('pattern retention policy');
               }
               runtime.resolveSchema(OpenPatternSchema).parse({'extra':1,'x-valid':'ok'});
               if (runtime.resolveSchema(OpenPatternSchema).safeParse({'extra':'wrong'}).success) throw new Error('invalid fallback accepted');

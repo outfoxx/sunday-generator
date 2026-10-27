@@ -388,6 +388,24 @@ class KotlinPatternModelsTest {
         val result = compileTypesResult(registry.buildTypes())
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
         val mapper = jacksonObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        for (name in listOf("UnmatchedPatternBase", "UnmatchedPatternChild", "OpenPattern")) {
+          val input = mapper.readTree("""{"x-label":"ok","other":123}""")
+          if (name ==
+            "UnmatchedPatternChild"
+          ) {
+            (input as com.fasterxml.jackson.databind.node.ObjectNode).put("y-label", "child")
+          }
+          val expected = input.deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>()
+          if (mode == UnknownFieldPreservation.Off ||
+            mode == UnknownFieldPreservation.Schema &&
+            name != "OpenPattern"
+          ) {
+            expected.remove("other")
+          }
+          val type = result.classLoader.loadClass("io.test.$name")
+          val decoded = mapper.readValue(mapper.writeValueAsBytes(input), type)
+          assertEquals(expected, mapper.valueToTree(decoded), "$name/$mode")
+        }
         val model = result.classLoader.loadClass("io.test.PatternRecord")
         patternModelValid.forEach { wire ->
           val decoded = mapper.readValue(wire, model)

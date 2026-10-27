@@ -4821,7 +4821,7 @@ class SwiftSundayIrGenerator(
   }
 
   private fun GeneratedModel.preservesExtensions(): Boolean =
-    (modelProperties.preservesUnknownFields(this, options.preserveUnknownFields) || inheritsExtensionStorage()) &&
+    (modelProperties.hasExtensionStorage(this, options.preserveUnknownFields) || inheritsExtensionStorage()) &&
       kind == GeneratedModel.Kind.OBJECT &&
       !isProtocolHierarchyRootModel &&
       !isProblemHierarchyProtocolModel &&
@@ -4832,7 +4832,41 @@ class SwiftSundayIrGenerator(
       inherits.mapNotNull { it.modelOrNull(apiIndex) }.any { it.isSwiftClassModel && it.preservesExtensions() }
 
   private fun extensionValue(model: GeneratedModel): CodeBlock =
-    CodeBlock.of("%N.filter { !%L.contains($0.key) }", extensionFieldName, allowedPropertyNames(model))
+    CodeBlock.of(
+      "%N.filter { !%L.contains($0.key)%L }",
+      extensionFieldName,
+      allowedPropertyNames(model),
+      extensionRetentionFilter(model, "$0.key"),
+    )
+
+  private fun extensionRetentionFilter(
+    model: GeneratedModel,
+    key: String,
+  ): CodeBlock =
+    if (modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
+      CodeBlock.of("")
+    } else {
+      CodeBlock.of(" && (%L)", retainedExtension(model, key))
+    }
+
+  private fun retainedExtension(
+    model: GeneratedModel,
+    key: String,
+  ): CodeBlock =
+    if (modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
+      CodeBlock.of("true")
+    } else {
+      modelProperties
+        .patternProperties(model)
+        .map {
+          CodeBlock.of(
+            "%L.range(of: %L, options: .regularExpression) != nil",
+            key,
+            SwiftModelConstraints.regexLiteral(it.pattern),
+          )
+        }.joinToCode(" || ")
+        .takeIf { modelProperties.patternProperties(model).isNotEmpty() } ?: CodeBlock.of("false")
+    }
 
   private fun modelConstructor(
     model: GeneratedModel,
@@ -5184,9 +5218,10 @@ class SwiftSundayIrGenerator(
         SET.parameterizedBy(STRING),
         if (dynamic) CodeBlock.of("Self._sundayAllowedPropertyNames") else allowedPropertyNames(model),
       ).addStatement(
-        "self.%N = try %T(uniqueKeysWithValues: extensionContainer.allKeys.filter { !declaredFields.contains($0.stringValue) }.map { key in",
+        "self.%N = try %T(uniqueKeysWithValues: extensionContainer.allKeys.filter { !declaredFields.contains($0.stringValue)%L }.map { key in",
         extensionFieldName,
         DICTIONARY.parameterizedBy(STRING, ANY_VALUE),
+        extensionRetentionFilter(model, "$0.stringValue"),
       ).addStatement("  (key.stringValue, try extensionContainer.decode(%T.self, forKey: key))", ANY_VALUE)
       .addStatement("})")
       .build()
@@ -5209,7 +5244,11 @@ class SwiftSundayIrGenerator(
         }
         if (!inherited) {
           addStatement("var extensionContainer = encoder.container(keyedBy: UnknownPropertyCodingKey.self)")
-          beginControlFlow("for", "(key, value) in %N", extensionFieldName)
+          if (modelProperties.preservesUnknownFields(model, options.preserveUnknownFields)) {
+            beginControlFlow("for", "(key, value) in %N", extensionFieldName)
+          } else {
+            beginControlFlow("for", "(key, value) in %N where %L", extensionFieldName, retainedExtension(model, "key"))
+          }
           addStatement(
             "try extensionContainer.encode(AdditionalPropertyValue(value: value), forKey: UnknownPropertyCodingKey(stringValue: key))",
           )

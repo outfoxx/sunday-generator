@@ -44,8 +44,9 @@ keys. Accepted fields are discarded when storage is disabled and a dynamic-value
 validation handler is required. Unconstrained Kotlin models without catch-all
 storage generate no `@JsonAnySetter`: Jackson's `FAIL_ON_UNKNOWN_PROPERTIES`
 setting determines whether unknown input fields fail or are ignored. This also
-applies to inherited ordinary models. Other targets discard permitted fields when
-storage is disabled. Declared properties, aliases and discriminator fields retain
+applies to inherited ordinary models. Pattern-matched fields remain stored in every
+mode; unmatched fields follow the selected preservation mode. Other targets discard permitted unmatched fields when
+catch-all storage is disabled. Declared properties, aliases and discriminator fields retain
 their normal behavior.
 
 For example, Quarkus applications can enable strict handling with

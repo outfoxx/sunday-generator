@@ -104,7 +104,8 @@ internal fun addOpenModelProperties(
         model.copy(patternProperties = properties.patternProperties(model)),
         namesByRoot.getValue(root(type)),
         parent,
-        if (runtimeWriter != null) true else properties.preservesUnknownFields(model, preserveUnknownFields),
+        if (runtimeWriter != null) true else properties.hasExtensionStorage(model, preserveUnknownFields),
+        runtimeWriter != null || properties.preservesUnknownFields(model, preserveUnknownFields),
         typeName,
         properties,
         nativeTypes,
@@ -240,6 +241,7 @@ internal data class OpenModelExtensionStorage(
   val setterName: String,
   val valueType: TypeName,
   val preserves: Boolean,
+  val retentionName: String? = null,
 )
 
 private fun TypeSpec.Builder.addOpenModelStorage(
@@ -248,6 +250,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   knownNames: Set<String>,
   parent: OpenModelExtensionStorage?,
   preserve: Boolean,
+  preserveUnmatched: Boolean,
   typeName: (GeneratedTypeRef) -> TypeName,
   properties: GeneratedModelProperties,
   nativeTypes: BeanValidationTypes?,
@@ -271,6 +274,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
       parent,
       closed,
       preserve,
+      preserveUnmatched,
       typeName,
       properties,
       nativeTypes?.takeIf {

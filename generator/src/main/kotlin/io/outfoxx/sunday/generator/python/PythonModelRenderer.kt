@@ -603,7 +603,7 @@ class PythonModelRenderer(
     val extra =
       when {
         modelProperties.isClosed(this) && modelProperties.patternProperties(this).isEmpty() -> "forbid"
-        modelProperties.preservesUnknownFields(this, preserveUnknownFields) -> "allow"
+        modelProperties.hasExtensionStorage(this, preserveUnknownFields) -> "allow"
         else -> "ignore"
       }
     val schemaExtra = mutableListOf<PythonCodeBlock>()
@@ -1018,6 +1018,10 @@ class PythonModelRenderer(
             validatedType,
           )
       }
+    }
+
+    if (!modelProperties.preservesUnknownFields(this, preserveUnknownFields) && !modelProperties.isClosed(this)) {
+      statements += PythonCodeBlock.of("            data.pop(key)")
     }
 
     return PythonCodeBlock.of(

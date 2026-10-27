@@ -104,6 +104,15 @@ class PythonPatternModelsTest : PythonTest() {
                   pass
               else:
                   raise AssertionError("inherited constraint ignored")
+          from test_api.models import UnmatchedPatternBase, UnmatchedPatternChild
+          for model in [UnmatchedPatternBase, UnmatchedPatternChild, OpenPattern]:
+              data = {"x-label": "ok", "other": 123}
+              if model is UnmatchedPatternChild:
+                  data["y-label"] = "child"
+              expected = data.copy()
+              if "${mode.name}" == "Off" or ("${mode.name}" == "Schema" and model is not OpenPattern):
+                  expected.pop("other")
+              assert model.model_validate(data).model_dump(mode="json", exclude_unset=True) == expected
           OpenPattern.model_validate({"extra": 1, "x-valid": "ok"})
           try:
               OpenPattern.model_validate({"extra": "wrong"})
