@@ -17,8 +17,10 @@
 package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.core.parse
+import io.outfoxx.sunday.generator.kotlin.KotlinGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerateCommand
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.python.PythonLitestarGenerateCommand
 import io.outfoxx.sunday.generator.python.PythonSundayGenerateCommand
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerateCommand
@@ -28,13 +30,13 @@ import org.junit.jupiter.api.Test
 
 class PreserveUnknownFieldsCLITest {
   @Test
-  fun `all targets default to preservation and accept both explicit settings`() {
+  fun `all targets default to schema preservation and accept all three settings`() {
     val source = requireNotNull(javaClass.getResource("/empty.raml")).toURI()
     for ((flags, expected) in listOf(
-      emptyList<String>() to true,
-      listOf("-preserve-unknown-fields") to true,
-      listOf("-no-preserve-unknown-fields") to false,
-      listOf("-no-preserve-unknown-fields", "-preserve-unknown-fields") to true,
+      emptyList<String>() to UnknownFieldPreservation.Schema,
+      listOf("-preserve-unknown-fields", "on") to UnknownFieldPreservation.On,
+      listOf("-preserve-unknown-fields", "off") to UnknownFieldPreservation.Off,
+      listOf("-preserve-unknown-fields", "schema") to UnknownFieldPreservation.Schema,
     )) {
       val commands =
         listOf(
@@ -60,6 +62,12 @@ class PreserveUnknownFieldsCLITest {
       commands.forEach { command ->
         command.parse((flags + listOf("-out", source.resolve("..").path, source.path)).toTypedArray())
         assertEquals(expected, command.preserveUnknownFields, command.commandName)
+        if (command is KotlinGenerateCommand) {
+          assertEquals(
+            expected == UnknownFieldPreservation.On,
+            KotlinTypeRegistry.Option.PreserveUnknownFields in command.allRegistryOptions(),
+          )
+        }
       }
     }
   }

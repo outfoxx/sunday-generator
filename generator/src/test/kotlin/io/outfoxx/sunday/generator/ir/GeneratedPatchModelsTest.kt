@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.tools.discriminatedPatchApi
 import io.outfoxx.sunday.generator.tools.patchableApi
@@ -30,58 +31,30 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 class GeneratedPatchModelsTest {
-  @Test
-  fun `variant exclusions do not become inherited schema constraints`(
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed", "three-level"])
+  fun `editing a sibling cannot change another patch model`(
+    frontend: String,
     @TempDir directory: Path,
   ) {
-    val api = discriminatedPatchApi("three-level", directory)
-    val models = api.models.associateBy { it.name }.toMutableMap()
-    val mammal = models.getValue("MammalPatch")
-    val inheritedPattern = GeneratedPatternProperty("^custom", GeneratedTypeRef.scalar("string"))
-    models[mammal.name] = mammal.copy(patternProperties = listOf(inheritedPattern))
+    val original = discriminatedPatchApi(frontend, directory)
+    val changed = discriminatedPatchApi(frontend, directory, extraDogField = "newSiblingField")
+    for (name in listOf("CatPatch", "AnimalPatch")) {
+      assertEquals(original.models.single { it.name == name }, changed.models.single { it.name == name })
+    }
+    assertTrue(
+      changed.models
+        .single { it.name == "DogPatch" }
+        .properties
+        .any { it.name == "newSiblingField" },
+    )
+    val models = changed.models.associateBy { it.name }
     val properties = GeneratedModelProperties { models[it.name] }
-    val cat = models.getValue("CatPatch")
-    assertTrue("indoor" in mammal.patchExcludedFields)
-    assertFalse("indoor" in cat.patchExcludedFields)
-    assertTrue(properties.patternProperties(cat).contains(inheritedPattern))
-    assertFalse(properties.patternProperties(cat).any { Regex(it.pattern).matches("indoor") })
-    assertTrue(properties.patternProperties(cat).any { Regex(it.pattern).matches("trained") })
-  }
-
-  @Test
-  fun `variant field exclusions stay within their own hierarchy`(
-    @TempDir directory: Path,
-  ) {
-    val api = discriminatedPatchApi("openapi", directory)
-    val vehicle =
-      GeneratedModel(
-        "Vehicle",
-        GeneratedModel.Kind.OBJECT,
-        patchable = true,
-        discriminator = "kind",
-        properties = listOf(GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true)),
-        discriminatorMappings = mapOf("car" to GeneratedTypeRef.named("Car")),
-        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-      )
-    val car =
-      GeneratedModel(
-        "Car",
-        GeneratedModel.Kind.OBJECT,
-        inherits = listOf(GeneratedTypeRef.named("Vehicle")),
-        properties = listOf(GeneratedModelProperty("wheels", GeneratedTypeRef.scalar("integer"))),
-        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-      )
-    val source =
-      api.copy(
-        services = emptyList(),
-        models =
-          api.models.filter { it.patchOf == null }.map {
-            if (it.name == "Animal") it.copy(patchable = true) else it
-          } + listOf(vehicle, car),
-      )
-    val patch = GeneratedPatchModels.materialize(source).models.single { it.name == "CatPatch" }
-    assertTrue("trained" in patch.patchExcludedFields)
-    assertFalse("wheels" in patch.patchExcludedFields)
+    val patch = models.getValue("CatPatch")
+    assertTrue(properties.patternProperties(patch).isEmpty())
+    assertTrue(properties.preservesUnknownFields(patch, UnknownFieldPreservation.On))
+    assertFalse(properties.preservesUnknownFields(patch, UnknownFieldPreservation.Off))
+    assertFalse(properties.preservesUnknownFields(patch, UnknownFieldPreservation.Schema))
   }
 
   @ParameterizedTest

@@ -34,7 +34,10 @@ class InheritedProblemEndpoint {
     throw QueuedProblem(
       nullableChild = null,
       metadata = Metadata(region = "west"),
-    )
+    ).also {
+      it.setAdditionalProperty("future", null)
+      it.setAdditionalProperty("nested", mapOf("value" to listOf(1, true)))
+    }
 
   /** Throws either concrete problem declared for the shared 404 response. */
   @GET

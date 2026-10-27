@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedModelScope
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -207,7 +208,8 @@ class SwiftProtocolUnionTest {
         "https://example.org/",
         listOf("application/json"),
         "API",
-        preserveUnknownFields = preserveUnknownFields,
+        preserveUnknownFields =
+          if (preserveUnknownFields) UnknownFieldPreservation.On else UnknownFieldPreservation.Schema,
       ),
     ).generateServiceTypes()
     registry.generateFiles(GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()), compiler.srcDir)

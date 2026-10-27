@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir.emit
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -106,7 +107,31 @@ internal class GeneratedModelProperties(
     return closed(model)
   }
 
-  /** All pattern assertions applying to a model, including inherited constraints. */
+  /** Whether decoded dynamic fields need storage, including declared pattern fields. */
+  fun hasExtensionStorage(
+    model: GeneratedModel,
+    preservation: UnknownFieldPreservation,
+  ): Boolean = patternProperties(model).isNotEmpty() || preservesUnknownFields(model, preservation)
+
+  /** Whether unmatched fields are retained after schema validation. */
+  fun preservesUnknownFields(
+    model: GeneratedModel,
+    preservation: UnknownFieldPreservation,
+  ): Boolean {
+    if (isClosed(model) || preservation == UnknownFieldPreservation.Off) return false
+    val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
+
+    fun explicit(candidate: GeneratedModel): Boolean =
+      visited.add(candidate) &&
+        (
+          candidate.additionalProperties?.allowed == true ||
+            candidate.additionalProperties?.type != null ||
+            candidate.inherits.mapNotNull(modelFor).any(::explicit)
+        )
+    return preservation == UnknownFieldPreservation.On || explicit(model)
+  }
+
+  /** Authored pattern assertions, including constraints inherited through explicit schema relationships. */
   fun patternProperties(model: GeneratedModel): List<GeneratedPatternProperty> {
     val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
 
@@ -116,25 +141,8 @@ internal class GeneratedModelProperties(
       } else {
         emptyList()
       }
-    return (
-      collect(model) +
-        model.patchExcludedFields.map { wireName ->
-          GeneratedPatternProperty(
-            pattern = exactPropertyPattern(wireName),
-            type = GeneratedTypeRef.scalar("string"),
-            allowedValues = emptyList(),
-          )
-        }
-    ).distinct()
+    return collect(model).distinct()
   }
-
-  // Use portable escapes: Java's \Q...\E form is not supported by every target's regex engine.
-  private fun exactPropertyPattern(wireName: String): String =
-    "^" +
-      wireName
-        .map { char ->
-          if (char in "\\.^$|?*+()[]{}") "\\$char" else char.toString()
-        }.joinToString("") + "$"
 
   /** All typed additional-property assertions, retaining restrictions inherited from every parent. */
   fun additionalProperties(model: GeneratedModel): List<GeneratedAdditionalProperties> {

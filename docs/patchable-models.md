@@ -111,8 +111,9 @@ The tag stays fixed to the selected subtype. A discriminator-only patch is a val
 fields, including inherited fields, retain the omission, set, and deletion rules above. A required
 nullable property may be omitted but cannot be deleted.
 
-A subtype patch rejects fields known only to other variants. Unrelated extension fields still follow
-the schema's additional-property policy. Ordinary JSON models retain their original contracts.
+A subtype patch derives its field rules only from its own schema and explicit inheritance. Fields
+declared only by another variant are ordinary unknown fields, with the same storage and decoding
+policy as any other undeclared name. Ordinary JSON models retain their original contracts.
 
 Merge helpers reject changes to the discriminator; Swift exposes concrete subtype helpers so a
 `DogPatch` cannot be passed to `Cat.merge`. Difference helpers retain the discriminator even when it

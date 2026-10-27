@@ -22,6 +22,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
@@ -73,6 +74,7 @@ class KotlinAnyOfDeserializationTest {
           "http://example.com/",
           listOf("application/json"),
           "API",
+          preserveUnknownFields = UnknownFieldPreservation.On,
         ),
       ).generateServiceTypes()
     } else {
@@ -91,6 +93,7 @@ class KotlinAnyOfDeserializationTest {
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
           quarkus = false,
+          preserveUnknownFields = UnknownFieldPreservation.On,
         ),
       ).generateServiceTypes()
     }

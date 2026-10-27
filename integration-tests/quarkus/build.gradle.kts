@@ -403,6 +403,33 @@ val generateSseApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val identityPatchSources = layout.buildDirectory.dir("generated/identity-patches")
+val identityPatchContract = layout.projectDirectory.file("src/main/openapi/identity-patch.yaml")
+val generateIdentityPatches by tasks.registering(JavaExec::class) {
+  inputs.file(identityPatchContract)
+  outputs.dir(identityPatchSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-quarkus",
+    "-use-jakarta-packages",
+    "-preserve-unknown-fields",
+    "off",
+    "-category",
+    "models",
+    "--placement-config",
+    layout.projectDirectory
+      .file("src/main/placement/io.test.quarkus.patch.yaml")
+      .asFile.absolutePath,
+    "-out",
+    identityPatchSources.get().asFile.absolutePath,
+    identityPatchContract.asFile.absolutePath,
+  )
+}
+
 val inheritedProblemSources = layout.buildDirectory.dir("generated/inherited-problems")
 val inheritedProblemContract =
   rootProject.layout.projectDirectory.file("generator/src/test/resources/openapi/ir/inherited-problem.yaml")
@@ -417,6 +444,8 @@ val generateInheritedProblems by tasks.registering(JavaExec::class) {
     "server",
     "-quarkus",
     "-use-jakarta-packages",
+    "-preserve-unknown-fields",
+    "off",
     "-problem-library",
     "quarkus",
     "-category",
@@ -435,6 +464,7 @@ kotlin.compilerOptions {
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateIdentityPatches)
   kotlin.srcDir(generateInheritedProblems)
   kotlin.srcDir(generateSseApi)
   optionalBodyGenerators.forEach { kotlin.srcDir(it) }
@@ -453,6 +483,7 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(generateIdentityPatches)
   dependsOn(generateInheritedProblems)
   dependsOn(generateSseApi)
   dependsOn(optionalBodyGenerators)

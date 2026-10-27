@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin.sunday
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
 import io.outfoxx.sunday.generator.tools.kotlinPlacement
 
@@ -25,4 +26,5 @@ val kotlinSundayTestOptions =
     "http://example.com/",
     listOf("application/json"),
     "API",
+    preserveUnknownFields = UnknownFieldPreservation.On,
   )

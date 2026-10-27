@@ -20,6 +20,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -585,6 +586,7 @@ class KotlinModelValueEqualityTest {
           defaultMediaTypes = listOf("application/json"),
           serviceSuffix = "API",
           quarkus = framework == "quarkus",
+          preserveUnknownFields = UnknownFieldPreservation.On,
         ),
       ).generateServiceTypes()
     }

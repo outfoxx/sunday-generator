@@ -17,8 +17,11 @@
 package io.outfoxx.sunday.generator.ir.emit
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
+import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,6 +30,47 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class GeneratedModelPropertiesTest {
+  @Test
+  fun `schema declarations override the implicit storage default across inheritance`() {
+    val source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory")
+    val implicit = GeneratedModel("Implicit", GeneratedModel.Kind.OBJECT, source)
+    val explicit =
+      implicit.copy(
+        name = "Explicit",
+        additionalProperties = GeneratedAdditionalProperties(allowed = true),
+      )
+    val typed =
+      implicit.copy(
+        name = "Typed",
+        additionalProperties = GeneratedAdditionalProperties(type = GeneratedTypeRef.scalar("string")),
+      )
+    val closed = implicit.copy(name = "Closed", additionalProperties = GeneratedAdditionalProperties(allowed = false))
+    val pattern =
+      closed.copy(
+        name = "Pattern",
+        patternProperties = listOf(GeneratedPatternProperty("^x-", GeneratedTypeRef.scalar("string"))),
+      )
+    val child = implicit.copy(name = "Child", inherits = listOf(GeneratedTypeRef.named(explicit.name)))
+    val closedChild = child.copy(name = "ClosedChild", closed = true)
+    val explicitChild = explicit.copy(name = "ExplicitChild", inherits = listOf(GeneratedTypeRef.named(implicit.name)))
+    val models =
+      listOf(implicit, explicit, typed, closed, pattern, child, closedChild, explicitChild).associateBy {
+        it.name
+      }
+    val properties = GeneratedModelProperties { models[it.name] }
+    for (mode in UnknownFieldPreservation.entries) {
+      assertEquals(mode == UnknownFieldPreservation.On, properties.preservesUnknownFields(implicit, mode))
+      for (model in listOf(explicit, typed, child, explicitChild)) {
+        assertEquals(mode != UnknownFieldPreservation.Off, properties.preservesUnknownFields(model, mode), model.name)
+      }
+      assertTrue(properties.hasExtensionStorage(pattern, mode))
+      assertEquals(false, properties.preservesUnknownFields(pattern, mode))
+      for (model in listOf(closed, closedChild)) {
+        assertEquals(false, properties.preservesUnknownFields(model, mode), model.name)
+      }
+    }
+  }
+
   @Test
   fun `local refinements preserve inherited presence requirements and defaults`() {
     val source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory")

@@ -201,17 +201,6 @@ internal object GeneratedPatchModels {
                 allowedValues = discriminatorValue(model)?.let { listOf(it) } ?: tag.allowedValues,
               ),
             )
-        val forbiddenFields =
-          if (discriminator != null && discriminatorValue(model) != null) {
-            val ownFields = properties.fields(model).map { it.wireName }.toSet()
-            models.values
-              .filter { discriminatorRoot(it) == discriminatorRoot(model) }
-              .flatMap { properties.fields(it) }
-              .map { it.wireName }
-              .toSet() - ownFields
-          } else {
-            emptySet()
-          }
         model.copy(
           name = patchName,
           patchable = true,
@@ -234,7 +223,6 @@ internal object GeneratedPatchModels {
                 type = patchType(it.type).copy(nullable = true),
               )
             },
-          patchExcludedFields = forbiddenFields.toList(),
           discriminatorMappings =
             mappings.mapValues { (_, type) ->
               type.copy(name = patchNames.getValue(type.name))

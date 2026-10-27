@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
 import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
@@ -37,10 +38,10 @@ import java.nio.file.Path
 @Tag("models")
 class TypeScriptPatternModelsTest {
   @ParameterizedTest
-  @CsvSource("false,true", "true,true", "false,false", "true,false")
+  @CsvSource("false,On", "true,On", "false,Schema", "true,Schema", "false,Off", "true,Off")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
@@ -52,7 +53,7 @@ class TypeScriptPatternModelsTest {
         "http://example.com/",
         listOf("application/json"),
         "API",
-        preserveUnknownFields = preserve,
+        preserveUnknownFields = mode,
       ),
     ).generateServiceTypes()
     val check =
@@ -69,17 +70,17 @@ class TypeScriptPatternModelsTest {
               import {PatternClosedInheritedSchema} from './pattern-closed-inherited';
               import {PatternFieldInheritedSchema} from './pattern-field-inherited';
               import {NestedAdditionalPatternSchema} from './nested-additional-pattern';
+              import {UnmatchedPatternBaseSchema} from './unmatched-pattern-base';
+              import {UnmatchedPatternChildSchema} from './unmatched-pattern-child';
               import {OpenPatternSchema} from './open-pattern';
               const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
               const schema = runtime.resolveSchema(PatternRecordSchema);
               for (const valid of [${patternModelValid.joinToString()}]) {
                 const decoded = schema.parse(valid);
                 const output = schema.encode(decoded) as Record<string, unknown>;
-                if ($preserve) {
-                  for (const [key, value] of Object.entries(valid)) {
-                    if (JSON.stringify(output[key]) !== JSON.stringify(value)) throw new Error('round trip lost ' + key);
-                  }
-                } else if ('x-value' in output || 'maybe-value' in output) throw new Error('extensions retained when disabled');
+                for (const [key, value] of Object.entries(valid)) {
+                  if (JSON.stringify(output[key]) !== JSON.stringify(value)) throw new Error('round trip lost ' + key);
+                }
               }
               for (const invalid of [${patternModelInvalid.joinToString()}]) {
                 if (schema.safeParse(invalid).success) throw new Error('invalid pattern value accepted: ' + JSON.stringify(invalid));
@@ -95,6 +96,14 @@ class TypeScriptPatternModelsTest {
               runtime.resolveSchema(PatternInheritedSchema).parse({'x-valid':'ok'});
               for (const invalid of [{'x-invalid':'a'}, {extra:1}]) {
                 if (runtime.resolveSchema(PatternInheritedSchema).safeParse(invalid).success) throw new Error('inherited constraint ignored');
+              }
+              for (const [factory, child, explicit] of [[UnmatchedPatternBaseSchema, false, false], [UnmatchedPatternChildSchema, true, false], [OpenPatternSchema, false, true]] as const) {
+                const input: Record<string, unknown> = {'x-label':'ok', other:123};
+                if (child) input['y-label'] = 'child';
+                const schema = runtime.resolveSchema(factory);
+                const output = schema.encode(schema.parse(input)) as Record<string, unknown>;
+                const retain = ${mode == UnknownFieldPreservation.On} || (${mode == UnknownFieldPreservation.Schema} && explicit);
+                if (Object.hasOwn(output, 'other') !== retain || output['x-label'] !== 'ok' || (child && output['y-label'] !== 'child')) throw new Error('pattern retention policy');
               }
               runtime.resolveSchema(OpenPatternSchema).parse({'extra':1,'x-valid':'ok'});
               if (runtime.resolveSchema(OpenPatternSchema).safeParse({'extra':'wrong'}).success) throw new Error('invalid fallback accepted');

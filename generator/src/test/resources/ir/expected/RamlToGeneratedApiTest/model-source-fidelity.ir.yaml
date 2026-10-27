@@ -75,6 +75,8 @@ models:
     validation:
       uniqueItems: "true"
   closed: true
+  additionalProperties:
+    allowed: false
 - name: "DynamicLabels"
   kind: "MAP"
   source:

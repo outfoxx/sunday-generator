@@ -432,7 +432,7 @@ Object models may carry `closed` when the source object disallows unknown proper
 
 APIs, models, and model properties may carry `targets`, keyed by target id such as `kotlin`, `kotlinClient`, `kotlinServer`, `swift`, and `typescript`. Target entries preserve source annotations for package/module names, model package/module names, target type names, and implementation overrides. Imported RAML declaration models also inherit target defaults from their declaring library, so library-level model package/module annotations remain durable in IR.
 
-Implementation overrides carry source `code` plus ordered `parameters` with `type` and `value`. Models may also carry `nested` metadata with the resolved enclosing type reference and nested name, and `patchable` for declarations representing partial updates. Materialized companions carry `patchOf`, a reference to their ordinary model; RAML annotations follow the same companion-generation rules as native annotations. Request bodies with content type `application/merge-patch+json` automatically derive and select companion patch declarations before serialization, independently of the HTTP method or a schema annotation. Other content alternatives retain their ordinary types. `x-sunday-patchable` (RAML `(sunday.patchable)`) also requests a companion when no merge-patch body references the schema. Projected properties carry `patchDeletionAllowed`, preserving the original member's deletion permission after `required` becomes false. Its false value is serialized explicitly; value nullability alone never grants deletion. Discriminator members in companion hierarchies instead carry `patchDiscriminator: true`, remain required and non-null, and do not carry `patchDeletionAllowed`. Companion discriminator mappings reference companion variants. `patchExcludedFields` lists other variants’ wire fields forbidden on this companion only; these exclusions do not propagate through inheritance. See [patchable models](patchable-models.md).
+Implementation overrides carry source `code` plus ordered `parameters` with `type` and `value`. Models may also carry `nested` metadata with the resolved enclosing type reference and nested name, and `patchable` for declarations representing partial updates. Materialized companions carry `patchOf`, a reference to their ordinary model; RAML annotations follow the same companion-generation rules as native annotations. Request bodies with content type `application/merge-patch+json` automatically derive and select companion patch declarations before serialization, independently of the HTTP method or a schema annotation. Other content alternatives retain their ordinary types. `x-sunday-patchable` (RAML `(sunday.patchable)`) also requests a companion when no merge-patch body references the schema. Projected properties carry `patchDeletionAllowed`, preserving the original member's deletion permission after `required` becomes false. Its false value is serialized explicitly; value nullability alone never grants deletion. Discriminator members in companion hierarchies instead carry `patchDiscriminator: true`, remain required and non-null, and do not carry `patchDeletionAllowed`. Companion discriminator mappings reference companion variants. Companions do not derive field exclusions from sibling variants. See [patchable models](patchable-models.md).
 
 ## Source And Codegen Boundary
 
@@ -497,9 +497,10 @@ semantics, and every matching pattern applies, including to named properties.
 Kotlin/Jackson, Swift decoding, TypeScript/Zod, and Python/Pydantic validate the
 matching value types and emitted constraints. Closed schemas still reject
 unmatched keys with null, scalar, array, or object values. Every target preserves
-accepted dynamic fields by default. `-no-preserve-unknown-fields` discards them
-after validation; it never relaxes closed schemas or value constraints. This is
-a generation option and does not change the IR contract. See
+pattern-matched fields. The default `schema` preservation mode also retains
+explicit `additionalProperties` fields. `-preserve-unknown-fields on` enables
+implicit preservation; `off` suppresses catch-all storage. All modes enforce
+closed schemas and value constraints. See
 [dynamic model fields](unknown-fields.md) for configuration and model access.
 
 

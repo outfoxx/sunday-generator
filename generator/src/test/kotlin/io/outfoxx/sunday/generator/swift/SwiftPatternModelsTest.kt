@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
@@ -45,10 +46,10 @@ import java.nio.file.Path
 @Tag("models")
 class SwiftPatternModelsTest {
   @ParameterizedTest
-  @CsvSource("false,true", "true,true", "false,false", "true,false")
+  @CsvSource("false,On", "true,On", "false,Schema", "true,Schema", "false,Off", "true,Off")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
-    preserve: Boolean,
+    mode: UnknownFieldPreservation,
     compiler: SwiftCompiler,
     @TempDir directory: Path,
   ) {
@@ -161,7 +162,12 @@ class SwiftPatternModelsTest {
     SwiftSundayIrGenerator(
       api,
       registry,
-      SwiftSundayOptions("http://example.com/", listOf("application/json"), "API", preserveUnknownFields = preserve),
+      SwiftSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = mode,
+      ),
     ).generateServiceTypes()
     registry.generateFiles(
       // The pattern regression also exercises anonymous request declarations owned by the service.
@@ -188,12 +194,7 @@ class SwiftPatternModelsTest {
             let encoded = try JSONEncoder().encode(decoded)
             let input = try JSONSerialization.jsonObject(with: Data(wire.utf8)) as! NSDictionary
             let output = try JSONSerialization.jsonObject(with: encoded) as! NSDictionary
-            if $preserve {
-              for (key, value) in input { XCTAssertEqual(output[key] as? NSObject, value as? NSObject) }
-            } else {
-              XCTAssertNil(output["x-value"])
-              XCTAssertNil(output["maybe-value"])
-            }
+            for (key, value) in input { XCTAssertEqual(output[key] as? NSObject, value as? NSObject) }
           }
           for wire in invalid {
             XCTAssertThrowsError(try JSONDecoder().decode(PatternRecord.self, from: Data(wire.utf8)), wire)
@@ -245,11 +246,18 @@ class SwiftPatternModelsTest {
           _ = try JSONDecoder().decode(PatternInherited.self, from: Data(#"{"x-valid":"ok"}"#.utf8))
           XCTAssertThrowsError(try JSONDecoder().decode(PatternInherited.self, from: Data(#"{"x-invalid":"a"}"#.utf8)))
           XCTAssertThrowsError(try JSONDecoder().decode(PatternInherited.self, from: Data(#"{"extra":1}"#.utf8)))
+          let input = #"{"x-label":"ok","y-label":"child","other":123}"#
+          let child = try JSONDecoder().decode(UnmatchedPatternChild.self, from: Data(input.utf8))
+          let output = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(child)) as? [String: Any])
+          XCTAssertEqual(output["x-label"] as? String, "ok")
+          XCTAssertEqual(output["y-label"] as? String, "child")
+          XCTAssertEqual(output["other"] != nil, ${mode == UnknownFieldPreservation.On})
+          let explicit = try JSONDecoder().decode(OpenPattern.self, from: Data(#"{"x-label":"ok","other":123}"#.utf8))
+          let explicitOutput = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(explicit)) as? [String: Any])
+          XCTAssertEqual(explicitOutput["other"] != nil, ${mode != UnknownFieldPreservation.Off})
           _ = try JSONDecoder().decode(OpenPattern.self, from: Data(#"{"extra":1,"x-valid":"ok"}"#.utf8))
           XCTAssertThrowsError(try JSONDecoder().decode(OpenPattern.self, from: Data(#"{"extra":"wrong"}"#.utf8)))
           _ = try JSONDecoder().decode(PatternOnly.self, from: Data(#"{"x-valid":"ok"}"#.utf8))
-          ${if (preserve) {
-        """
           XCTAssertThrowsError(try PatternRecord(additionalProperties: ["numbers-values": [2, 3]])) { error in
             guard let failure = error as? ModelValidationError else { return XCTFail("Unexpected failure") }
             XCTAssertEqual(failure.diagnostics.map(\.jsonPointer), ["/numbers-values/1"])
@@ -286,10 +294,6 @@ class SwiftPatternModelsTest {
             XCTAssertEqual(error.diagnostics.map(\.reason), [.unknownEnum])
           }
 
-          """
-      } else {
-        ""
-      }}
 
         }
       }

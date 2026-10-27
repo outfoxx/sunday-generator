@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
@@ -340,7 +341,7 @@ class KotlinPatternModelsTest {
   ) {
     val api = patternModelsApi(directory, composed)
     for (jaxrs in listOf(false, true)) {
-      for (preserve in listOf(false, true)) {
+      for (mode in UnknownFieldPreservation.entries) {
         val registry =
           KotlinTypeRegistry(
             null,
@@ -348,7 +349,7 @@ class KotlinPatternModelsTest {
             buildSet {
               add(KotlinTypeRegistry.Option.ImplementModel)
               add(KotlinTypeRegistry.Option.JacksonAnnotations)
-              if (preserve) add(KotlinTypeRegistry.Option.PreserveUnknownFields)
+              if (mode == UnknownFieldPreservation.On) add(KotlinTypeRegistry.Option.PreserveUnknownFields)
             },
             problemLibrary = KotlinProblemLibrary.SUNDAY,
           )
@@ -368,7 +369,7 @@ class KotlinPatternModelsTest {
               listOf("application/json"),
               "API",
               false,
-              preserveUnknownFields = preserve,
+              preserveUnknownFields = mode,
             ),
           ).generateServiceTypes()
         } else {
@@ -380,21 +381,37 @@ class KotlinPatternModelsTest {
               "http://example.com/",
               listOf("application/json"),
               "API",
-              preserveUnknownFields = preserve,
+              preserveUnknownFields = mode,
             ),
           ).generateServiceTypes()
         }
         val result = compileTypesResult(registry.buildTypes())
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
         val mapper = jacksonObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        for (name in listOf("UnmatchedPatternBase", "UnmatchedPatternChild", "OpenPattern")) {
+          val input = mapper.readTree("""{"x-label":"ok","other":123}""")
+          if (name ==
+            "UnmatchedPatternChild"
+          ) {
+            (input as com.fasterxml.jackson.databind.node.ObjectNode).put("y-label", "child")
+          }
+          val expected = input.deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>()
+          if (mode == UnknownFieldPreservation.Off ||
+            mode == UnknownFieldPreservation.Schema &&
+            name != "OpenPattern"
+          ) {
+            expected.remove("other")
+          }
+          val type = result.classLoader.loadClass("io.test.$name")
+          val decoded = mapper.readValue(mapper.writeValueAsBytes(input), type)
+          assertEquals(expected, mapper.valueToTree(decoded), "$name/$mode")
+        }
         val model = result.classLoader.loadClass("io.test.PatternRecord")
         patternModelValid.forEach { wire ->
           val decoded = mapper.readValue(wire, model)
-          if (preserve) {
-            val input = mapper.readTree(wire)
-            val output = mapper.readTree(mapper.writeValueAsString(decoded))
-            input.properties().forEach { (key, value) -> assertEquals(value, output[key], key) }
-          }
+          val input = mapper.readTree(wire)
+          val output = mapper.readTree(mapper.writeValueAsString(decoded))
+          input.properties().forEach { (key, value) -> assertEquals(value, output[key], key) }
         }
         patternModelInvalid.forEach { wire ->
           assertThrows(JsonMappingException::class.java, { mapper.readValue(wire, model) }, wire)

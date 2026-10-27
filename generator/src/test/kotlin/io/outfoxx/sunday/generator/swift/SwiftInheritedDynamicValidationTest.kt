@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -121,7 +122,12 @@ class SwiftInheritedDynamicValidationTest {
             ),
       ),
       registry,
-      SwiftSundayOptions("https://example.com/", listOf("application/json"), "API", preserveUnknownFields = true),
+      SwiftSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = UnknownFieldPreservation.On,
+      ),
     ).generateServiceTypes()
     registry.generateFiles(
       GeneratedOutputSelection(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Problem)),

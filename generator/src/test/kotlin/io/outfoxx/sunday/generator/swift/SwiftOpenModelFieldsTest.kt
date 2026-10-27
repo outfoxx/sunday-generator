@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -45,7 +46,7 @@ class SwiftOpenModelFieldsTest {
     "asyncapi,false",
     "composed,false",
   )
-  fun `open model fields round trip by default and can be discarded`(
+  fun `open model fields follow the implicit preservation setting`(
     frontend: String,
     preserve: Boolean,
     compiler: SwiftCompiler,
@@ -60,7 +61,7 @@ class SwiftOpenModelFieldsTest {
           "http://example.com/",
           listOf("application/json"),
           "API",
-          preserveUnknownFields = false,
+          preserveUnknownFields = UnknownFieldPreservation.Schema,
         )
       }
     SwiftSundayIrGenerator(openModelFieldsApi(frontend, directory), registry, options).generateServiceTypes()
@@ -107,7 +108,6 @@ class SwiftOpenModelFieldsTest {
           let copiedJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(copied)) as! NSDictionary
           XCTAssertEqual(copiedJSON["name"] as? String, "after")
           XCTAssertTrue(copiedJSON["nested"] is NSDictionary)
-          XCTAssertThrowsError(try JSONEncoder().encode(ClosedRecord(id: "one", additionalProperties_: ["future": 1])))
           XCTAssertThrowsError(try JSONEncoder().encode(TypedRecord(id: "one", additionalProperties_: ["future": "wrong"])))
           """
       } else {

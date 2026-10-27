@@ -51,6 +51,7 @@ import amf.shapes.client.platform.model.domain.NilShape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.ScalarShape
 import amf.shapes.client.platform.model.domain.UnionShape
+import amf.shapes.internal.domain.metamodel.`NodeShapeModel$`
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.GeneratedDocumentUri
@@ -2205,7 +2206,11 @@ class RamlToGeneratedApi(
     rootLocation: String,
   ): GeneratedAdditionalProperties? {
     if (sourceKind != GeneratedSourceSpec.Kind.OPENAPI) {
-      return null
+      // AMF synthesizes openness when RAML omits the keyword; only authored values opt in to storage.
+      val field = _internal().fields().getValue(`NodeShapeModel$`.`MODULE$`.Closed())
+      return closed
+        ?.takeUnless { field?.annotations()?.isSynthesized() == true }
+        ?.let { GeneratedAdditionalProperties(allowed = !it) }
     }
 
     if (closed == true) {

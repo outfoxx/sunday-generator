@@ -23,7 +23,11 @@ import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MAP
+import com.squareup.kotlinpoet.MUTABLE_MAP
+import com.squareup.kotlinpoet.NameAllocator
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -43,6 +47,81 @@ internal fun addZalandoProblemExtensions(
   models.filterKeys(::isProblem).forEach { (_, entry) ->
     val (model, builder) = entry
     if (builder.build().superclass == ZALANDO_ABSTRACT_THROWABLE_PROBLEM) {
+      builder.build().tag(ProblemExtensionWriter::class)?.let { writer ->
+        val type = builder.build()
+        val constructor = requireNotNull(type.primaryConstructor)
+        val names = NameAllocator()
+        val memberNames = type.propertySpecs.map { it.name } + constructor.parameters.map { it.name }
+        memberNames.distinct().forEach { names.newName(it) }
+        val storage = names.newName("problemParameters")
+        val map = MUTABLE_MAP.parameterizedBy(STRING, ANY.copy(nullable = true))
+        // Zalando exposes an unmodifiable view; keep the same map passed to its constructor for validated writes.
+        builder.primaryConstructor(
+          constructor
+            .toBuilder()
+            .apply {
+              modifiers.clear()
+              addModifiers(KModifier.PRIVATE)
+              annotations.clear()
+              parameters.add(0, ParameterSpec.builder(storage, map).build())
+            }.build(),
+        )
+        builder.addFunction(
+          constructor
+            .toBuilder()
+            .apply {
+              modifiers.clear()
+              addModifiers(if (KModifier.SEALED in type.modifiers) KModifier.PROTECTED else KModifier.PUBLIC)
+              addKdoc("Creates a problem with its declared fields.\n")
+              parameters.replaceAll { parameter ->
+                parameter
+                  .toBuilder()
+                  .apply {
+                    annotations.replaceAll { it.toBuilder().useSiteTarget(null).build() }
+                  }.build()
+              }
+              if (type.typeSpecs.flatMap { it.funSpecs }.none { function ->
+                  function.annotations.any { it.typeName == JACKSON_JSON_CREATOR }
+                }
+              ) {
+                addAnnotation(JACKSON_JSON_CREATOR)
+              }
+              callThisConstructor(
+                listOf(CodeBlock.of("linkedMapOf()")) + constructor.parameters.map { CodeBlock.of("%N", it.name) },
+              )
+            }.build(),
+        )
+        builder.addSuperclassConstructorParameter("%N", storage)
+        builder.addProperty(PropertySpec.builder(storage, map, KModifier.PRIVATE).initializer("%N", storage).build())
+        builder.addFunction(
+          FunSpec
+            .builder(writer.name)
+            .addModifiers(KModifier.PROTECTED)
+            .addKdoc("Stores a validated extension in the runtime problem map.\n")
+            .addParameter("name", STRING)
+            .addParameter("value", ANY.copy(nullable = true))
+            .addStatement("%N[name] = value", storage)
+            .build(),
+        )
+        builder.addFunction(
+          FunSpec
+            .builder(names.newName("problemExtensionParameters"))
+            .addModifiers(KModifier.PRIVATE)
+            .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnyGetter"))
+            .addAnnotation(
+              AnnotationSpec
+                .builder(JACKSON_JSON_INCLUDE)
+                .addMember(
+                  "value = %T.ALWAYS, content = %T.ALWAYS",
+                  JACKSON_JSON_INCLUDE_INCLUDE,
+                  JACKSON_JSON_INCLUDE_INCLUDE,
+                ).build(),
+            ).returns(MAP.parameterizedBy(STRING, ANY.copy(nullable = true)))
+            .addStatement("return super.getParameters()")
+            .build(),
+        )
+        builder.initializerIndex = builder.propertySpecs.size
+      }
       // Zalando suppresses about:blank; a source schema can require the type member explicitly.
       builder.addFunction(
         FunSpec
@@ -84,9 +163,6 @@ internal fun addZalandoProblemExtensions(
         .beginControlFlow("return buildMap")
         .addStatement("putAll(super.getParameters())")
     builder.propertySpecs.forEach { property ->
-      if (property.annotations.any { it.typeName == ClassName("com.fasterxml.jackson.annotation", "JsonAnyGetter") }) {
-        body.addStatement("putAll(%N)", property.name)
-      }
       val field = fields[property.name]
       if (field != null && field.wireName !in setOf("type", "title", "status", "detail", "instance")) {
         val omitNull = !field.effective.required && !properties.acceptsNull(field.effective.type)

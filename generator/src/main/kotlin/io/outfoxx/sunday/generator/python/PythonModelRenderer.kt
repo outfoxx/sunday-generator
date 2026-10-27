@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -40,7 +41,7 @@ private const val FALLBACK_TAG = "__unknown__"
 /** Renders IR models into a Python Pydantic models module. */
 class PythonModelRenderer(
   private val packageName: String,
-  private val preserveUnknownFields: Boolean = true,
+  private val preserveUnknownFields: UnknownFieldPreservation = UnknownFieldPreservation.Schema,
   private val defaultTolerance: Tolerance = Tolerance.Response,
   private val moduleName: String = "$packageName.models",
 ) {
@@ -602,7 +603,7 @@ class PythonModelRenderer(
     val extra =
       when {
         modelProperties.isClosed(this) && modelProperties.patternProperties(this).isEmpty() -> "forbid"
-        preserveUnknownFields -> "allow"
+        modelProperties.hasExtensionStorage(this, preserveUnknownFields) -> "allow"
         else -> "ignore"
       }
     val schemaExtra = mutableListOf<PythonCodeBlock>()
@@ -935,9 +936,7 @@ class PythonModelRenderer(
   private fun GeneratedModel.renderWireValueValidator(): PythonCodeBlock? {
     val patterns = modelProperties.patternProperties(this)
     val additional = modelProperties.additionalProperties(this)
-    val validatesAdditionalProperties = patterns.isNotEmpty() || additional.isNotEmpty()
-    // Override an inherited validator even when this variant has no exclusions of its own.
-    if (!validatesAdditionalProperties && !(patchOf != null && properties.any { it.patchDiscriminator })) return null
+    if (patterns.isEmpty() && additional.isEmpty()) return null
 
     val statements = mutableListOf<PythonCodeBlock>()
     statements +=
@@ -1019,6 +1018,10 @@ class PythonModelRenderer(
             validatedType,
           )
       }
+    }
+
+    if (!modelProperties.preservesUnknownFields(this, preserveUnknownFields) && !modelProperties.isClosed(this)) {
+      statements += PythonCodeBlock.of("            data.pop(key)")
     }
 
     return PythonCodeBlock.of(

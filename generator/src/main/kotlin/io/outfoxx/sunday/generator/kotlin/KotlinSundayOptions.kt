@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin
 
 import io.outfoxx.sunday.generator.GenerationOptions
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 
 /** Options for Kotlin/Sunday generation. */
@@ -31,7 +32,7 @@ class KotlinSundayOptions(
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = true,
-  preserveUnknownFields: Boolean = true,
+  preserveUnknownFields: UnknownFieldPreservation = UnknownFieldPreservation.Schema,
   profile: String? = null,
   defaultTolerance: Tolerance = Tolerance.Response,
   /** Generate server configurations and application-supplied transport factories. */

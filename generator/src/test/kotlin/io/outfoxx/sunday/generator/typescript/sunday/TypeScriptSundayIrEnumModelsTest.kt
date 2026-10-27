@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -463,7 +464,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
         "http://example.com/",
         listOf("application/json"),
         "API",
-        preserveUnknownFields = preserve,
+        preserveUnknownFields = if (preserve) UnknownFieldPreservation.On else UnknownFieldPreservation.Schema,
       ),
     ).generateServiceTypes()
 

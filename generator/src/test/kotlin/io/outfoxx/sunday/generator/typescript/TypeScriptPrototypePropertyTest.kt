@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
@@ -60,7 +61,7 @@ class TypeScriptPrototypePropertyTest {
         "http://example.com/",
         listOf("application/json"),
         "API",
-        preserveUnknownFields = preserve,
+        preserveUnknownFields = if (preserve) UnknownFieldPreservation.On else UnknownFieldPreservation.Schema,
       ),
     ).generateServiceTypes()
     // AsyncAPI does not currently export patternProperties into the IR.

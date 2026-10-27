@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.closedModelsApi
@@ -25,7 +26,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
@@ -33,18 +34,36 @@ import java.nio.file.Path
 @Tag("validation")
 class PythonClosedModelsTest : PythonTest() {
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @CsvSource(
+    "raml,Schema",
+    "raml,On",
+    "raml,Off",
+    "openapi,Schema",
+    "openapi,On",
+    "openapi,Off",
+    "asyncapi,Schema",
+    "asyncapi,On",
+    "asyncapi,Off",
+    "composed,Schema",
+    "composed,On",
+    "composed,Off",
+  )
   fun `closed objects retain unknown field rejection`(
     frontend: String,
+    mode: UnknownFieldPreservation,
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
+    val preserve = mode == UnknownFieldPreservation.On
     val api = closedModelsApi(frontend, directory)
     assertTrue(
       compileModules(
         compiler,
         listOf(
-          PythonModelRenderer("test_api").renderModels(api.models),
+          PythonModelRenderer(
+            "test_api",
+            mode,
+          ).renderModels(api.models),
           PythonModuleBuilder("test_api/__init__.py").build(),
         ),
         importModules = listOf("test_api.models"),
@@ -52,9 +71,9 @@ class PythonClosedModelsTest : PythonTest() {
           """
           from pydantic import ValidationError
           from test_api.models import ClosedRecord, ClosedChild, EmptyClosed, OpenRecord
-          ${if (frontend == "composed") "from test_api.models import EventRecord" else ""}
+          ${if (frontend.startsWith("composed")) "from test_api.models import EventRecord" else ""}
           cases = [(ClosedRecord, {"display-name": "valid"}), (ClosedChild, {"name": "valid", "count": 1}), (EmptyClosed, {})]
-          ${if (frontend == "composed") "cases.append((EventRecord, {}))" else ""}
+          ${if (frontend.startsWith("composed")) "cases.append((EventRecord, {}))" else ""}
           for model, valid in cases:
               model.model_validate(valid)
               for extra in [1, None, {}, []]:
@@ -64,7 +83,11 @@ class PythonClosedModelsTest : PythonTest() {
                       assert any(item["type"] == "extra_forbidden" for item in error.errors())
                   else:
                       raise AssertionError("unknown field accepted")
-          OpenRecord.model_validate({"name": "valid", "extra": 1})
+          open_value = OpenRecord.model_validate({"name": "valid", "extra": 1})
+          assert ("extra" in open_value.model_dump()) == ${if (preserve) "True" else "False"}
+          from test_api.models import ExplicitRecord, ExplicitChild, ExplicitLeaf
+          for model in [ExplicitRecord, ExplicitChild, ExplicitLeaf]:
+              assert ("extra" in model.model_validate({"extra": 1}).model_dump()) == ${if (mode != UnknownFieldPreservation.Off) "True" else "False"}
           """.trimIndent(),
       ),
     )

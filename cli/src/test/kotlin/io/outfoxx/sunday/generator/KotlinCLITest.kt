@@ -154,7 +154,11 @@ class KotlinCLITest {
   }
 
   @ParameterizedTest
-  @EnumSource(KotlinTypeRegistry.Option::class)
+  @EnumSource(
+    value = KotlinTypeRegistry.Option::class,
+    names = ["PreserveUnknownFields"],
+    mode = EnumSource.Mode.EXCLUDE,
+  )
   fun `type registry defaults agree with help`(option: KotlinTypeRegistry.Option) {
     if (option in KotlinGenerateCommand.impliedRegistryOptions) {
       return
@@ -168,7 +172,6 @@ class KotlinCLITest {
           KotlinTypeRegistry.Option.JacksonAnnotations,
           KotlinTypeRegistry.Option.ValidationConstraints,
           KotlinTypeRegistry.Option.ContainerElementValid,
-          KotlinTypeRegistry.Option.PreserveUnknownFields,
         )
     val command = KotlinGenerateCommandTest()
     command.parse(requiredOptions)
@@ -188,7 +191,11 @@ class KotlinCLITest {
   }
 
   @ParameterizedTest
-  @EnumSource(KotlinTypeRegistry.Option::class)
+  @EnumSource(
+    value = KotlinTypeRegistry.Option::class,
+    names = ["PreserveUnknownFields"],
+    mode = EnumSource.Mode.EXCLUDE,
+  )
   fun `enable type registry options`(option: KotlinTypeRegistry.Option) {
     // Skip implied options
     if (option in KotlinGenerateCommand.impliedRegistryOptions) {
@@ -201,7 +208,11 @@ class KotlinCLITest {
   }
 
   @ParameterizedTest
-  @EnumSource(KotlinTypeRegistry.Option::class)
+  @EnumSource(
+    value = KotlinTypeRegistry.Option::class,
+    names = ["PreserveUnknownFields"],
+    mode = EnumSource.Mode.EXCLUDE,
+  )
   fun `disable type registry options`(option: KotlinTypeRegistry.Option) {
     // Skip implied options
     if (option in KotlinGenerateCommand.impliedRegistryOptions) {

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.tools.anyOfDeserializationApi
 import io.outfoxx.sunday.generator.tools.anyOfInvalidWires
 import io.outfoxx.sunday.generator.tools.anyOfValidWires
@@ -47,7 +48,12 @@ class TypeScriptAnyOfDeserializationTest {
     TypeScriptSundayIrGenerator(
       anyOfDeserializationApi(frontend, directory),
       registry,
-      TypeScriptSundayOptions("http://example.com/", listOf("application/json"), "API"),
+      TypeScriptSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = UnknownFieldPreservation.On,
+      ),
     ).generateServiceTypes()
     val check =
       ModuleSpec

@@ -26,6 +26,57 @@ internal fun problemExtensionsApi(
   frontend: String,
   directory: Path,
 ): GeneratedApi {
+  val raml =
+    """
+    #%RAML 1.0
+    title: Problem extensions
+    uses:
+      sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+    types:
+      Uri:
+        type: string
+        (sunday.kotlinType): java.net.URI
+      Problem:
+        type: object
+        properties:
+          type: Uri
+          title: {type: string, minLength: 2}
+          status: {type: integer, minimum: 100, maximum: 599}
+          detail?: string
+          instance?: Uri
+      InvalidLimitProblem: Problem
+      OtherProblem: Problem
+      ClosedProblem:
+        type: Problem
+        additionalProperties: false
+      TypedProblem: Problem
+      DeclaredProblem:
+        type: Problem
+        properties:
+          code: string
+      PatternProblem:
+        type: object
+        properties:
+          type: Uri
+          title: string
+          status: integer
+          /^x-/: {type: integer, minimum: 1}
+      ProblemResponse: InvalidLimitProblem | OtherProblem
+      ProblemFixtures:
+        type: object
+        properties:
+          response?: ProblemResponse
+          closed?: ClosedProblem
+          typed?: TypedProblem
+          declared?: DeclaredProblem
+          patterned?: PatternProblem
+    /user:
+      get:
+        responses:
+          200:
+            body:
+              application/problem+json: ProblemFixtures
+    """.trimIndent()
   val schemas =
     """
     Problem:
@@ -139,9 +190,10 @@ internal fun problemExtensionsApi(
     components:
       schemas:
     """.trimIndent() + "\n" + asyncSchemas.prependIndent("    ")
-  val source = directory.resolve("problems.yaml")
+  val source = directory.resolve(if (frontend == "raml") "problems.raml" else "problems.yaml")
   source.writeText(
     when (frontend) {
+      "raml" -> raml
       "asyncapi" -> asyncapi
       "openapi", "composed" -> openapi
       else -> error("Unsupported problem schema frontend: $frontend")

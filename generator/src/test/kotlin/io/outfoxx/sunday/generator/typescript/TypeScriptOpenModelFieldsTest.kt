@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.tools.inheritedAdditionalPropertiesModels
 import io.outfoxx.sunday.generator.tools.openModelFieldsApi
 import io.outfoxx.sunday.generator.tools.openModelWire
@@ -98,7 +99,7 @@ class TypeScriptOpenModelFieldsTest {
     "asyncapi,false",
     "composed,false",
   )
-  fun `open model fields round trip by default and can be discarded`(
+  fun `open model fields follow the implicit preservation setting`(
     frontend: String,
     preserve: Boolean,
     compiler: TypeScriptCompiler,
@@ -113,7 +114,7 @@ class TypeScriptOpenModelFieldsTest {
           "http://example.com/",
           listOf("application/json"),
           "API",
-          preserveUnknownFields = false,
+          preserveUnknownFields = UnknownFieldPreservation.Schema,
         )
       }
     TypeScriptSundayIrGenerator(openModelFieldsApi(frontend, directory), registry, options).generateServiceTypes()

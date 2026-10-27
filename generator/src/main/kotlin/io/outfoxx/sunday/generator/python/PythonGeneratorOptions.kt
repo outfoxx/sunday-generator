@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.BrokerGenerationOptions
 import io.outfoxx.sunday.generator.EnvironmentGenerationOptions
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.UnknownFieldPreservation
 import io.outfoxx.sunday.generator.ir.GeneratedPlacementConfiguration
 
 /** Options shared by Python IR-backed generators. */
@@ -33,7 +34,7 @@ data class PythonGeneratorOptions(
   /** Enforce complete scheme and permission requirements using application-provided authenticators. */
   val enforceSecuritySchemes: Boolean = false,
   /** Retain schema-permitted dynamic model fields for serialization. */
-  val preserveUnknownFields: Boolean = true,
+  val preserveUnknownFields: UnknownFieldPreservation = UnknownFieldPreservation.Schema,
   override val profile: String? = null,
   override val defaultTolerance: Tolerance = Tolerance.Response,
   /** Generate server configurations for Sunday clients; ignored by server targets. */

@@ -59,6 +59,8 @@ internal fun closedModelsApi(
               child?: ClosedChild
               empty?: EmptyClosed
               choice?: Choice
+              explicit?: ExplicitRecord
+              leaf?: ExplicitLeaf
           Cat:
             type: object
             additionalProperties: false
@@ -81,6 +83,20 @@ internal fun closedModelsApi(
             additionalProperties: false
             properties:
               count?: integer
+          ExplicitRecord:
+            type: object
+            additionalProperties: true
+            properties:
+              name?: string
+          ExplicitChild:
+            type: OpenRecord
+            additionalProperties: true
+            properties:
+              count?: integer
+          ExplicitLeaf:
+            type: ExplicitChild
+            properties:
+              flag?: boolean
           EmptyClosed:
             type: object
             additionalProperties: false

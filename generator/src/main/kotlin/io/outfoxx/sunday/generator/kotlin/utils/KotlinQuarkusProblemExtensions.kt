@@ -44,7 +44,15 @@ internal fun addQuarkusProblemExtensions(
     }
 
   models.keys.groupBy(::root).forEach { (root, hierarchy) ->
-    if (root == null || hierarchy.size == 1) return@forEach
+    if (root == null) return@forEach
+    val runtimeWriter =
+      models
+        .getValue(root)
+        .second
+        .build()
+        .tag(ProblemExtensionWriter::class)
+        ?.name
+    if (hierarchy.size == 1 && runtimeWriter == null) return@forEach
     val builder = models.getValue(root).second
     val type = builder.build()
     val constructor = type.primaryConstructor ?: return@forEach
@@ -60,7 +68,7 @@ internal fun addQuarkusProblemExtensions(
       }.distinct()
       .forEach { names.newName(it) }
     val builderName = names.newName("problemBuilder")
-    val registerName = names.newName("registerProblemExtension")
+    val registerName = runtimeWriter ?: names.newName("registerProblemExtension")
     val builderType = QUARKUS_HTTP_PROBLEM.nestedClass("Builder")
 
     // HttpProblem keeps an unmodifiable view of its builder's map, including in builder(original).
@@ -112,7 +120,7 @@ internal fun addQuarkusProblemExtensions(
       FunSpec
         .builder(registerName)
         .addModifiers(KModifier.PROTECTED)
-        .addKdoc("Adds an initialized declared extension to the runtime problem representation.\n")
+        .addKdoc("Adds a validated dynamic or initialized declared extension to the runtime problem representation.\n")
         .addParameter("name", STRING)
         .addParameter("value", ANY.copy(nullable = true))
         .addStatement("%N.with(name, value)", builderName)
