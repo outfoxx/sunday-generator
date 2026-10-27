@@ -409,6 +409,38 @@ class GeneratedModelPropertiesTest {
   }
 
   @Test
+  fun `flattened alias patterns survive inherited intersections`() {
+    val property = GeneratedModelProperty("instance", GeneratedTypeRef.scalar("string"))
+    val parent =
+      GeneratedModel(
+        "ParentProblem",
+        GeneratedModel.Kind.OBJECT,
+        GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
+        properties =
+          listOf(
+            property.copy(validation = mapOf("pattern" to "^urn:"), additionalPatterns = listOf(":example")),
+          ),
+      )
+    val otherParent =
+      parent.copy(
+        name = "OtherProblem",
+        properties = listOf(property.copy(additionalPatterns = listOf("example$"))),
+      )
+    val child =
+      parent.copy(
+        name = "ChildProblem",
+        inherits = listOf(GeneratedTypeRef.named(parent.name), GeneratedTypeRef.named(otherParent.name)),
+        properties = emptyList(),
+      )
+    val models = listOf(parent, otherParent, child).associateBy { it.name }
+    val properties = GeneratedModelProperties { models[it.name] }
+    assertEquals(
+      listOf("^urn:", ":example", "example$"),
+      properties.patterns(properties.fields(child).single().effective),
+    )
+  }
+
+  @Test
   fun `inherited numeric and collection assertions intersect without weakening either parent`() {
     val property = GeneratedModelProperty("value", GeneratedTypeRef.scalar("number"))
     val left =

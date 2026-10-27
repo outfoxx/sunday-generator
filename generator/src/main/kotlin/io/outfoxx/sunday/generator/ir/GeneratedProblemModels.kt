@@ -89,10 +89,13 @@ object GeneratedProblemModels {
     var reference = type
     var constraints = validation
     var values = allowedValues
+    val patterns = additionalPatterns.toMutableSet()
+    validation["pattern"]?.let(patterns::add)
     val visited = mutableSetOf<GeneratedModel>()
     while (reference.kind == GeneratedTypeRef.Kind.NAMED) {
       val declaration = index.modelOrNull(reference) ?: break
       if (!visited.add(declaration)) break
+      declaration.validation["pattern"]?.let(patterns::add)
       constraints = declaration.validation + constraints
       if (declaration.kind == GeneratedModel.Kind.ENUM && declaration.unknownValue == null) {
         values = values?.filter { it in declaration.values } ?: declaration.values
@@ -103,6 +106,7 @@ object GeneratedProblemModels {
       type = GeneratedTypeRef.scalar("string", format = "problem-uri"),
       validation = constraints,
       allowedValues = values,
+      additionalPatterns = patterns.filterNot { it == constraints["pattern"] },
     )
   }
 }

@@ -287,6 +287,7 @@ internal class GeneratedModelProperties(
   fun patterns(property: GeneratedModelProperty): List<String> {
     val patterns = linkedSetOf<String>()
     property.validation["pattern"]?.let(patterns::add)
+    patterns.addAll(property.additionalPatterns)
     var reference = property.type
     val visited = mutableSetOf<String>()
     while (reference.kind == GeneratedTypeRef.Kind.NAMED && visited.add(reference.name)) {

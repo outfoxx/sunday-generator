@@ -274,7 +274,7 @@ internal class SwiftValidationViews(
         }
         endControlFlow("if")
         val check = nestedCheck ?: typeCheck(property.type.copy(nullable = false))
-        if (property.validation.isEmpty() && property.allowedValues == null) {
+        if (property.validation.isEmpty() && property.additionalPatterns.isEmpty() && property.allowedValues == null) {
           add("return %L\n", check)
         } else {
           add("var valid = %L\n", check)

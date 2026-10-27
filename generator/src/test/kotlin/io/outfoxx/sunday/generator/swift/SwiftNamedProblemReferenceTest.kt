@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -50,7 +51,8 @@ class SwiftNamedProblemReferenceTest {
         types:
           Uri: string
           NestedUri: Uri
-          InstanceUri: {type: Uri, minLength: 3}
+          InstanceRoot: {type: Uri, minLength: 3}
+          InstanceUri: InstanceRoot
           AllowedType: {type: string, enum: ['about:blank', 'https://example.com']}
           HttpProblem:
             type: object
@@ -80,7 +82,8 @@ class SwiftNamedProblemReferenceTest {
             schemas:
               Uri: {type: string, format: uri}
               NestedUri: {${'$'}ref: '#/components/schemas/Uri'}
-              InstanceUri: {${'$'}ref: '#/components/schemas/Uri', minLength: 3}
+              InstanceRoot: {${'$'}ref: '#/components/schemas/Uri', minLength: 3}
+              InstanceUri: {${'$'}ref: '#/components/schemas/InstanceRoot'}
               AllowedType: {type: string, enum: ['about:blank', 'https://example.com']}
               HttpProblem:
                 type: object
@@ -112,8 +115,39 @@ class SwiftNamedProblemReferenceTest {
       sources += events.toUri()
     }
     val registry = SwiftTypeRegistry(setOf())
+    val exported = GeneratedApiIrExporter().export(sources)
+    // Frontends differ in how they compose patterns; exercise the retained alias chain at the IR boundary.
+    val api =
+      exported.copy(
+        models =
+          exported.models.map { model ->
+            when (model.name) {
+              "InstanceRoot" -> model.copy(validation = model.validation + ("pattern" to "^urn:"))
+              "InstanceUri" ->
+                model.copy(
+                  aliases = listOf(GeneratedTypeRef.named("InstanceRoot")),
+                  validation = model.validation + ("pattern" to ":example"),
+                )
+              "HttpProblem" ->
+                model.copy(
+                  properties =
+                    model.properties.map { property ->
+                      if (property.name == "instance") {
+                        property.copy(
+                          type = GeneratedTypeRef.named("InstanceUri"),
+                          validation = property.validation + ("pattern" to "example$"),
+                        )
+                      } else {
+                        property
+                      }
+                    },
+                )
+              else -> model
+            }
+          },
+      )
     SwiftSundayIrGenerator(
-      GeneratedApiIrExporter().export(sources),
+      api,
       registry,
       swiftSundayTestOptions,
     ).generateServiceTypes()
@@ -142,12 +176,17 @@ class SwiftNamedProblemReferenceTest {
           XCTAssertEqual(try decoder.decode(HttpProblem.self, from: encoder.encode(value)).instance, "urn:example")
           XCTAssertThrowsError(try HttpProblem(instance: "x"))
           XCTAssertThrowsError(try decoder.decode(HttpProblem.self, from: Data(#"{"instance":"x"}"#.utf8)))
+          for invalid in ["https:example", "urn:otherexample", "urn:example-tail"] {
+            let data = try JSONSerialization.data(withJSONObject: ["instance": invalid])
+            XCTAssertThrowsError(try HttpProblem(instance: invalid), invalid)
+            XCTAssertThrowsError(try decoder.decode(HttpProblem.self, from: data), invalid)
+          }
           for type in ["about:blank", "https://example.com"] {
             let value = try EnumProblem(type: type)
             XCTAssertEqual(try decoder.decode(EnumProblem.self, from: encoder.encode(value)).type, type)
           }
           XCTAssertThrowsError(try EnumProblem(type: "https://example.org/wrong"))
-          let ordinary = try OrdinaryRecord(uri: ${if (frontend == "raml") "\"https://example.com\"" else "URL(string: \"https://example.com\")!"})
+          let ordinary = OrdinaryRecord(uri: ${if (frontend == "raml") "\"https://example.com\"" else "URL(string: \"https://example.com\")!"})
           let ordinaryReference: ${if (frontend == "raml") "String" else "URL"} = ordinary.uri
           XCTAssertEqual(String(describing: ordinaryReference), "https://example.com")
         }

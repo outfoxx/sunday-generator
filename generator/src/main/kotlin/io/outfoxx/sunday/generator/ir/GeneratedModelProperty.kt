@@ -43,4 +43,7 @@ data class GeneratedModelProperty(
   val patchDeletionAllowed: Boolean? = null,
   /** Required immutable dispatch tag in a merge-patch hierarchy, never an update operation. */
   val patchDiscriminator: Boolean = false,
+  /** Independent pattern assertions retained when a target flattens named scalar aliases. */
+  @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
+  val additionalPatterns: List<String> = emptyList(),
 )
