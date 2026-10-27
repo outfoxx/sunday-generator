@@ -3585,7 +3585,17 @@ class TypeScriptSundayIrGenerator(
               ?.takeIf { it.kind == GeneratedModel.Kind.ENUM && it.unknownValue == null }
               ?.values,
         )
-      val schema = stringProperty.zodSchema(owner, lazyRefType)
+      // Reference codecs already normalize the wire category; constrain the resulting string directly.
+      var schema = stringProperty.copy(allowedValues = null).zodSchema(owner, lazyRefType)
+      stringProperty.allowedValues?.let { values ->
+        val matches = values.map { CodeBlock.of("value === %L", literal(it)) }.toMutableList()
+        if (!required) matches.add(0, CodeBlock.of("value === undefined"))
+        schema =
+          schema.appendSchemaCall(
+            "refine((value) => %L)",
+            matches.takeIf { it.isNotEmpty() }?.joinToCode(" || ") ?: CodeBlock.of("false"),
+          )
+      }
       return CodeBlock.of(
         "%Q(%L, %L)",
         SymbolSpec.importsName("createProblemReferenceCodec", "@outfoxx/sunday"),
