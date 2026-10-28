@@ -118,7 +118,7 @@ class ResponseProblemsTest {
 
     assertTrue(generated.contains("import io.outfoxx.sunday.problems.SundayHttpProblem"), generated)
     assertTrue(generated.contains("class InvalidIdProblem"), generated)
-    assertTrue(generated.contains("SundayHttpProblem(TYPE_URI, \"Invalid Id\", 400,"), generated)
+    assertTrue(generated.contains("SundayHttpProblem(TYPE_URI, title, status,"), generated)
     assertFalse(generated.contains("org.zalando.problem.AbstractThrowableProblem"), generated)
   }
 

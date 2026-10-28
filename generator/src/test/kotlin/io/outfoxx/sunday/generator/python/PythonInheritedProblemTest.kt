@@ -306,8 +306,8 @@ class PythonInheritedProblemTest : PythonTest() {
               from test_api.models_problems import Problem as BaseProblem
               base = BaseProblem(type=None, title="Failure", status=400)
               assert base.type == "about:blank"
-              assert base.payload.type is None
-              assert base.model_dump(mode='json')['type'] is None
+              assert base.payload.type == 'about:blank'
+              assert base.model_dump(mode='json')['type'] == 'about:blank'
           value = QueuedProblem(detail='Resource A is rebuilding', traceId='trace-A',
               resourceKey='A', nullableParent=None, nullableChild=None, metadata=Metadata(region='west'), queuePosition=2)
           assert isinstance(value, RebuildingProblem)
@@ -345,7 +345,7 @@ class PythonInheritedProblemTest : PythonTest() {
           assert value.model_dump(mode='json', by_alias=True) == raw
           assert QueuedProblem.model_validate(raw).model_dump(mode='json', by_alias=True) == raw
           for invalid in [dict(raw, resourceKey=''), dict(raw, retryAfterSeconds=2), dict(raw, queuePosition=0),
-              dict(raw, type='https://example.com/wrong'), dict(raw, detail=None),
+              dict(raw, type='https://example.com/wrong'),
               *[{k: v for k, v in raw.items() if k != field} for field in ['type', 'nullableChild', 'resourceKey', 'queuePosition']]]:
               try:
                   QueuedProblem.model_validate(invalid)
@@ -353,6 +353,16 @@ class PythonInheritedProblemTest : PythonTest() {
                   pass
               else:
                   raise AssertionError(f'Accepted invalid problem: {invalid}')
+          for member in ['type', 'title', 'status', 'detail', 'instance']:
+              missing = {k: v for k, v in raw.items() if k != member}
+              def decoded(data):
+                  try:
+                      return QueuedProblem.model_validate(data).model_dump(mode='json')
+                  except ValidationError:
+                      return 'invalid'
+              baseline = decoded(missing)
+              for wrong in ([None, True, '401', [], {}] if member == 'status' else [None, True, 42, [], {}]):
+                  assert decoded(dict(missing, **{member: wrong})) == baseline, (member, wrong)
           async def http_problem():
               async with httpx.AsyncClient(base_url="https://example.test", transport=httpx.MockTransport(
                   lambda request: httpx.Response(409, json=raw, headers={"Content-Type": "application/problem+json"})

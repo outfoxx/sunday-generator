@@ -50,7 +50,7 @@ internal class PythonProblemModels(
 
   // The runtime exception contract exposes URI strings, while Pydantic still validates URI syntax.
   fun normalizedModels(): List<GeneratedModel> =
-    models.map { model ->
+    io.outfoxx.sunday.generator.ir.GeneratedProblemModels.normalizeFields(models).map { model ->
       if (!isProblem(model)) {
         model
       } else {

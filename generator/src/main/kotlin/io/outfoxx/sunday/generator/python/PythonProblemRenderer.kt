@@ -82,9 +82,27 @@ class PythonProblemRenderer(
     )
 
   private fun GeneratedProblem.renderPayloadType(): PythonCodeBlock {
+    val typeProperty =
+      PythonCodeBlock.of(
+        "    type: %T[%C] = %C",
+        PythonSymbol("typing", "Literal"),
+        typeUri.renderPythonValue(),
+        typeUri.renderPythonValue(),
+      )
+    val formattedType =
+      if (typeProperty.render(PythonRenderContext(PythonImportSet())).length <= 120) {
+        typeProperty
+      } else {
+        PythonCodeBlock.of(
+          "    type: %T[%C] = (\n        %C\n    )",
+          PythonSymbol("typing", "Literal"),
+          typeUri.renderPythonValue(),
+          typeUri.renderPythonValue(),
+        )
+      }
     val baseProperties =
       listOfNotNull(
-        PythonCodeBlock.of("    type: str = %C", typeUri.renderPythonValue()),
+        formattedType,
         title?.let { PythonCodeBlock.of("    title: str | None = %S", it) },
         status?.let { PythonCodeBlock.of("    status: int | None = %L", it) },
         detail?.let { PythonCodeBlock.of("    detail: str | None = %S", it) },
@@ -126,6 +144,7 @@ class PythonProblemRenderer(
               payload: %L | None = None,
               **values: object,
           ) -> None:
+              values.setdefault("type", %C)
               super().__init__(payload or self.payload_type.model_validate(values))
       %C
       """.trimIndent(),
@@ -135,6 +154,7 @@ class PythonProblemRenderer(
       payloadTypeName,
       payloadTypeName,
       payloadTypeName,
+      typeUri.renderPythonValue(),
       fieldAccessors?.let { PythonCodeBlock.of("\n%C", it) } ?: PythonCodeBlock.of(""),
     )
   }

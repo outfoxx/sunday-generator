@@ -69,11 +69,13 @@ internal object SwiftValueConstraints {
         "exclusiveMaximum",
         "multipleOf",
       )
-    if (elementType != null && property.validation.keys.any { it in elementKeys }) {
+    if (elementType != null &&
+      (property.validation.keys.any { it in elementKeys } || property.additionalPatterns.isNotEmpty())
+    ) {
       val elementRules = property.validation.filterKeys { it in elementKeys }
       return CodeBlock.of(
         "%L.appending(.elements(%L, nullable: %L))",
-        metadata(property.copy(validation = property.validation - elementKeys)),
+        metadata(property.copy(validation = property.validation - elementKeys, additionalPatterns = emptyList())),
         metadata(property.copy(type = elementType, validation = elementRules, allowedValues = null)),
         elementType.nullable,
       )
@@ -100,6 +102,9 @@ internal object SwiftValueConstraints {
         "pattern" -> rules += CodeBlock.of(".pattern(%L)", SwiftModelConstraints.regexLiteral(bound))
         "uniqueItems" -> if (bound == "true") rules += CodeBlock.of(".uniqueItems")
       }
+    }
+    property.additionalPatterns.forEach { pattern ->
+      rules += CodeBlock.of(".pattern(%L)", SwiftModelConstraints.regexLiteral(pattern))
     }
     GeneratedNumericBounds.parse(property.validation, property.name).forEach { bound ->
       SwiftModelConstraints.decimalLiteral(bound.value, property.name)

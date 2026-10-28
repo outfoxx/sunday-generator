@@ -159,7 +159,6 @@ class KotlinProblemExtensionsTest {
           }
         }
         for (invalid in listOf(
-          """{"type":"about:blank","status":400}""",
           """{"type":"about:blank","title":"x","status":400}""",
           """{"type":"about:blank","title":"Failure","status":999}""",
         )) {

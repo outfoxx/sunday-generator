@@ -1,4 +1,3 @@
-import Foundation
 import PotentCodables
 import Sunday
 
@@ -9,12 +8,12 @@ import Sunday
  */
 public struct InvalidIdProblem : Problem {
 
-  public static let type: URL = URL(string: "http://api.example.com/api/invalid_id")!
-  public let type: URL
-  public let title: String
-  public let status: Int
+  public static let type: String = "http://api.example.com/api/invalid_id"
+  public let type: String
+  public let title: String?
+  public let status: Int?
   public let detail: String?
-  public let instance: URL?
+  public let instance: String?
   public let parameters: [String : AnyValue]?
   public let offendingId: String
   public var description: String {
@@ -30,7 +29,7 @@ public struct InvalidIdProblem : Problem {
 
   public init(
     offendingId: String,
-    instance: URL? = nil,
+    instance: String? = nil,
     detail: String? = "The id contains one or more invalid characters."
   ) {
     self.type = Self.type
@@ -44,14 +43,17 @@ public struct InvalidIdProblem : Problem {
 
   public init(from decoder: Decoder) throws {
     let problem = try GenericProblem(from: decoder)
+    guard problem.type == Self.type else {
+      throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unexpected Problem type"))
+    }
     let container = try decoder.container(keyedBy: CodingKeys.self)
     self.offendingId = try container.decode(String.self, forKey: CodingKeys.offendingId)
     self.type = problem.type
-    self.title = problem.title
-    self.status = problem.status
-    self.detail = problem.detail
+    self.title = problem.title ?? "Invalid Id"
+    self.status = problem.status ?? 400
+    self.detail = problem.detail ?? "The id contains one or more invalid characters."
     self.instance = problem.instance
-    self.parameters = nil
+    self.parameters = problem.parameters?.filter { !["offending_id"].contains($0.key) }
   }
 
   public func encode(to encoder: Encoder) throws {

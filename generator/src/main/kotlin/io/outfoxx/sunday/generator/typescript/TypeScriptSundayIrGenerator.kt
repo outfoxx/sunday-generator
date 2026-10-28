@@ -167,7 +167,12 @@ class TypeScriptSundayIrGenerator(
       ).resolve(sourceApi)
       .resolveProblemUris(options.defaultProblemBaseUri)
       .let {
-        it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
+        it.copy(
+          models =
+            io.outfoxx.sunday.generator.ir.GeneratedProblemModels.normalizeFields(
+              GeneratedPatchModels.normalizeFields(it.models),
+            ),
+        )
       }
 
   private val patchSupportNames by lazy {
@@ -1178,7 +1183,7 @@ class TypeScriptSundayIrGenerator(
         listOf(
           problemSpecSchemaCode(typeName, properties),
           problemSpecType(specName, typeName),
-          problemSchemaCode(typeName, properties),
+          problemSchemaCode(problem, typeName, properties),
         ),
       )
     }
@@ -1212,7 +1217,9 @@ class TypeScriptSundayIrGenerator(
           add(field.type.zodSchema(typeName, field.required, field.validation))
           add(",\n")
         }
-      }.add("    'detail': %T.string().optional(),\n", Z)
+      }.add("    'title': %T.string().optional(),\n", Z)
+      .add("    'status': %T.number().int().optional(),\n", Z)
+      .add("    'detail': %T.string().optional(),\n", Z)
       .add(
         "    'instance': %T.union([%T.string(), %T.instanceof(%T)]).optional()\n",
         Z,
@@ -1233,15 +1240,16 @@ class TypeScriptSundayIrGenerator(
       .add(
         """
         |super({
+        |  ...spec,
         |  type: %T.TYPE,
-        |  title: %S,
-        |  status: %L,
+        |  title: spec.title ?? %L,
+        |  status: spec.status ?? %L,
         |  detail: spec.detail ?? %L,
         |  instance: spec.instance
         """.trimMargin(),
         typeName,
-        problem.title,
-        problem.status,
+        problem.title?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"),
+        problem.status?.let { CodeBlock.of("%L", it) } ?: CodeBlock.of("undefined"),
         problem.detail?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"),
       ).apply {
         if (fields.isNotEmpty()) {
@@ -1261,6 +1269,7 @@ class TypeScriptSundayIrGenerator(
       .build()
 
   private fun problemSchemaCode(
+    problem: GeneratedProblem,
     typeName: TypeName.Standard,
     properties: List<Pair<GeneratedModelProperty, TypeName>>,
   ): CodeBlock =
@@ -1271,20 +1280,29 @@ class TypeScriptSundayIrGenerator(
         typeName.sibling("WireSchema").simpleName(),
         DEFINE_MODEL_SCHEMA,
         SCHEMA_RUNTIME,
-      ).add("  return %T.extend({", PROBLEM_WIRE_SCHEMA)
-      .apply {
-        if (properties.isNotEmpty()) {
-          add("\n")
-          properties.forEachIndexed { idx, (field, _) ->
-            add("    %S: ", field.serializationName ?: field.name)
-            add(field.type.zodSchema(typeName, field.required, field.validation))
-            if (idx < properties.lastIndex) {
-              add(",")
-            }
-            add("\n")
+      ).add("  return %T.extend({\n", PROBLEM_WIRE_SCHEMA)
+      .add(
+        "    'type': %Q(%T.literal(%S), true),\n",
+        SymbolSpec.importsName("createProblemReferenceCodec", "@outfoxx/sunday"),
+        Z,
+        problem.typeUri,
+      ).apply {
+        val defaults = listOf("title" to problem.title, "status" to problem.status, "detail" to problem.detail)
+        defaults.forEach { (name, value) ->
+          add("    %S: %T.shape.%L", name, PROBLEM_WIRE_SCHEMA, name)
+          if (value != null) {
+            add(".pipe(%T.%L().prefault(", Z, if (name == "status") "number" else "string")
+            if (value is String) add("%S", value) else add("%L", value)
+            add("))")
           }
-          add("  ")
+          add(",\n")
         }
+        properties.forEach { (field, _) ->
+          add("    %S: ", field.serializationName ?: field.name)
+          add(field.type.zodSchema(typeName, field.required, field.validation))
+          add(",\n")
+        }
+        add("  ")
       }.add("});\n")
       .add("});\n\n")
       .add(
@@ -1766,7 +1784,13 @@ class TypeScriptSundayIrGenerator(
       val propertyName = property.name.typeScriptIdentifierName
       // Inherited problem properties retain their runtime types; wire schemas still enforce constants.
       val propertyType =
-        property.type.typeName(ownerTypeName).modelPropertyType(
+        (
+          if (isProblemModel && (property.serializationName ?: property.name) in setOf("type", "instance")) {
+            TypeName.unionType(URL_TYPE, TypeName.STRING)
+          } else {
+            property.type.typeName(ownerTypeName)
+          }
+        ).modelPropertyType(
           if (isProblemModel) property.copy(allowedValues = null) else property,
         )
       interfaceBuilder.addProperty(
@@ -2211,8 +2235,8 @@ class TypeScriptSundayIrGenerator(
         |super({
         |  ...$inputName,
         |  type: $inputName.type ?? %T.BLANK_URL,
-        |  title: $inputName.title ?? '',
-        |  status: $inputName.status ?? 0,
+        |  title: $inputName.title,
+        |  status: $inputName.status,
         |  detail: %L,
         |  instance: %L
         |});
@@ -2590,7 +2614,15 @@ class TypeScriptSundayIrGenerator(
           selectedSchema = "oneOfSchema"
         }
         val checked = applyUnionCommonConstraints(model, typeName, selectedSchema)
-        add("  const wireSchema = %L;\n", checked)
+        if (model.aliases.isNotEmpty() && model.aliases.all { it.modelOrNull(index)?.isProblemModel() == true }) {
+          add(
+            "  const wireSchema = %Q(%L);\n",
+            SymbolSpec.importsName("createProblemUnionCodec", "@outfoxx/sunday"),
+            checked,
+          )
+        } else {
+          add("  const wireSchema = %L;\n", checked)
+        }
         if (fallbackSchema != null) {
           add(
             "  return %Q(wireSchema, ",
@@ -2944,7 +2976,7 @@ class TypeScriptSundayIrGenerator(
                   if (property.externalDiscriminator != null) {
                     externalDiscriminatedPropertySchema(property.type.typeName(serviceTypeName))
                   } else {
-                    property.zodSchema(serviceTypeName, typeName)
+                    property.problemZodSchema(model, serviceTypeName, typeName)
                   }
               },
             )
@@ -3020,7 +3052,7 @@ class TypeScriptSundayIrGenerator(
                   if (property.externalDiscriminator != null) {
                     externalDiscriminatedPropertySchema(property.type.typeName(serviceTypeName))
                   } else {
-                    property.zodSchema(serviceTypeName)
+                    property.problemZodSchema(model, serviceTypeName)
                   }
               },
             )
@@ -3530,6 +3562,59 @@ class TypeScriptSundayIrGenerator(
           }
         }
     return schema.build()
+  }
+
+  private fun GeneratedModelProperty.problemZodSchema(
+    model: GeneratedModel,
+    owner: TypeName.Standard,
+    lazyRefType: TypeName.Standard? = null,
+  ): CodeBlock {
+    val wireName = serializationName ?: name
+    if (!model.isProblemModel() || wireName !in setOf("type", "title", "status", "detail", "instance")) {
+      return zodSchema(owner, lazyRefType)
+    }
+    if (wireName in setOf("type", "instance")) {
+      val stringProperty =
+        io.outfoxx.sunday.generator.ir.GeneratedProblemModels.stringReference(this, index::modelOrNull).copy(
+          type = GeneratedTypeRef.scalar("string").copy(nullable = type.nullable),
+          defaultValue = if (wireName == "type") null else defaultValue,
+        )
+      // Reference codecs already normalize the wire category; constrain the resulting string directly.
+      var schema = stringProperty.copy(allowedValues = null).zodSchema(owner, lazyRefType)
+      stringProperty.additionalPatterns.forEach { pattern ->
+        schema =
+          schema.appendSchemaCall("refine((value) => value === undefined || new RegExp(%S).test(value))", pattern)
+      }
+      stringProperty.allowedValues?.let { values ->
+        val matches = values.map { CodeBlock.of("value === %L", literal(it)) }.toMutableList()
+        if (!required) matches.add(0, CodeBlock.of("value === undefined"))
+        schema =
+          schema.appendSchemaCall(
+            "refine((value) => %L)",
+            matches.takeIf { it.isNotEmpty() }?.joinToCode(" || ") ?: CodeBlock.of("false"),
+          )
+      }
+      return CodeBlock.of(
+        "%Q(%L, %L)",
+        SymbolSpec.importsName("createProblemReferenceCodec", "@outfoxx/sunday"),
+        schema,
+        wireName == "type",
+      )
+    }
+    return CodeBlock.of(
+      "%T.pipe(%L)",
+      TypeName.namedImport(
+        if (wireName ==
+          "status"
+        ) {
+          "ProblemStatusSchema"
+        } else {
+          "ProblemStringSchema"
+        },
+        "@outfoxx/sunday",
+      ),
+      zodSchema(owner, lazyRefType),
+    )
   }
 
   private fun GeneratedModelProperty.zodSchema(

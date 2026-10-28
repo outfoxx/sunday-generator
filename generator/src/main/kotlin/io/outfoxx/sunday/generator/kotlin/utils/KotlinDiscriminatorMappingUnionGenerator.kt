@@ -37,6 +37,7 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback>,
   private val jacksonAnnotations: Boolean,
   private val typeName: (GeneratedModel) -> ClassName,
+  private val isSundayProblem: (GeneratedModel) -> Boolean = { false },
   private val commonValidation: (GeneratedModel) -> BeanValidationTypes? = { null },
 ) {
 
@@ -108,6 +109,7 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
         val mappedModel = mappedType.modelOrNull(apiIndex) ?: return@mapNotNull null
         value to typeName(mappedModel)
       }
+    val normalize = mappingModels(model).all(isSundayProblem)
     val types = commonValidation(model)
     val deserialize =
       FunSpec
@@ -118,9 +120,19 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
         .returns(unionTypeName)
         .apply {
           if (types == null) {
-            addStatement("val tree = context.readTree(parser)")
+            addStatement("val %L = context.readTree(parser)", if (normalize) "rawTree" else "tree")
           } else {
-            addStatement("val tree = %T.read(parser, context)", ClassName("io.outfoxx.sunday.validation", "WireTree"))
+            addStatement(
+              "val %L = %T.read(parser, context)",
+              if (normalize) "rawTree" else "tree",
+              ClassName("io.outfoxx.sunday.validation", "WireTree"),
+            )
+          }
+          if (normalize) {
+            addStatement(
+              "val tree = %T.normalized(rawTree)",
+              ClassName("io.outfoxx.sunday.problems", "ProblemDecoding"),
+            )
           }
         }.addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminatorWireName)
         .apply {

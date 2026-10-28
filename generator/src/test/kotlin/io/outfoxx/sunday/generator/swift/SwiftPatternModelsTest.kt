@@ -235,7 +235,7 @@ class SwiftPatternModelsTest {
           XCTAssertNoThrow(try problem.validate(.response))
           let defaultedProblem = try JSONDecoder().decode(DynamicProblem.self, from:
             Data(#"{"title":"Bad request","status":400}"#.utf8))
-          XCTAssertEqual(defaultedProblem.type.absoluteString, "about:blank")
+          XCTAssertEqual(defaultedProblem.type, "about:blank")
           _ = try JSONDecoder().decode(PatternRecord.self, from:
             Data(#"{"problem-one":{"type":"about:blank","title":"Bad request","status":400}}"#.utf8))
           for raw in [#"{"problem-one":{"type":"about:blank","title":"no","status":400}}"#,

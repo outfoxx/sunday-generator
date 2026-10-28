@@ -33,8 +33,9 @@ internal fun protocolUnionApi(
     """
     BaseProblem:
       type: object
-      required: [type, title, status, detail]
+      required: [type, title, status, detail, problemId]
       properties:
+        problemId: {type: string}
         type: {type: string, format: uri}
         title: {type: string, minLength: 2}
         status: {type: integer, minimum: 400}
@@ -104,6 +105,7 @@ internal fun protocolUnionApi(
       BaseProblem:
         type: object
         properties:
+          problemId: string
           type: string
           title: {type: string, minLength: 2}
           status: {type: integer, minimum: 400}

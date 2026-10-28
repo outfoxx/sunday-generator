@@ -52,7 +52,7 @@ class PythonProblemDetailTest : PythonTest() {
           assert WithDefaultProblem(detail="Override").detail == "Override"
           assert WithoutDefaultProblem(detail="Override").detail == "Override"
           assert WithDefaultProblem(detail="").detail == ""
-          assert WithDefaultProblem(detail=None).detail is None
+          assert WithDefaultProblem(detail=None).detail == "Default detail"
           """.trimIndent(),
       ),
     )

@@ -81,13 +81,14 @@ class PythonProblemRendererTest : PythonTest() {
 
           payload = ProjectNotFoundProblemPayload.model_validate(
               {
+                  "type": "https://turnpost.example/problems/project-not-found",
                   "projectId": "4f76662f-dc50-41b8-bb15-0a097ace8515",
                   "detail": "Project was deleted",
                   "retry-after": "2026-05-24T13:45:00Z",
               },
           )
           problem = ProjectNotFoundProblem(payload)
-          validated_problem = ProjectNotFoundProblem.model_validate({"projectId": "4f76662f-dc50-41b8-bb15-0a097ace8515"})
+          validated_problem = ProjectNotFoundProblem.model_validate({"type": "https://turnpost.example/problems/project-not-found", "projectId": "4f76662f-dc50-41b8-bb15-0a097ace8515"})
 
           assert isinstance(problem, Exception)
           assert isinstance(problem, Problem)

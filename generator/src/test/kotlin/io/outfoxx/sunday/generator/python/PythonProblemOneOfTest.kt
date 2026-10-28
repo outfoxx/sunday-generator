@@ -19,8 +19,8 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
-import io.outfoxx.sunday.generator.tools.problemOneOfCases
 import io.outfoxx.sunday.generator.tools.pythonPlacement
+import io.outfoxx.sunday.generator.tools.rfc9457ProblemOneOfCases
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -61,7 +61,7 @@ class PythonProblemOneOfTest : PythonTest() {
           from pydantic import TypeAdapter, ValidationError
           from test_api import models
           failures = []
-          for case in json.loads('''$problemOneOfCases'''):
+          for case in json.loads('''$rfc9457ProblemOneOfCases'''):
               adapter = TypeAdapter(getattr(models, case['union']))
               try:
                   decoded = adapter.validate_json(json.dumps(case['wire']))
@@ -73,6 +73,17 @@ class PythonProblemOneOfTest : PythonTest() {
                       failures.append(f"Accepted invalid case: {case}")
                   else:
                       assert type(decoded).__name__ == case['expected'], case
+                      for member in ['type', 'title', 'status', 'detail', 'instance']:
+                          missing = {k: v for k, v in case['wire'].items() if k != member}
+                          def outcome(raw):
+                              try:
+                                  value = adapter.validate_json(json.dumps(raw))
+                                  return (type(value).__name__, json.loads(adapter.dump_json(value, by_alias=True)))
+                              except ValidationError:
+                                  return None
+                          for wrong in ([None, True, '404', [], {}] if member == 'status' else [None, True, 42, [], {}]):
+                              assert outcome(dict(missing, **{member: wrong})) == outcome(missing), (member, wrong, case)
+
                       assert json.loads(adapter.dump_json(decoded, by_alias=True)) == case['wire'], case
           assert not failures, '\n'.join(failures)
           """.trimIndent(),

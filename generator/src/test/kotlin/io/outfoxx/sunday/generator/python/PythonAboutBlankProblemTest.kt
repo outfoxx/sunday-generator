@@ -132,7 +132,9 @@ class PythonAboutBlankProblemTest : PythonTest() {
           assert CustomProblem.model_validate(custom).type == custom['type']
           assert CustomProblem(title='Error', status=400).type == custom['type']
           assert RequiredProblem.model_validate(custom).type == custom['type']
-          for cls, raw in [(CustomProblem, omitted), (RequiredProblem, omitted), (FlexibleProblem, dict(omitted, type=None))]:
+          assert RequiredProblem.model_validate(omitted).type == 'about:blank'
+          assert FlexibleProblem.model_validate(dict(omitted, type=None)).type == 'about:blank'
+          for cls, raw in [(CustomProblem, omitted)]:
               try:
                   cls.model_validate(raw)
               except ValidationError:

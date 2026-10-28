@@ -187,7 +187,13 @@ class SwiftSundayIrGenerator(
       ).resolve(sourceApi)
       .resolveProblemUris(options.defaultProblemBaseUri)
       .let {
-        it.copy(models = GeneratedPatchModels.normalizeFields(it.models))
+        it.copy(
+          models =
+            io.outfoxx.sunday.generator.ir.GeneratedProblemModels.normalizeFields(
+              GeneratedPatchModels.normalizeFields(it.models),
+              stringReferences = true,
+            ),
+        )
       }
 
   private val transportTypeVariable = typeVariable("TransportType", bound(TRANSPORT))
@@ -3397,6 +3403,9 @@ class SwiftSundayIrGenerator(
       .addParameter("from", "decoder", DECODER)
       .throws(true)
       .apply {
+        if (cases.isNotEmpty() && cases.all { it.isProblemModel }) {
+          addStatement("let decoder = try %T.normalized(decoder)", DeclaredTypeName("Sunday", "ProblemDecoding"))
+        }
         val discriminator = unionDiscriminator(cases)
         if (this@unionDecoderConstructor in normalizedValidationModels) {
           addStatement("var context = try %T.decodingValue(decoder)", SwiftModelValidation.context)
@@ -3561,20 +3570,20 @@ class SwiftSundayIrGenerator(
       .addSuperType(runtimeProblemTypeName)
       .addProperty(
         PropertySpec
-          .builder("type", URL, PUBLIC, STATIC)
-          .initializer("%T(string: %S)!", URL, resolvedTypeUri(options.defaultProblemBaseUri))
+          .builder("type", STRING, PUBLIC, STATIC)
+          .initializer("%S", resolvedTypeUri(options.defaultProblemBaseUri))
           .build(),
       ).addProperty(
         PropertySpec
-          .builder("type", URL, PUBLIC)
+          .builder("type", STRING, PUBLIC)
           .build(),
       ).addProperty(
         PropertySpec
-          .builder("title", STRING, PUBLIC)
+          .builder("title", STRING.makeOptional(), PUBLIC)
           .build(),
       ).addProperty(
         PropertySpec
-          .builder("status", INT, PUBLIC)
+          .builder("status", INT.makeOptional(), PUBLIC)
           .build(),
       ).addProperty(
         PropertySpec
@@ -3582,7 +3591,7 @@ class SwiftSundayIrGenerator(
           .build(),
       ).addProperty(
         PropertySpec
-          .builder("instance", URL.makeOptional(), PUBLIC)
+          .builder("instance", STRING.makeOptional(), PUBLIC)
           .build(),
       ).addProperty(
         PropertySpec
@@ -3624,7 +3633,7 @@ class SwiftSundayIrGenerator(
         }
         addParameter(
           ParameterSpec
-            .builder("instance", URL.makeOptional())
+            .builder("instance", STRING.makeOptional())
             .defaultValue("nil")
             .build(),
         )
@@ -3635,8 +3644,8 @@ class SwiftSundayIrGenerator(
             .build(),
         )
         addStatement("self.type = %T.type", SelfTypeName.INSTANCE)
-        addStatement("self.title = %S", title ?: "")
-        addStatement("self.status = %L", status ?: 0)
+        addStatement("self.title = %L", title?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil"))
+        addStatement("self.status = %L", status ?: "nil")
         addStatement("self.detail = detail")
         addStatement("self.instance = instance")
         addStatement("self.parameters = nil")
@@ -3673,7 +3682,7 @@ class SwiftSundayIrGenerator(
           ).build(),
       ).build()
 
-  private fun problemDecoderConstructor(
+  private fun GeneratedProblem.problemDecoderConstructor(
     customFields: List<GeneratedModelProperty>,
     codingKeysTypeName: DeclaredTypeName,
   ): FunctionSpec =
@@ -3684,6 +3693,13 @@ class SwiftSundayIrGenerator(
       .throws(true)
       .apply {
         addStatement("let problem = try %T(from: decoder)", GENERIC_PROBLEM)
+        beginControlFlow("guard", "problem.type == Self.type else")
+        addStatement(
+          "throw %T.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: %S))",
+          DECODING_ERROR,
+          "Unexpected Problem type",
+        )
+        endControlFlow("guard")
         if (customFields.isNotEmpty()) {
           addStatement("let container = try decoder.container(keyedBy: %T.self)", codingKeysTypeName)
         }
@@ -3698,11 +3714,18 @@ class SwiftSundayIrGenerator(
           )
         }
         addStatement("self.type = problem.type")
-        addStatement("self.title = problem.title")
-        addStatement("self.status = problem.status")
-        addStatement("self.detail = problem.detail")
+        addStatement("self.title = problem.title%L", title?.let { CodeBlock.of(" ?? %S", it) } ?: CodeBlock.of(""))
+        addStatement("self.status = problem.status%L", status?.let { CodeBlock.of(" ?? %L", it) } ?: CodeBlock.of(""))
+        addStatement("self.detail = problem.detail%L", detail?.let { CodeBlock.of(" ?? %S", it) } ?: CodeBlock.of(""))
         addStatement("self.instance = problem.instance")
-        addStatement("self.parameters = nil")
+        if (customFields.isEmpty()) {
+          addStatement("self.parameters = problem.parameters")
+        } else {
+          addStatement(
+            "self.parameters = problem.parameters?.filter { ![%L].contains($0.key) }",
+            customFields.map { CodeBlock.of("%S", it.serializationName ?: it.name) }.joinToCode(", "),
+          )
+        }
       }.build()
 
   private fun problemEncoderFunction(
@@ -3920,7 +3943,7 @@ class SwiftSundayIrGenerator(
 
     if (isProblemHierarchyValueModel) {
       // The runtime Problem protocol includes optional standard fields even when the source omits them.
-      listOf("detail" to STRING, "instance" to URL).forEach { (name, type) ->
+      listOf("detail" to STRING, "instance" to STRING).forEach { (name, type) ->
         if (storedProperties.none { it.name == name }) {
           typeBuilder.addProperty(
             PropertySpec
@@ -4949,9 +4972,9 @@ class SwiftSundayIrGenerator(
         if (isRootProblemModel) {
           addStatement(
             "super.init(type: %L,%Wtitle: %L,%Wstatus: %L,%Wdetail: %L,%Winstance: %L,%Wparameters: nil)",
-            problemModelBaseArgument(localProperties, "type", "%T(string: %S)!", URL, "about:blank"),
-            problemModelBaseArgument(localProperties, "title", "%S", ""),
-            problemModelBaseArgument(localProperties, "status", "%L", 0),
+            problemModelBaseArgument(localProperties, "type", "%S", "about:blank"),
+            problemModelBaseArgument(localProperties, "title", "%L", "nil"),
+            problemModelBaseArgument(localProperties, "status", "%L", "nil"),
             problemModelBaseArgument(localProperties, "detail", "%L", "nil"),
             problemModelBaseArgument(localProperties, "instance", "%L", "nil"),
           )
@@ -5317,7 +5340,11 @@ class SwiftSundayIrGenerator(
       .addModifiers(*modifiers)
       .addParameter("from", "decoder", DECODER)
       .throws(true)
-      .addStatement(
+      .apply {
+        if (model.isProblemModel) {
+          addStatement("let decoder = try %T.normalized(decoder)", DeclaredTypeName("Sunday", "ProblemDecoding"))
+        }
+      }.addStatement(
         "let %L = try decoder.container(keyedBy: CodingKeys.self)",
         if (localProperties.isEmpty() && model.properties.none { it.patchDiscriminator }) "_" else "container",
       ).apply {
@@ -6742,6 +6769,12 @@ class SwiftSundayIrGenerator(
     model: GeneratedModel,
     constructor: Boolean = false,
   ): CodeBlock? {
+    if (model.isProblemModel && wireName == "type" && !constructor) {
+      return CodeBlock.of("%S", "about:blank")
+    }
+    if (model.isProblemModel && wireName == "type" && constructor) {
+      return model.constantCode(this) ?: CodeBlock.of("%S", "about:blank")
+    }
     val field = modelProperties.fields(model).firstOrNull { it.wireName == (serializationName ?: name) }
     if (!constructor && field?.effective?.required == true) return null
     val nominal = modelProperties.declarationModel(type)?.takeIf { it.nominal }
@@ -6982,7 +7015,7 @@ class SwiftSundayIrGenerator(
     private val PATCH_OP = DeclaredTypeName.typeName("$SUNDAY_MODULE.PatchOp")
     private val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     private val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
-    private val optionalBaseProblemProperties = setOf("detail", "instance")
+    private val optionalBaseProblemProperties = setOf("title", "status", "detail", "instance")
     private val swiftEnumCaseIdentifierRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
     private val requestModelUsages =
       setOf(

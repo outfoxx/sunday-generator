@@ -94,7 +94,7 @@ internal class PythonSchemaProblemRenderer(
                     "    @property\n" +
                       "    def type(self) -> str:\n" +
                       "        \"\"\"Return the URI used by the runtime when the payload omits it.\"\"\"\n" +
-                      "        return self.payload.type or \"about:blank\"",
+                      "        return self.payload.type",
                   ),
                 )
               } else {

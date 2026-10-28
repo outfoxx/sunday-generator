@@ -62,12 +62,12 @@ class SwiftMergePatchProblemDefaultsTest {
             decoder.userInfo[CodingUserInfoKey(rawValue: "io.outfoxx.sunday.mergePatch")!] = merging
             let missingType = Data(#"{"title":"Not Found","status":404}"#.utf8)
             let notFound = try decoder.decode(RecordNotFoundProblem.self, from: missingType)
-            XCTAssertEqual(notFound.type.absoluteString, "about:blank")
+            XCTAssertEqual(notFound.type, "about:blank")
             XCTAssertEqual(notFound.title, "Not Found")
             XCTAssertEqual(notFound.status, 404)
-            XCTAssertThrowsError(try decoder.decode(RecordNotFoundProblem.self, from: Data("{}".utf8)))
+            XCTAssertEqual(try decoder.decode(RecordNotFoundProblem.self, from: Data("{}".utf8)).type, "about:blank")
             let defaulted = try decoder.decode(DefaultedProblem.self, from: Data("{}".utf8))
-            XCTAssertEqual(defaulted.type.absoluteString, "about:blank")
+            XCTAssertEqual(defaulted.type, "about:blank")
             XCTAssertEqual(defaulted.title, "Bad Request")
             XCTAssertEqual(defaulted.status, 400)
             XCTAssertEqual(defaulted.detail, "Details")
@@ -79,7 +79,7 @@ class SwiftMergePatchProblemDefaultsTest {
             XCTAssertEqual(child.localLabel, "unrelated")
             for (field, invalid) in [("type", "https://example.com/wrong" as Any),
                                       ("title", "Wrong"), ("status", 500)] {
-              for value in [invalid, NSNull()] {
+              for value in [invalid] {
                 var record: [String: Any] = ["title": "Not Found", "status": 404]
                 record[field] = value
                 let recordData = try JSONSerialization.data(withJSONObject: record)

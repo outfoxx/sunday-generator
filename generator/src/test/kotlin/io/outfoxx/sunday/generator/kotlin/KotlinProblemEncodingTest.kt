@@ -149,7 +149,15 @@ class KotlinProblemEncodingTest {
         val decodedExtension = mapper.readValue(withExtension.toString(), problemClass)
         assertEquals(withExtension, mapper.readTree(mapper.writeValueAsBytes(decodedExtension)))
         val explicitNull = encoded.deepCopy<ObjectNode>().putNull("detail")
-        assertThrows(JsonMappingException::class.java) { mapper.readValue(explicitNull.toString(), problemClass) }
+        if (library == KotlinProblemLibrary.SUNDAY) {
+          val missing = encoded.deepCopy<ObjectNode>().apply { remove("detail") }
+          assertEquals(
+            mapper.readTree(mapper.writeValueAsBytes(mapper.readValue(missing.toString(), problemClass))),
+            mapper.readTree(mapper.writeValueAsBytes(mapper.readValue(explicitNull.toString(), problemClass))),
+          )
+        } else {
+          assertThrows(JsonMappingException::class.java) { mapper.readValue(explicitNull.toString(), problemClass) }
+        }
       }
     }
   }

@@ -16,6 +16,9 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
+import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import io.outfoxx.sunday.generator.GenerationMode
@@ -26,6 +29,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.problemDetailApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -79,6 +83,49 @@ class KotlinProblemDetailTest {
           .loadClass("CheckKt")
           .getMethod("verify")
           .invoke(null)
+        if (library == KotlinProblemLibrary.SUNDAY) {
+          val mapper = jacksonObjectMapper()
+          val problemType = compiled.classLoader.loadClass("io.test.WithDefaultProblem")
+          val valid =
+            mapper
+              .createObjectNode()
+              .put("type", "https://example.com/problems/with_default")
+              .putNull("trace")
+              .put("title", "")
+              .put("detail", "")
+              .put("status", 409)
+
+          fun roundTrip(value: JsonNode): JsonNode =
+            mapper.readTree(mapper.writeValueAsBytes(mapper.treeToValue(value, problemType)))
+          val roundTripped = roundTrip(valid)
+          assertEquals("", roundTripped["title"].textValue())
+          assertEquals(409, roundTripped["status"].intValue())
+          assertEquals("", roundTripped["detail"].textValue())
+          assertEquals(mapper.nullNode(), roundTripped["trace"])
+          for (member in listOf("type", "title", "status", "detail", "instance")) {
+            val missing = valid.deepCopy().apply { remove(member) }
+            val wrong =
+              if (member == "status") {
+                listOf("null", "true", "\"400\"", "[]", "{}")
+              } else {
+                listOf("null", "true", "42", "[]", "{}")
+              }
+            if (member == "type") {
+              assertThrows(JsonMappingException::class.java) { roundTrip(missing) }
+              wrong.forEach { value ->
+                assertThrows(JsonMappingException::class.java) {
+                  roundTrip(valid.deepCopy().set<JsonNode>(member, mapper.readTree(value)))
+                }
+              }
+            } else {
+              val expected = roundTrip(missing)
+              wrong.forEach { value ->
+                assertEquals(expected, roundTrip(valid.deepCopy().set<JsonNode>(member, mapper.readTree(value))))
+              }
+            }
+          }
+          assertThrows(JsonMappingException::class.java) { roundTrip(valid.deepCopy().put("status", 409.5)) }
+        }
       }
     }
   }

@@ -38,6 +38,7 @@ internal object GeneratedPropertyConstraints {
       type = right.type.copy(nullable = left.type.nullable && right.type.nullable),
       defaultValue = right.defaultValue ?: left.defaultValue,
       validation = intersectValidation(left.validation, right.validation, context),
+      additionalPatterns = (left.additionalPatterns + right.additionalPatterns).distinct(),
       allowedValues =
         when {
           left.allowedValues == null -> right.allowedValues
@@ -46,7 +47,8 @@ internal object GeneratedPropertyConstraints {
         },
     )
 
-  private fun intersectValidation(
+  /** Keeps the strongest compatible bound contributed by either declaration. */
+  fun intersectValidation(
     left: Map<String, String>,
     right: Map<String, String>,
     context: String,

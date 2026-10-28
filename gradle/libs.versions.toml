@@ -46,14 +46,14 @@ smallryeFaultTolerance = "6.9.1"
 shadow = "9.3.1"
 slf4j = "2.0.17"
 sonarqube = "7.2.2.6593"
-sundayKt = "2.0.0-beta.16"
+sundayKt = "2.0.0-beta.19"
 swiftPoet = "1.6.6"
 typeScriptPoet = "1.1.2"
 vanniktechMavenPublish = "0.36.0"
 validation = "2.0.1.Final"
 versionCatalogUpdatePlugin = "0.8.5"
 versions = "0.51.0"
-zalandoProblem = "0.27.1"
+zalandoProblem = "1.0.0"
 
 [plugins]
 quarkus = { id = "io.quarkus", version.ref = "quarkus-rest" }

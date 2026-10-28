@@ -97,7 +97,7 @@ class SwiftProtocolUnionTest {
       @testable import SundayGenTest
       final class ScopedProtocolUnionTests: XCTestCase {
         func testParentOnlyValue() throws {
-          let wire = Data(#"{"type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"}"#.utf8)
+          let wire = Data(#"{"problemId":"test","type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"}"#.utf8)
           let value = try JSONDecoder().decode(LocalAPI<URLSessionTransport>.CollectionChoice.self, from: wire)
           guard case .collectionProblem(let parent) = value else { return XCTFail("Expected parent branch") }
           let _: AnyCollectionProblem = parent
@@ -160,7 +160,7 @@ class SwiftProtocolUnionTest {
       final class HelperCollisionTests: XCTestCase {
         func testIndependentParentAndDiscriminatedValues() throws {
           let decoder = JSONDecoder()
-          let parent = Data(#"{"type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"}"#.utf8)
+          let parent = Data(#"{"problemId":"test","type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"}"#.utf8)
           let choice = try decoder.decode(CollectionChoice.self, from: parent)
           guard case .${parentName.replaceFirstChar(
         Char::lowercaseChar,
@@ -236,7 +236,7 @@ class SwiftProtocolUnionTest {
       @testable import SundayGenTest
       final class ProtocolUnionTests: XCTestCase {
         func testParentSchema() throws {
-          let parent = #"{"type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"$extra}"#
+          let parent = #"{"problemId":"test","type":"https://example.org/problem","title":"Problem","status":400,"detail":"valid"$extra}"#
           let child = parent.replacingOccurrences(of: #""detail":"valid""#, with: #""detail":"valid","reason":"bad""#)
           let malformedChild = child.replacingOccurrences(of: "bad", with: "x")
           let decoder = JSONDecoder()

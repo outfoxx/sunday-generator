@@ -58,6 +58,14 @@ class SwiftProblemDetailTest {
       import XCTest
       @testable import SundayGenTest
       final class ProblemEncodingTests: XCTestCase {
+        func testEmptyReferencesSurvive() throws {
+          let original = try AccountFieldsInvalidProblem(instance: "")
+          let value = try JSONDecoder().decode(AccountFieldsInvalidProblem.self, from: JSONEncoder().encode(original))
+          XCTAssertEqual(value.instance, "")
+          XCTAssertNil(value.instanceURI)
+          let encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as? [String: Any])
+          XCTAssertEqual(encoded["instance"] as? String, "")
+        }
         func testNarrowedDetailEncoding() throws {
           for detail: String? in [nil, "", "Invalid field"] {
             let problem = try AccountFieldsInvalidProblem(detail: detail)
@@ -65,11 +73,11 @@ class SwiftProblemDetailTest {
             var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
             XCTAssertEqual(object.keys.contains("detail"), detail != nil)
             XCTAssertEqual(object["detail"] as? String, detail)
-            XCTAssertTrue(object["instance"] is NSNull)
+            XCTAssertNil(object["instance"])
             XCTAssertEqual(try JSONDecoder().decode(AccountFieldsInvalidProblem.self, from: encoded).detail, detail)
             object["detail"] = NSNull()
-            XCTAssertThrowsError(try JSONDecoder().decode(AccountFieldsInvalidProblem.self,
-              from: JSONSerialization.data(withJSONObject: object)))
+            XCTAssertNil(try JSONDecoder().decode(AccountFieldsInvalidProblem.self,
+              from: JSONSerialization.data(withJSONObject: object)).detail)
           }
         }
       }
@@ -109,6 +117,8 @@ class SwiftProblemDetailTest {
           XCTAssertEqual(WithoutDefaultProblem(detail: "Override").detail, "Override")
           XCTAssertEqual(WithDefaultProblem(detail: "").detail, "")
           XCTAssertNil(WithDefaultProblem(detail: nil).detail)
+          let empty = WithDefaultProblem(instance: "")
+          XCTAssertEqual(try JSONDecoder().decode(WithDefaultProblem.self, from: JSONEncoder().encode(empty)).instance, "")
           let encoded = try JSONEncoder().encode(WithDefaultProblem(detail: "Wire detail"))
           XCTAssertEqual(try JSONDecoder().decode(WithDefaultProblem.self, from: encoded).detail, "Wire detail")
         }

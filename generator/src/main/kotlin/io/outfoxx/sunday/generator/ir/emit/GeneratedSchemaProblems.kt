@@ -115,30 +115,8 @@ private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): L
     .mapNotNull { model -> typeUri(model)?.let { it to model } }
 }
 
-/** Validates HTTP Problem type defaults, response shapes, and URI uniqueness for every emitter and output selection. */
+/** Validates HTTP Problem response shapes and URI uniqueness for every emitter and output selection. */
 fun GeneratedApiIndex.validateSchemaProblemResponses() {
-  val properties = GeneratedModelProperties(::modelOrNull)
-  api.models.filter(::isSchemaProblem).forEach { model ->
-    val type = properties.fields(model).single { it.wireName == "type" }.effective
-    if (!type.required) {
-      val context = "HTTP Problem property '${model.name}.type'"
-      require(type.defaultValue == "about:blank") {
-        "$context is optional and must declare a default of 'about:blank'; add that default or make 'type' required"
-      }
-      val declaration = properties.declarationType(type.type)
-      val fallback = "about:blank"
-      require(
-        declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
-          declaration.name == "string" &&
-          (type.allowedValues == null || fallback in type.allowedValues) &&
-          (type.validation["minLength"]?.toInt()?.let { fallback.length >= it } != false) &&
-          (type.validation["maxLength"]?.toInt()?.let { fallback.length <= it } != false) &&
-          properties.patterns(type).all { Regex(it).containsMatchIn(fallback) },
-      ) {
-        "$context has a default of 'about:blank' that violates its constraints; allow 'about:blank' or make 'type' required"
-      }
-    }
-  }
   api.services.forEach { it.referencedSchemaProblems(this) }
 }
 
