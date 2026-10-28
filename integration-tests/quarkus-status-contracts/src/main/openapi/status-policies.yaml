@@ -46,6 +46,33 @@ paths:
                 oneOf:
                   - {$ref: '#/components/schemas/RebuildingProblem'}
                   - {$ref: '#/components/schemas/OtherProblem'}
+  /status/overlap/{scenario}/{format}/{key}:
+    get:
+      operationId: overlap
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          retry:
+            maxRetries: 2
+            delay: PT0S
+            jitter: PT0S
+            retryOn: [5XX]
+            abortOn: [503]
+          circuitBreaker:
+            requestVolumeThreshold: 2
+            failureRatio: 1.0
+            delay: PT1H
+            failOn: [5XX]
+            skipOn: [503]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
   /status/noRetry/{scenario}/{format}/{key}:
     get:
       operationId: noRetry

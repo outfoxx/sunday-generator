@@ -103,6 +103,25 @@ class StatusPolicyTest {
     }
 
   @Test
+  fun `overlapping exclusions win over retry and breaker selectors`() =
+    runBlocking {
+      for (format in listOf("json", "cbor")) {
+        for (scenario in listOf("503", "wrapped")) {
+          // More invocations than the breaker's threshold prove skipped failures never open it.
+          repeat(3) {
+            val key = key()
+            val error = failure<RuntimeException> { client.overlap(scenario, format, key) }
+            val problem = assertInstanceOf(HttpProblem::class.java, if (scenario == "wrapped") error.cause else error)
+            assertEquals(503, problem.statusCode)
+            assertEquals(key, problem.parameters["trace"])
+            assertEquals(1, StatusPolicyUpstream.count(key))
+          }
+          assertEquals("ok", client.overlap("200", format, key()))
+        }
+      }
+    }
+
+  @Test
   fun `transport failures use explicit class selectors`() =
     runBlocking {
       val selected = key()
