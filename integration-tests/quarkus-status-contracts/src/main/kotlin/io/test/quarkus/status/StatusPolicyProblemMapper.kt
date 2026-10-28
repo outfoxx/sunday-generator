@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package io.test.quarkus
+package io.test.quarkus.status
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
 import io.quarkiverse.resteasy.problem.HttpProblem
-import io.test.quarkus.status.StatusAPI
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response

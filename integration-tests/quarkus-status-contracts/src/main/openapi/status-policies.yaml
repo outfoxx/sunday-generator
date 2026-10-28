@@ -3,7 +3,7 @@ info: {title: Status policies, version: '1'}
 x-sunday-jaxrs:
   rest-client:
     config-key: status-client
-    providers: [io.test.quarkus.StatusPolicyProblemMapper]
+    providers: [io.test.quarkus.status.StatusPolicyProblemMapper]
 x-sunday-placement:
   kotlin: {package: io.test.quarkus.status}
 paths:
