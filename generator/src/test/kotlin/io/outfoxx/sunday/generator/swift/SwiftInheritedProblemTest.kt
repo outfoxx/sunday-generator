@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.swift
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.INHERITED_PROBLEM_JSON
@@ -27,7 +28,8 @@ import io.outfoxx.sunday.generator.tools.USER_NOT_FOUND_JSON
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.nio.file.Files
 import kotlin.io.path.writeText
@@ -36,16 +38,57 @@ import kotlin.io.path.writeText
 @Tag("models")
 @Tag("responses")
 class SwiftInheritedProblemTest {
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
   fun `inherited problem fields survive construction decoding and encoding`(
+    aggregate: Boolean,
     @ResourceUri("openapi/ir/inherited-problem-relative.yaml") source: URI,
     compiler: SwiftCompiler,
   ) {
+    val original = GeneratedApiIrExporter().export(listOf(source))
+    val service = original.services.single()
+    val operation = service.operations.first()
+    val parentType = GeneratedTypeRef.named("RebuildingProblem")
+    val api =
+      if (aggregate) {
+        original.copy(
+          services =
+            listOf(
+              service.copy(
+                name = "Parent",
+                group = "parent",
+                operations =
+                  listOf(
+                    operation.copy(
+                      id = "readParent",
+                      path = "/parent",
+                      responses =
+                        operation.responses.map { response ->
+                          response.copy(
+                            type = parentType,
+                            payloads = response.payloads.map { it.copy(type = parentType) },
+                          )
+                        },
+                    ),
+                  ),
+              ),
+              service.copy(name = "Child", group = "child"),
+            ),
+        )
+      } else {
+        original
+      }
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(
-      GeneratedApiIrExporter().export(listOf(source)),
+      api,
       registry,
-      SwiftSundayOptions("https://example.com/", listOf("application/json"), "API"),
+      SwiftSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        aggregateServices = aggregate,
+        aggregateServiceName = "AllAPI",
+      ),
     ).generateServiceTypes()
     registry.generateFiles(
       GeneratedOutputSelection(GeneratedTypeCategory.entries.toSet()),
@@ -65,7 +108,7 @@ class SwiftInheritedProblemTest {
           let session = URLSession(configuration: config)
           let transport = URLSessionTransport(baseURL: "https://example.test", session: session, eventSession: session)
           defer { transport.close() }
-          let client = API(transport: transport)
+          let client = ${if (aggregate) "AllAPI(transport: transport).child" else "API(transport: transport)"}
           do {
             try await client.readResource().execute()
             XCTFail("Expected an HTTP problem")
@@ -82,7 +125,7 @@ class SwiftInheritedProblemTest {
           let session = URLSession(configuration: config)
           let transport = URLSessionTransport(baseURL: "https://example.test", session: session, eventSession: session)
           defer { transport.close() }
-          let client = API(transport: transport)
+          let client = ${if (aggregate) "AllAPI(transport: transport).child" else "API(transport: transport)"}
           let team = try TeamNotFoundProblem()
           let user = try UserNotFoundProblem()
           let overridden = try TeamNotFoundProblem(detail: "Override", resourceId: "123")

@@ -1179,7 +1179,8 @@ class SwiftSundayIrGenerator(
             services
               .flatMap {
                 it.service.referencedSchemaProblems(apiIndex).entries
-              }.distinctBy { it.key }
+              }.filterNot { it.value.isProblemHierarchyProtocolModel }
+              .distinctBy { it.key }
               .associate { it.toPair() },
           ),
         ).addProperty(
