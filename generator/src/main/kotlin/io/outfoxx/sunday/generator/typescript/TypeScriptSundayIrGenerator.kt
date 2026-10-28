@@ -3575,18 +3575,16 @@ class TypeScriptSundayIrGenerator(
     }
     if (wireName in setOf("type", "instance")) {
       val stringProperty =
-        copy(
+        io.outfoxx.sunday.generator.ir.GeneratedProblemModels.stringReference(this, index::modelOrNull).copy(
           type = GeneratedTypeRef.scalar("string").copy(nullable = type.nullable),
           defaultValue = if (wireName == "type") null else defaultValue,
-          validation = modelProperties.declarationModel(type)?.validation.orEmpty() + validation,
-          allowedValues =
-            allowedValues ?: modelProperties
-              .declarationModel(type)
-              ?.takeIf { it.kind == GeneratedModel.Kind.ENUM && it.unknownValue == null }
-              ?.values,
         )
       // Reference codecs already normalize the wire category; constrain the resulting string directly.
       var schema = stringProperty.copy(allowedValues = null).zodSchema(owner, lazyRefType)
+      stringProperty.additionalPatterns.forEach { pattern ->
+        schema =
+          schema.appendSchemaCall("refine((value) => value === undefined || new RegExp(%S).test(value))", pattern)
+      }
       stringProperty.allowedValues?.let { values ->
         val matches = values.map { CodeBlock.of("value === %L", literal(it)) }.toMutableList()
         if (!required) matches.add(0, CodeBlock.of("value === undefined"))

@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.ir
 
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelIndex
+import io.outfoxx.sunday.generator.ir.emit.GeneratedPropertyConstraints
 
 /** Applies the RFC standard-member contract only to recognized Problem hierarchies. */
 object GeneratedProblemModels {
@@ -47,7 +48,7 @@ object GeneratedProblemModels {
                 if (stringReferences &&
                   (sourceProperty.serializationName ?: sourceProperty.name) in setOf("type", "instance")
                 ) {
-                  sourceProperty.stringReference(index)
+                  stringReference(sourceProperty, index::modelOrNull)
                 } else {
                   sourceProperty
                 }
@@ -84,29 +85,38 @@ object GeneratedProblemModels {
     }
   }
 
-  // Problem URI storage is a string even when an authored alias normally maps to URL or an enum.
-  private fun GeneratedModelProperty.stringReference(index: GeneratedModelIndex): GeneratedModelProperty {
-    var reference = type
-    var constraints = validation
-    var values = allowedValues
-    val patterns = additionalPatterns.toMutableSet()
-    validation["pattern"]?.let(patterns::add)
-    val visited = mutableSetOf<GeneratedModel>()
-    while (reference.kind == GeneratedTypeRef.Kind.NAMED) {
-      val declaration = index.modelOrNull(reference) ?: break
-      if (!visited.add(declaration)) break
-      declaration.validation["pattern"]?.let(patterns::add)
-      constraints = declaration.validation + constraints
-      if (declaration.kind == GeneratedModel.Kind.ENUM && declaration.unknownValue == null) {
-        values = values?.filter { it in declaration.values } ?: declaration.values
+  /** Flattens Problem URI aliases without weakening their independent wire constraints. */
+  internal fun stringReference(
+    property: GeneratedModelProperty,
+    modelFor: (GeneratedTypeRef) -> GeneratedModel?,
+  ): GeneratedModelProperty =
+    with(property) {
+      var reference = type
+      var constraints = validation
+      var values = allowedValues
+      val patterns = additionalPatterns.toMutableSet()
+      validation["pattern"]?.let(patterns::add)
+      val visited = mutableSetOf<GeneratedModel>()
+      while (reference.kind == GeneratedTypeRef.Kind.NAMED) {
+        val declaration = modelFor(reference) ?: break
+        if (!visited.add(declaration)) break
+        declaration.validation["pattern"]?.let(patterns::add)
+        constraints =
+          GeneratedPropertyConstraints.intersectValidation(
+            if ("pattern" in constraints) declaration.validation - "pattern" else declaration.validation,
+            constraints,
+            "Problem reference '${serializationName ?: name}'",
+          )
+        if (declaration.kind == GeneratedModel.Kind.ENUM && declaration.unknownValue == null) {
+          values = values?.filter { it in declaration.values } ?: declaration.values
+        }
+        reference = declaration.aliases.singleOrNull() ?: break
       }
-      reference = declaration.aliases.singleOrNull() ?: break
+      copy(
+        type = GeneratedTypeRef.scalar("string", format = "problem-uri"),
+        validation = constraints,
+        allowedValues = values,
+        additionalPatterns = patterns.filterNot { it == constraints["pattern"] },
+      )
     }
-    return copy(
-      type = GeneratedTypeRef.scalar("string", format = "problem-uri"),
-      validation = constraints,
-      allowedValues = values,
-      additionalPatterns = patterns.filterNot { it == constraints["pattern"] },
-    )
-  }
 }

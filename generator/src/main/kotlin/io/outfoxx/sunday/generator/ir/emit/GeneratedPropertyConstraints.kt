@@ -47,7 +47,8 @@ internal object GeneratedPropertyConstraints {
         },
     )
 
-  private fun intersectValidation(
+  /** Keeps the strongest compatible bound contributed by either declaration. */
+  fun intersectValidation(
     left: Map<String, String>,
     right: Map<String, String>,
     context: String,
