@@ -73,6 +73,7 @@ include(
   "gradle-plugin",
   "code-coverage",
   "integration-tests:quarkus",
+  "integration-tests:quarkus-status-contracts",
   "integration-tests:jaxrs",
   "integration-tests:quarkus-security-contracts",
   "integration-tests:quarkus-security-provider",

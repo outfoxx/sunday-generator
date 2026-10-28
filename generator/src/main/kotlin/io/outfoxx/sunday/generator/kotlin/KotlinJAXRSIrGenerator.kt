@@ -88,6 +88,7 @@ import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.hasEnabledPolicies
+import io.outfoxx.sunday.generator.ir.emit.hasStatusPredicates
 import io.outfoxx.sunday.generator.ir.emit.isAsynchronous
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
 import io.outfoxx.sunday.generator.ir.emit.isNullableParameter
@@ -145,6 +146,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinNativeSchema
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinNominalTypes
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinOneOfSelection
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinPolicyAnnotations
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinPolicyGuards
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
 import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
@@ -297,6 +299,7 @@ class KotlinJAXRSIrGenerator(
       JaxRsTypes.JAVAX
     }
 
+  private val policyGuards = linkedMapOf<ClassName, KotlinPolicyGuards>()
   private val clientSecurityGenerators = linkedMapOf<String, KotlinQuarkusClientSecurity>()
   private val selectedServers = linkedMapOf<String, GeneratedServer>()
   private val nativeClientServices = linkedSetOf<String>()
@@ -1128,6 +1131,14 @@ class KotlinJAXRSIrGenerator(
       .map { modelType -> modelType.build() }
       .forEach(typeBuilder::addType)
 
+    policyGuards[serviceTypeName]?.let { guards ->
+      if (typeBuilder.typeSpecs.any { it.name == "Guards" }) {
+        genError("Service '${serviceTypeName.canonicalName}' reserves nested name 'Guards' for status policies")
+      }
+      typeBuilder.addType(guards.generate())
+      typeRegistry.requireBeanArchive(serviceTypeName)
+    }
+
     return typeBuilder.withNativeClientDefaults()
   }
 
@@ -1420,7 +1431,7 @@ class KotlinJAXRSIrGenerator(
           ?.let(functionBuilder::addAnnotation)
       }
     }
-    addQuarkusFaultToleranceAnnotations(functionBuilder)
+    addQuarkusFaultToleranceAnnotations(service, functionBuilder)
     addQuarkusZanzibarAnnotations(service, functionBuilder)
 
     val names = NameAllocator()
@@ -1504,6 +1515,15 @@ class KotlinJAXRSIrGenerator(
           )
         }
     }
+    if (resolvedPolicy()?.hasStatusPredicates == true) {
+      val raw = (responseTypeName as? ParameterizedTypeName)?.rawType ?: responseTypeName
+      if (jaxrs?.sseEnabled(generationMode) == true ||
+        raw.toString() in
+        setOf("io.smallrye.mutiny.Multi", "kotlinx.coroutines.flow.Flow", "java.util.concurrent.Future")
+      ) {
+        genError("Operation '$id' HTTP status policies do not support streaming or Future responses")
+      }
+    }
     if (responseTypeName != UNIT) {
       functionBuilder.returns(responseTypeName)
     }
@@ -1580,15 +1600,39 @@ class KotlinJAXRSIrGenerator(
     }
   }
 
-  private fun GeneratedOperation.addQuarkusFaultToleranceAnnotations(functionBuilder: FunSpec.Builder) {
+  private fun GeneratedOperation.addQuarkusFaultToleranceAnnotations(
+    service: GeneratedService,
+    functionBuilder: FunSpec.Builder,
+  ) {
     val effectivePolicy = resolvedPolicy()?.takeIf { it.hasEnabledPolicies } ?: return
     if (!options.quarkus) genError("Operation '$id' uses fault-tolerance policies; enable Quarkus generation")
-    KotlinPolicyAnnotations { reference ->
+    val exceptionType: (GeneratedExceptionRef) -> ClassName = { reference ->
       reference.className?.let(ClassName::bestGuess) ?: reference.generatedProblem().typeName()
-    }.annotations(
-      effectivePolicy,
-      KotlinQuarkusClientOperations.requiredAbortTypes(functionBuilder),
-    ).forEach(functionBuilder::addAnnotation)
+    }
+    if (effectivePolicy.hasStatusPredicates) {
+      if (generationMode != Client) genError("Operation '$id' HTTP status policies require Quarkus client generation")
+      val abortTypes = KotlinQuarkusClientOperations.requiredAbortTypes(functionBuilder)
+      if (abortTypes.isNotEmpty()) {
+        genError(
+          "Operation '$id' HTTP status policies do not yet support scoped client authentication; choose a profile without status selectors",
+        )
+      }
+      val serviceName = serviceTypeName(service)
+      val identifier =
+        policyGuards
+          .getOrPut(serviceName) {
+            KotlinPolicyGuards(typeRegistry.problemLibrarySupport, exceptionType)
+          }.add(serviceName.nestedClass("Guards"), id.kotlinIdentifierName, effectivePolicy)
+      functionBuilder.addAnnotation(
+        AnnotationSpec.builder(KotlinPolicyGuards.applyGuard).addMember("%S", identifier).build(),
+      )
+      return
+    }
+    KotlinPolicyAnnotations(exceptionType)
+      .annotations(
+        effectivePolicy,
+        KotlinQuarkusClientOperations.requiredAbortTypes(functionBuilder),
+      ).forEach(functionBuilder::addAnnotation)
   }
 
   private fun GeneratedOperation.resolvedPolicy(): GeneratedPolicyValues? =

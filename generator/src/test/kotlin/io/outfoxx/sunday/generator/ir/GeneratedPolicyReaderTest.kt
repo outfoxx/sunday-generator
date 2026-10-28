@@ -29,6 +29,67 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class GeneratedPolicyReaderTest {
   @Test
+  fun `status lists normalize and preserve inheritance and clearing`() {
+    val policy =
+      GeneratedPolicyReader
+        .read(
+          mapOf(
+            "client" to
+              mapOf(
+                "retry" to
+                  mapOf(
+                    "retryOn" to listOf(503, "5XX", "500-504"),
+                    "abortOn" to listOf(404),
+                  ),
+              ),
+          ),
+          "policy",
+        ).client!!
+    assertEquals(
+      listOf(
+        GeneratedHttpStatusRange(503),
+        GeneratedHttpStatusRange(500, 599),
+        GeneratedHttpStatusRange(500, 504),
+      ).map {
+        GeneratedExceptionRef(status = it)
+      },
+      policy.retry!!.value!!.retryOn,
+    )
+    val override =
+      GeneratedPolicyValues(
+        retry = GeneratedPolicySetting(value = GeneratedPolicyValues.Retry(retryOn = emptyList())),
+      )
+    val merged = policy.merge(override)
+    assertEquals(emptyList<GeneratedExceptionRef>(), merged.retry!!.value!!.retryOn)
+    assertEquals(listOf(GeneratedExceptionRef(status = GeneratedHttpStatusRange(404))), merged.retry.value.abortOn)
+    assertThrows(GenerationException::class.java) { policy.merge(override, rejectConflicts = true) }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["99", "600", "5xx", "503.0", "599-500", "5XX-4XX", " 503", "500-600", "503,504"])
+  fun `rejects invalid status selectors`(selector: String) {
+    val error =
+      assertThrows(GenerationException::class.java) {
+        GeneratedPolicyReader.read(
+          mapOf(
+            "profiles" to
+              mapOf(
+                "unselected" to
+                  mapOf(
+                    "client" to
+                      mapOf(
+                        "retry" to mapOf("retryOn" to listOf(selector)),
+                      ),
+                  ),
+              ),
+          ),
+          "policy",
+        )
+      }
+    assertTrue(error.message!!.contains("unselected.client.retry"))
+  }
+
+  @Test
   fun `resolves shared role and profile members without losing unselected declarations`() {
     val policy =
       GeneratedPolicyReader.read(

@@ -52,6 +52,9 @@ interface KotlinTypeOutputRegistry {
     implementation: ClassName,
   )
 
+  /** Requests CDI archive discovery when the owning service is selected for output. */
+  fun requireBeanArchive(owner: ClassName)
+
   /** Registers API-derived properties, retaining provenance for collision diagnostics. */
   fun addProperties(
     path: String,

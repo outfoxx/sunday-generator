@@ -1,0 +1,401 @@
+openapi: 3.1.0
+info: {title: Status policies, version: '1'}
+x-sunday-jaxrs:
+  rest-client:
+    config-key: status-client
+    providers: [io.test.quarkus.status.StatusPolicyProblemMapper]
+x-sunday-placement:
+  kotlin: {package: io.test.quarkus.status}
+paths:
+  /status/read/{scenario}/{format}/{key}:
+    get:
+      operationId: read
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          retry:
+            maxRetries: 2
+            delay: PT0.02S
+            jitter: PT0S
+            retryOn: [5XX, io.test.quarkus.status.RebuildingProblem, java.io.IOException]
+            abortOn: [401, 403, 404]
+          circuitBreaker:
+            requestVolumeThreshold: 20
+            failureRatio: 1.0
+            delay: PT0.2S
+            skipOn: [401, 403, 404]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/overlap/{scenario}/{format}/{key}:
+    get:
+      operationId: overlap
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          retry:
+            maxRetries: 2
+            delay: PT0S
+            jitter: PT0S
+            retryOn: [5XX]
+            abortOn: [503]
+          circuitBreaker:
+            requestVolumeThreshold: 2
+            failureRatio: 1.0
+            delay: PT1H
+            failOn: [5XX]
+            skipOn: [503]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+  /status/noRetry/{scenario}/{format}/{key}:
+    get:
+      operationId: noRetry
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          circuitBreaker:
+            requestVolumeThreshold: 100
+            skipOn: [4XX]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/breaker/{scenario}/{format}/{key}:
+    get:
+      operationId: breaker
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          circuitBreaker:
+            requestVolumeThreshold: 2
+            failureRatio: 1.0
+            successThreshold: 1
+            delay: PT0.2S
+            skipOn: [401, 403, 404]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/mutate/{scenario}/{format}/{key}:
+    post:
+      operationId: mutate
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          circuitBreaker:
+            requestVolumeThreshold: 2
+            failureRatio: 1.0
+            successThreshold: 1
+            delay: PT0.2S
+            skipOn: [401, 403, 404]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/duration/{scenario}/{format}/{key}:
+    get:
+      operationId: duration
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          retry:
+            maxRetries: 100
+            delay: PT0.1S
+            jitter: PT0S
+            maxDuration: PT0.25S
+            retryOn: [503]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/jitter/{scenario}/{format}/{key}:
+    get:
+      operationId: jitter
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          retry:
+            maxRetries: 2
+            delay: PT0.2S
+            jitter: PT0.02S
+            retryOn: [503]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/cancel/{scenario}/{format}/{key}:
+    get:
+      operationId: cancel
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          retry:
+            maxRetries: 100
+            delay: PT0.1S
+            jitter: PT0S
+            retryOn: [503]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/override/{scenario}/{format}/{key}:
+    get:
+      operationId: override
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          retry:
+            maxRetries: 1
+            jitter: PT0S
+            retryOn: [503]
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/rate/{scenario}/{format}/{key}:
+    get:
+      operationId: rate
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          rateLimit: {value: 2, window: PT1S, minSpacing: PT0S, type: fixed}
+          retry: {maxRetries: 0, retryOn: [503]}
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+  /status/timeout/{scenario}/{format}/{key}:
+    get:
+      operationId: timeout
+      x-sunday-service: Status
+      parameters:
+        - {name: scenario, in: path, required: true, schema: {type: string}}
+        - {name: format, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}}
+      x-sunday-policy:
+        client:
+          timeout: PT0.1S
+          retry: {maxRetries: 0, retryOn: [503]}
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain: {schema: {type: string}}
+        '404':
+          description: Missing
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/RebuildingProblem'}
+                  - {$ref: '#/components/schemas/OtherProblem'}
+components:
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+      additionalProperties: true
+    MissingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.test/status/missing'}
+            title: {type: string, const: Missing}
+            status: {type: integer, const: 404}
+    RebuildingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.test/status/rebuilding'}
+            title: {type: string, const: Rebuilding}
+            status: {type: integer, const: 409}
+    OtherProblem:
+      allOf:
+        - {$ref: '#/components/schemas/Problem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'https://example.test/status/other'}
+            title: {type: string, const: Other}
+            status: {type: integer, const: 409}

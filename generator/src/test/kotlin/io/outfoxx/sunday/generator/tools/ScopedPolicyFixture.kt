@@ -25,6 +25,7 @@ import kotlin.io.path.writeText
 internal fun scopedPolicyApi(
   frontend: String,
   directory: Path,
+  statusPolicies: Boolean = false,
 ): GeneratedApi {
   val inherited =
     """
@@ -127,7 +128,21 @@ internal fun scopedPolicyApi(
     }
   return GeneratedApiIrExporter().export(
     documents.map { (name, source) ->
-      directory.resolve(name).also { it.writeText(source) }.toUri()
+      directory
+        .resolve(name)
+        .also {
+          it.writeText(
+            if (statusPolicies) {
+              source.replace("action: receive", "action: send").replace(
+                Regex("(?m)^( +)rateLimit:.*value: 3,.*$"),
+              ) { match ->
+                "${match.groupValues[1]}retry: {retryOn: [5XX], abortOn: [401, 403, 404]}\n${match.value}"
+              }
+            } else {
+              source
+            },
+          )
+        }.toUri()
     },
   )
 }

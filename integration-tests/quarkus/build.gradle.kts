@@ -7,6 +7,7 @@ val generator by configurations.creating
 
 dependencies {
   generator(project(":cli"))
+  implementation(project(":integration-tests:quarkus-status-contracts"))
   implementation(libs.jackson)
   implementation(enforcedPlatform("io.quarkus.platform:quarkus-bom:${libs.versions.quarkus.rest.get()}"))
   implementation("io.quarkus:quarkus-kotlin")
@@ -19,6 +20,7 @@ dependencies {
   implementation("io.outfoxx.sunday:sunday-jaxrs-quarkus:${libs.versions.sundayKt.get()}")
   implementation("io.outfoxx.sunday:sunday-client-quarkus:${libs.versions.sundayKt.get()}")
   implementation(libs.jacksonKotlin)
+  implementation(libs.jacksonCbor)
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-smallrye-jwt")
   implementation(libs.quarkiverseZanzibar)

@@ -21,6 +21,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.language.jvm.tasks.ProcessResources
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -189,7 +190,23 @@ class SundayGeneratorPlugin : Plugin<Project> {
           project.tasks
             .register(mergeName, SundayMergeServiceProviders::class.java) {
               it.outputDirectory.set(mergedResources)
-            }.also { task -> sourceSets.getByName(sourceSetName).resources.srcDir(task) }
+            }.also { task ->
+              val sourceSet = sourceSets.getByName(sourceSetName)
+              sourceSet.resources.srcDir(task)
+              val archives = sourceSet.resources.matching { it.include("META-INF/beans.xml") }
+              val generatedArchive = mergedResources.map { it.file("META-INF/beans.xml") }
+              project.tasks.named(sourceSet.processResourcesTaskName, ProcessResources::class.java) { process ->
+                process.eachFile { file ->
+                  // Application descriptors own discovery settings when both sources supply one.
+                  if (file.path == "META-INF/beans.xml" &&
+                    file.file == generatedArchive.get().asFile &&
+                    archives.files.any { it != file.file }
+                  ) {
+                    file.exclude()
+                  }
+                }
+              }
+            }
         }
       merge.configure { task ->
         task.resourceRoots.from(genTask.flatMap { it.outputDir })

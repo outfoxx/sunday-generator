@@ -83,14 +83,18 @@ abstract class SundayMergeServiceProviders : DefaultTask() {
         .write(root.toPath(), path, values)
     }
     val services = sortedMapOf<String, MutableSet<String>>()
-    // Remove only the legacy descriptor in this task's dedicated output directory.
-    Files.deleteIfExists(
-      outputDirectory
-        .get()
-        .asFile
-        .resolve("META-INF/beans.xml")
-        .toPath(),
-    )
+    val archive = root.resolve("META-INF/beans.xml")
+    val generatedArchive =
+      resourceRoots.files
+        .sortedBy { it.path }
+        .map { it.resolve("META-INF/beans.xml") }
+        .firstOrNull { it.isFile }
+    if (generatedArchive == null) {
+      Files.deleteIfExists(archive.toPath())
+    } else {
+      archive.parentFile.mkdirs()
+      generatedArchive.copyTo(archive, overwrite = true)
+    }
     descriptors.files.filter { it.isFile && it.name != "beans.xml" }.forEach { descriptor ->
       val providers = services.getOrPut(descriptor.name) { sortedSetOf() }
       descriptor

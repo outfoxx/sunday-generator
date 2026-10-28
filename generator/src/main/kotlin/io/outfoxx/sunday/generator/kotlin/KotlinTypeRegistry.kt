@@ -74,6 +74,7 @@ class KotlinTypeRegistry(
 
   val generationTimestamp = generationTimestamp?.ifBlank { null }
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
+  private val beanArchiveOwners = linkedSetOf<ClassName>()
   private val serviceProviders = linkedMapOf<ClassName, MutableSet<ClassName>>()
   private val propertyResources = linkedMapOf<String, MutableMap<String, String>>()
   private val propertyContributions = mutableListOf<Triple<String, Map<String, String>, Any>>()
@@ -114,6 +115,16 @@ class KotlinTypeRegistry(
         GeneratedProperties
           .write(outputDirectory, path, values)
       }
+      if (beanArchiveOwners.any { it in builtTypes && outputOwnership.includes(selection, it) }) {
+        val descriptor = outputDirectory.resolve("META-INF/beans.xml")
+        Files.createDirectories(descriptor.parent)
+        if (!Files.exists(descriptor)) {
+          Files.writeString(
+            descriptor,
+            "<beans xmlns=\"https://jakarta.ee/xml/ns/jakartaee\" bean-discovery-mode=\"annotated\" version=\"4.0\"/>\n",
+          )
+        }
+      }
       serviceProviders.forEach { (service, implementations) ->
         val selected = implementations.filter { outputOwnership.includes(selection, it) }
         if (selected.isEmpty()) return@forEach
@@ -122,6 +133,10 @@ class KotlinTypeRegistry(
         Files.writeString(resource, selected.joinToString("\n", postfix = "\n") { it.canonicalName })
       }
     }
+  }
+
+  override fun requireBeanArchive(owner: ClassName) {
+    beanArchiveOwners.add(owner)
   }
 
   override fun addProperties(
