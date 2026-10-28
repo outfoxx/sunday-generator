@@ -16,15 +16,16 @@
 
 package io.outfoxx.sunday.generator.ir
 
-/** A native exception class or an explicit reference to a generated problem exception. */
+/** A policy failure selector: native exception class, generated problem, or HTTP status interval. */
 data class GeneratedExceptionRef(
   val className: String? = null,
   val problem: String? = null,
+  val status: GeneratedHttpStatusRange? = null,
 ) {
   init {
     require(
-      (className != null) != (problem != null),
-    ) { "Exception references require exactly one of className or problem" }
+      listOf(className, problem, status).count { it != null } == 1,
+    ) { "Exception references require exactly one of className, problem, or status" }
     require(className == null || className.matches(Regex("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)+"))) {
       "Exception class names must be qualified names"
     }

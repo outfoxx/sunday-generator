@@ -140,7 +140,13 @@ internal object GeneratedPolicyReader {
     (if (value is List<*>) value else listOf(value))
       .mapIndexed { index, item ->
         when (item) {
-          is String -> GeneratedExceptionRef(className = item)
+          is Number -> GeneratedExceptionRef(status = GeneratedHttpStatusRange.parse(item, "$location[$index]"))
+          is String ->
+            if (item.firstOrNull()?.isDigit() == true) {
+              GeneratedExceptionRef(status = GeneratedHttpStatusRange.parse(item, "$location[$index]"))
+            } else {
+              GeneratedExceptionRef(className = item)
+            }
           is Map<*, *> -> {
             val reference = objectValue(item, "$location[$index]", setOf("problem"))
             GeneratedExceptionRef(
@@ -148,7 +154,7 @@ internal object GeneratedPolicyReader {
                 reference["problem"] as? String ?: genError("$location[$index].problem must name a generated problem"),
             )
           }
-          else -> genError("$location[$index] must be an exception class name or {problem: name}")
+          else -> genError("$location[$index] must be an exception class, HTTP status selector, or {problem: name}")
         }
       }.distinct()
 

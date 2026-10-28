@@ -170,6 +170,82 @@ Quarkus emits native SmallRye annotations on concrete resource boundaries and se
 Delegates do not repeat server enforcement. `skipOn` uses SmallRye's native behavior: matching outcomes
 count as successes in the circuit breaker's rolling window.
 
+### HTTP status selectors for Quarkus clients
+
+`retryOn`, `abortOn`, `failOn`, and `skipOn` accept mixed lists:
+
+```yaml
+x-sunday-policy:
+  client:
+    timeout: PT5S
+    retry:
+      maxRetries: 2
+      delay: PT1.25S
+      jitter: PT0.25S
+      maxDuration: PT30S
+      retryOn: [{problem: rebuilding}, jakarta.ws.rs.ProcessingException, 5XX]
+      abortOn: [401, 403, 404]
+    circuitBreaker:
+      requestVolumeThreshold: 10
+      failureRatio: 0.5
+      delay: PT30S
+      skipOn: [401, 403, 404]
+```
+
+An integer selects an exact HTTP status in `100..599`. Strings such as `5XX` select a family;
+`"500-599"` selects an inclusive ascending range. Numeric strings are also accepted. Other strings
+must be qualified exception class names. `{problem: name}` continues to select a generated exception.
+Each selector list replaces its inherited list as a whole; `[]` clears it. Profiles and `false` retain
+their normal behavior. Within a list, selectors are ORed. Abort/skip matches win over retry/fail matches,
+including when a registered Problem subtype matches both a class and a status selector. A supplied
+positive list replaces the implicit `Exception` default: `retryOn: [503]` does not retry other exceptions.
+Omitting a positive list retains the runtime's `Exception` default.
+
+A selected status selector explicitly opts that operation into generated SmallRye `Guard` enforcement.
+Use CLI `kotlin/jaxrs -mode client -quarkus` or Gradle `framework = JAXRS`, `mode = Client`,
+`quarkus = true`; both use the same contract syntax and `profile` selection. No additional switch is
+required. Selecting Quarkus alone leaves class-only policies unchanged. Other targets and server-mode
+status policies fail generation. Scoped client authentication with its generated authentication retry
+boundary is currently rejected for status policies; select a profile without status selectors for that
+combination. Streaming (`Multi`, `Flow`, SSE) and `Future` return modes are also rejected. Native REST client providers and native OIDC interception remain in place.
+
+Each generated client contains a nested `object Guards` with CDI-qualified producer fields. Only
+`@ApplyGuard` is applied to the operation, replacing its timeout, retry, breaker, and rate-limit
+annotations together. Identical policies share a factory with a stable generated name, while each
+operation receives a distinct guard and identifier. Breaker and rate-limit state therefore remain
+independent. A generated `META-INF/beans.xml` enables CDI discovery when the client is packaged in a
+JAR; include generated resources alongside the compiled sources. The Gradle plugin packages it
+automatically and preserves an application-owned bean descriptor. No application-written guard
+registration or wrapper is needed. The feature requires Jakarta CDI and SmallRye Fault Tolerance's `Guard`
+and `ApplyGuard` API. The supported runtime baseline for this feature is Quarkus 3.39.4
+(SmallRye Fault Tolerance 6.11.2), exercised by the HTTP integration suite. Include
+`io.quarkus:quarkus-smallrye-fault-tolerance`, which supplies the API and CDI implementation, plus
+the configured Problem library (for example, `io.quarkiverse.resteasy-problem:quarkus-resteasy-problem`).
+
+Classification reads the configured Problem library's effective status accessor, including registered
+subclasses; it does not parse response bodies or change exceptions. Continue configuring JSON/CBOR
+Problem decoding and generated subtype registration as usual. A non-Problem exception is matched only
+by its class selectors. A malformed successful response is not assigned an HTTP failure status.
+Predicates inspect the cause chain without looping on cycles; exclusions anywhere in that chain win.
+This follows SmallRye's non-compatible cause-inspection model, while making exclusion precedence
+explicit. Cancellation is always excluded from retry. Suspend methods use `@ApplyGuard` interception,
+not direct programmatic guard calls.
+
+The guard identifier is the fully qualified producer field name in `<Service>.Guards`. Use that identifier for
+runtime overrides, for example:
+
+```properties
+smallrye.faulttolerance."example.api.AccountsAPI.Guards.fetch".retry.max-retries=4
+```
+
+Native global overrides, enabled-strategy switches, timing, and thresholds remain supported. Existing
+class/method-specific override keys must migrate to the guard identifier for opted-in operations.
+Predicate selectors remain contract-owned and cannot be replaced through `retryOn`/`abortOn` or
+`failOn`/`skipOn` runtime configuration. Metrics use the intercepted method; the circuit-breaker
+maintenance name is the guard identifier. Unsupported strategies are rejected by the contract reader.
+See [SmallRye reusable guards](https://smallrye.io/docs/smallrye-fault-tolerance/6.11.1/reference/reusable.html)
+for configuration and asynchronous behavior.
+
 ## Client acquisition and server providers
 
 Security schemes describe wire requirements. Scoped `x-sunday-security` bindings select application

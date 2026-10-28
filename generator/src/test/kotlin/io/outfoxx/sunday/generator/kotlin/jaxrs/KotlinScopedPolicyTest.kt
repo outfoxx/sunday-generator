@@ -56,6 +56,110 @@ import java.time.temporal.ChronoUnit
 class KotlinScopedPolicyTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `status policies compile one guard per operation through every frontend`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val input = scopedPolicyApi(frontend, directory, statusPolicies = true)
+    val api =
+      input.copy(
+        services =
+          input.services.map { service ->
+            service.copy(
+              operations =
+                service.operations.flatMap { operation ->
+                  listOf(operation, operation.copy(id = operation.id + "Copy", path = operation.path + "/copy"))
+                },
+            )
+          },
+      )
+    val registry = registry(GenerationMode.Client)
+    KotlinJAXRSIrGenerator(
+      api,
+      registry,
+      options(GenerationMode.Client, "internal", coroutines = true),
+    ).generateServiceTypes()
+    val types = registry.buildTypes()
+    val compiled = compileTypesResult(types)
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+    val classes =
+      types.keys
+        .filter {
+          it.enclosingClassName() == null
+        }.map { compiled.classLoader.loadClass(it.canonicalName) }
+    val guarded =
+      classes.flatMap { it.declaredMethods.toList() }.filter {
+        it.getAnnotation(io.smallrye.faulttolerance.api.ApplyGuard::class.java) !=
+          null
+      }
+    assertEquals(api.services.sumOf { it.operations.size }, guarded.size)
+    val identifiers = guarded.map { it.getAnnotation(io.smallrye.faulttolerance.api.ApplyGuard::class.java).value }
+    assertEquals(identifiers.size, identifiers.distinct().size)
+    guarded.forEach {
+      assertNull(it.getAnnotation(Retry::class.java))
+      assertNull(it.getAnnotation(CircuitBreaker::class.java))
+      assertNull(it.getAnnotation(Timeout::class.java))
+      assertNull(it.getAnnotation(RateLimit::class.java))
+    }
+    val containers = classes.flatMap { it.declaredClasses.toList() }.filter { it.simpleName == "Guards" }
+    assertEquals(input.services.size, containers.size)
+    containers.forEach { container ->
+      assertEquals(1, container.declaredMethods.count { it.name.startsWith("policy_") && !it.name.contains('$') })
+    }
+    val producers =
+      containers.flatMap { it.declaredFields.toList() }.filter {
+        it.getAnnotation(jakarta.enterprise.inject.Produces::class.java) != null
+      }
+    assertTrue(
+      producers.all {
+        java.lang.reflect.Modifier
+          .isStatic(it.modifiers)
+      },
+    )
+    assertEquals(
+      identifiers.toSet(),
+      producers
+        .map {
+          it.getAnnotation(io.smallrye.common.annotation.Identifier::class.java).value
+        }.toSet(),
+    )
+    val output = directory.resolve("generated")
+    registry.generateFiles(outputDirectory = output)
+    assertTrue(
+      java.nio.file.Files
+        .exists(output.resolve("META-INF/beans.xml")),
+    )
+    val models = directory.resolve("models")
+    registry.generateFiles(
+      io.outfoxx.sunday.generator.GeneratedOutputSelection(
+        setOf(io.outfoxx.sunday.generator.GeneratedTypeCategory.Model),
+      ),
+      models,
+    )
+    assertTrue(
+      !java.nio.file.Files
+        .exists(models.resolve("META-INF/beans.xml")),
+    )
+    val excluded = directory.resolve("excluded")
+    registry.generateFiles(
+      io.outfoxx.sunday.generator
+        .GeneratedOutputSelection(ownerUris = setOf(directory.resolve("other.yaml").toUri())),
+      excluded,
+    )
+    assertTrue(
+      !java.nio.file.Files
+        .exists(excluded.resolve("META-INF/beans.xml")),
+    )
+    val restored =
+      io.outfoxx.sunday.generator.ir.GeneratedApiYaml.readString(
+        io.outfoxx.sunday.generator.ir.GeneratedApiYaml
+          .writeString(api),
+      )
+    assertEquals(api, restored)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
   fun `compiled annotations agree across source roles and profiles`(
     frontend: String,
     @TempDir directory: Path,
@@ -205,6 +309,102 @@ class KotlinScopedPolicyTest {
   }
 
   @Test
+  fun `status predicates compile for every configured Problem library`(
+    @TempDir directory: Path,
+  ) {
+    val api = scopedPolicyApi("openapi", directory, statusPolicies = true)
+    for (library in KotlinProblemLibrary.entries) {
+      val registry = registry(GenerationMode.Client, library)
+      KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
+      val compiled = compileTypesResult(registry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+    }
+  }
+
+  @Test
+  fun `status policies reject streaming responses`(
+    @TempDir directory: Path,
+  ) {
+    val input = scopedPolicyApi("asyncapi", directory, statusPolicies = true)
+    val api =
+      input.copy(
+        services =
+          input.services.map { service ->
+            service.copy(
+              operations =
+                service.operations.map {
+                  it.copy(
+                    streaming =
+                      io.outfoxx.sunday.generator.ir.GeneratedStreaming(
+                        io.outfoxx.sunday.generator.ir.GeneratedStreaming.Kind.EVENT_STREAM,
+                      ),
+                  )
+                },
+            )
+          },
+      )
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(
+          api,
+          registry(GenerationMode.Client),
+          options(GenerationMode.Client),
+        ).generateServiceTypes()
+      }
+    assertTrue(error.message!!.contains("streaming or Future"), error.message)
+  }
+
+  @Test
+  fun `status selectors reject server and portable generation`(
+    @TempDir directory: Path,
+  ) {
+    val api = scopedPolicyApi("openapi", directory, statusPolicies = true)
+    for (mode in GenerationMode.entries) {
+      val selected =
+        api.copy(
+          services =
+            api.services.map { service ->
+              service.copy(
+                operations =
+                  service.operations.map { operation ->
+                    operation.copy(
+                      policy =
+                        GeneratedPolicy(
+                          all =
+                            operation.policy!!.resolve(
+                              io.outfoxx.sunday.generator
+                                .GenerationContext(GenerationMode.Client),
+                            ) { a, b -> a.merge(b) },
+                        ),
+                    )
+                  },
+              )
+            },
+        )
+      val error =
+        assertThrows(GenerationException::class.java) {
+          KotlinJAXRSIrGenerator(
+            selected,
+            registry(mode),
+            options(mode, quarkus = mode == GenerationMode.Server),
+          ).generateServiceTypes()
+        }
+      assertTrue(
+        error.message!!.contains(
+          if (mode ==
+            GenerationMode.Server
+          ) {
+            "Quarkus client"
+          } else {
+            "enable Quarkus"
+          },
+        ),
+        error.message,
+      )
+    }
+  }
+
+  @Test
   fun `active policies reject non Quarkus generation`(
     @TempDir directory: Path,
   ) {
@@ -219,21 +419,24 @@ class KotlinScopedPolicyTest {
     assertTrue(error.message!!.contains("enable Quarkus generation"))
   }
 
-  private fun registry(mode: GenerationMode) =
-    KotlinTypeRegistry(
-      null,
-      mode,
-      setOf(KotlinTypeRegistry.Option.UseJakartaPackages),
-      problemLibrary = KotlinProblemLibrary.QUARKUS,
-    )
+  private fun registry(
+    mode: GenerationMode,
+    library: KotlinProblemLibrary = KotlinProblemLibrary.QUARKUS,
+  ) = KotlinTypeRegistry(
+    null,
+    mode,
+    setOf(KotlinTypeRegistry.Option.UseJakartaPackages),
+    problemLibrary = library,
+  )
 
   private fun options(
     mode: GenerationMode,
     profile: String? = null,
     quarkus: Boolean = true,
+    coroutines: Boolean = false,
   ) = KotlinJAXRSOptions(
     coroutineFlowMethods = false,
-    coroutineServiceMethods = false,
+    coroutineServiceMethods = coroutines,
     reactiveResponseType = null,
     explicitSecurityParameters = false,
     baseUriMode = null,

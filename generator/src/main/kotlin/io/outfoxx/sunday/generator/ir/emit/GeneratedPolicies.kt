@@ -25,6 +25,16 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 val GeneratedPolicyValues.hasEnabledPolicies: Boolean
   get() = listOf(timeout, retry, circuitBreaker, rateLimit).any { it?.enabled == true }
 
+/** True when an HTTP status selector opts into predicate-based enforcement. */
+val GeneratedPolicyValues.hasStatusPredicates: Boolean
+  get() =
+    listOf(
+      retry?.value?.retryOn,
+      retry?.value?.abortOn,
+      circuitBreaker?.value?.failOn,
+      circuitBreaker?.value?.skipOn,
+    ).filterNotNull().flatten().any { it.status != null }
+
 /** Rejects selected policies that this target cannot enforce instead of silently omitting them. */
 fun List<GeneratedService>.requireNoUnsupportedPolicies(
   context: GenerationContext,

@@ -275,6 +275,45 @@ class KotlinQuarkusClientSecurityTest {
   }
 
   @Test
+  fun `status policies diagnose scoped authentication instead of duplicating retry layers`(
+    @TempDir directory: Path,
+  ) {
+    val input = scopedSecurityApi("openapi", directory, endpointBindings = true)
+    val policy =
+      GeneratedPolicy(
+        client =
+          GeneratedPolicyValues(
+            retry =
+              GeneratedPolicySetting(
+                value =
+                  GeneratedPolicyValues.Retry(
+                    retryOn =
+                      listOf(
+                        GeneratedExceptionRef(
+                          status =
+                            io.outfoxx.sunday.generator.ir
+                              .GeneratedHttpStatusRange(503),
+                        ),
+                      ),
+                  ),
+              ),
+          ),
+      )
+    val api =
+      input.copy(
+        services =
+          input.services.map { service ->
+            service.copy(operations = service.operations.map { it.copy(policy = policy) })
+          },
+      )
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(api, registry(), options("internal")).generateServiceTypes()
+      }
+    assertTrue(error.message!!.contains("scoped client authentication"), error.message)
+  }
+
+  @Test
   fun `unsupported native flows and transports are diagnosed`(
     @TempDir directory: Path,
   ) {
