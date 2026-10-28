@@ -28,6 +28,8 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.kotlinPlacement
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -51,7 +53,7 @@ class KotlinAboutBlankProblemTest {
       "sunday-custom", "jaxrs-client-custom", "jaxrs-server-custom", "quarkus-custom", "quarkus-custom-models",
     ],
   )
-  fun `standard status models compile across frameworks while custom URI conflicts fail`(
+  fun `standard status and shared custom URI models compile across frameworks`(
     target: String,
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
   ) {
@@ -123,13 +125,6 @@ class KotlinAboutBlankProblemTest {
         ).generateServiceTypes()
       }
     }
-    if (target.contains("custom")) {
-      val error = assertThrows(IllegalArgumentException::class.java) { generate() }
-      for (part in listOf("urn:example:shared", "BadRequestProblem", "NotFoundProblem", "distinct fixed type URIs")) {
-        assertTrue(error.message.orEmpty().contains(part), error.message)
-      }
-      return
-    }
     generate()
     val selection =
       if (target.endsWith("models")) {
@@ -196,6 +191,15 @@ class KotlinAboutBlankProblemTest {
         additionalSources = listOf(SourceFile.kotlin("Consumer.kt", consumer)),
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    if (target.contains("custom")) {
+      if (!target.endsWith("models")) {
+        val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/blank/API.kt")
+        assertEquals(1, Regex("urn:example:shared").findAll(service).count(), service)
+        assertTrue(service.contains("BadRequestProblem::class"), service)
+        assertTrue(!service.contains("NotFoundProblem::class"), service)
+      }
+      return
+    }
     val consumerClass = result.classLoader.loadClass("io.test.blank.ConsumerKt")
     val values = consumerClass.getMethod("problems").invoke(null) as List<*>
     val mapper = jacksonObjectMapper()

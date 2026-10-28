@@ -21,21 +21,16 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
 /**
- * Finds unambiguous custom problem registrations for a client transport.
+ * Finds custom problem registrations in response declaration order, keeping the first use of each URI.
+ * Annotation-defined problems take precedence over schema-defined problems with the same URI.
  * Standard about:blank problems use the runtime fallback because their meaning depends on status.
  */
-fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<String, GeneratedModel> =
-  schemaProblemResponses(index)
-    .filterNot { (uri, _) -> uri == "about:blank" }
-    .groupBy({ it.first }, { it.second })
-    .mapValues { (uri, models) ->
-      val distinct = models.distinct()
-      require(distinct.size == 1) {
-        "HTTP Problem responses in service '$name' map type URI '$uri' to multiple problems: " +
-          distinct.map { it.name }.sorted().joinToString() + "; declare distinct fixed type URIs"
-      }
-      distinct.single()
-    }
+fun GeneratedService.referencedSchemaProblems(index: GeneratedApiIndex): Map<String, GeneratedModel> {
+  val usedTypeUris = referencedProblems(index).mapTo(mutableSetOf("about:blank")) { it.typeUri }
+  return schemaProblemResponses(index)
+    .filter { (uri, _) -> usedTypeUris.add(uri) }
+    .toMap()
+}
 
 // Keep response shape extraction shared by validation and client registration.
 private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): List<Pair<String, GeneratedModel>> {
@@ -115,7 +110,7 @@ private fun GeneratedService.schemaProblemResponses(index: GeneratedApiIndex): L
     .mapNotNull { model -> typeUri(model)?.let { it to model } }
 }
 
-/** Validates HTTP Problem response shapes and URI uniqueness for every emitter and output selection. */
+/** Validates HTTP Problem response shapes for every emitter and output selection. */
 fun GeneratedApiIndex.validateSchemaProblemResponses() {
   api.services.forEach { it.referencedSchemaProblems(this) }
 }

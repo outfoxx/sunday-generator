@@ -92,7 +92,7 @@ class PythonLitestarIrGenerator(
     }
     if (selection.categories.isEmpty() || GeneratedTypeCategory.Problem in selection.categories) {
       modules +=
-        PythonSchemaProblemRenderer(packageName, api.models).render(
+        PythonSchemaProblemRenderer(packageName, api.models, api.problems.map { it.typeUri }.toSet()).render(
           api.models
             .filter {
               selection.includes(it.outputOrigin(api).copy(category = GeneratedTypeCategory.Problem))

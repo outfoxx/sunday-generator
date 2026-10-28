@@ -24,11 +24,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 internal class PythonSchemaProblemRenderer(
   private val packageName: String,
   models: List<GeneratedModel>,
+  private val registeredTypeUris: Set<String> = emptySet(),
 ) {
   private val problems = PythonProblemModels(models)
 
-  fun render(selected: Set<GeneratedModel>): List<PythonModule> =
-    selected
+  fun render(selected: Set<GeneratedModel>): List<PythonModule> {
+    val usedTypeUris = registeredTypeUris.toMutableSet()
+    return selected
       .filter(problems::isProblem)
       .groupBy { it.pythonProblemModule(packageName) }
       .map { (moduleName, declarations) ->
@@ -183,7 +185,8 @@ internal class PythonSchemaProblemRenderer(
             val uri = problems.typeUri(candidate)
             uri != null &&
               uri != "about:blank" &&
-              problems.models.none { problems.parent(it) == candidate && problems.typeUri(it) == uri }
+              problems.models.none { problems.parent(it) == candidate && problems.typeUri(it) == uri } &&
+              usedTypeUris.add(uri)
           }
         module.addExport("register_problems")
         module.addCode(
@@ -211,4 +214,5 @@ internal class PythonSchemaProblemRenderer(
         )
         module.build()
       }
+  }
 }

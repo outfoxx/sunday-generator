@@ -1179,7 +1179,8 @@ class SwiftSundayIrGenerator(
             services
               .flatMap {
                 it.service.referencedSchemaProblems(apiIndex).entries
-              }.associate { it.toPair() },
+              }.distinctBy { it.key }
+              .associate { it.toPair() },
           ),
         ).addProperty(
           PropertySpec
@@ -1682,15 +1683,19 @@ class SwiftSundayIrGenerator(
           problem.swiftProblemTypeName(),
         )
       } +
-        schemas.filterValues { !it.isProblemHierarchyProtocolModel }.map { (uri, model) ->
-          CodeBlock.of(
-            "%T(type: %T(string: %S)!, problemType: %T.self)",
-            PROBLEM_REGISTRATION,
-            URL,
-            uri,
-            model.swiftDeclaredTypeName(),
-          )
-        }
+        schemas
+          .filter { (uri, model) ->
+            !model.isProblemHierarchyProtocolModel &&
+              problems.none { it.resolvedTypeUri(options.defaultProblemBaseUri) == uri }
+          }.map { (uri, model) ->
+            CodeBlock.of(
+              "%T(type: %T(string: %S)!, problemType: %T.self)",
+              PROBLEM_REGISTRATION,
+              URL,
+              uri,
+              model.swiftDeclaredTypeName(),
+            )
+          }
     return CodeBlock.of("return [%L]\n", entries.joinToCode(",\n"))
   }
 

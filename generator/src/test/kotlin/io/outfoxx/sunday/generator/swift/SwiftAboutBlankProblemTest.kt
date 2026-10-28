@@ -21,7 +21,11 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
+import io.outfoxx.sunday.generator.swift.tools.compileTypes
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -33,6 +37,21 @@ import kotlin.io.path.writeText
 @Tag("models")
 @Tag("responses")
 class SwiftAboutBlankProblemTest {
+  @Test
+  fun `schema problems register unique wire types alongside annotated problems`(
+    @ResourceUri("openapi/ir/schema-problem-registration.yaml") source: URI,
+    compiler: SwiftCompiler,
+  ) {
+    val registry = SwiftTypeRegistry(emptySet())
+    SwiftSundayIrGenerator(GeneratedApiIrExporter().export(source), registry, swiftSundayTestOptions)
+      .generateServiceTypes()
+    assertTrue(compileTypes(compiler, registry.buildTypes()))
+    val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "API.swift")
+    assertEquals(1, Regex("https://example.com/problems/missing").findAll(service).count(), service)
+    assertEquals(1, Regex("https://example.com/problems/annotated").findAll(service).count(), service)
+    assertTrue(!service.contains("about:blank"), service)
+  }
+
   @Test
   fun `standard status models retain constraints while HTTP errors use generic problems`(
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,

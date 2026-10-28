@@ -123,7 +123,7 @@ class GeneratedSchemaProblemsTest {
   }
 
   @Test
-  fun `conflicting response problem URIs fail regardless of response or operation order`(
+  fun `repeated response problem URIs keep the first registration in declaration order`(
     @ResourceUri("openapi/ir/inherited-problem.yaml") source: URI,
   ) {
     val api = GeneratedApiIrExporter().export(source)
@@ -133,27 +133,21 @@ class GeneratedSchemaProblemsTest {
       listOf("QueuedProblem", "RebuildingProblem").mapIndexed { index, name ->
         GeneratedResponse(status = 409 + index, type = GeneratedTypeRef.named(name))
       }
-    val messages = mutableSetOf<String?>()
     for (ordered in listOf(responses, responses.reversed())) {
       for (operations in listOf(
         listOf(operation.copy(responses = ordered)),
         ordered.mapIndexed { index, response -> operation.copy(id = "read$index", responses = listOf(response)) },
       )) {
         val index = GeneratedApiIndex(api.copy(services = listOf(service.copy(operations = operations))))
-        val error =
-          assertThrows(
-            IllegalArgumentException::class.java,
-          ) {
-            index.validateSchemaProblemResponses()
-          }
-        messages.add(error.message)
-        for (part in listOf(service.name, "QueuedProblem", "RebuildingProblem", "distinct fixed type URIs")) {
-          assertTrue(error.message.orEmpty().contains(part), error.message)
-        }
-        assertTrue(error.message.orEmpty().contains("https://example.com/problems/rebuilding"), error.message)
+        index.validateSchemaProblemResponses()
+        val registered =
+          index.api.services
+            .single()
+            .referencedSchemaProblems(index)
+        assertEquals(listOf("https://example.com/problems/rebuilding"), registered.keys.toList())
+        assertEquals(ordered.first().type?.name, registered.values.single().name)
       }
     }
-    assertEquals(1, messages.size)
   }
 
   @Test
