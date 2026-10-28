@@ -5,8 +5,6 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.referencedSchemaProblems
 import io.outfoxx.sunday.generator.ir.emit.validateSchemaProblemResponses
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -335,7 +333,7 @@ class ProblemUriResolutionTest {
   }
 
   @Test
-  fun `relative and absolute spellings of the same custom URI still conflict`() {
+  fun `relative and absolute spellings of the same custom URI share one registration`() {
     val source = directory.resolve("conflict.yaml")
     val resource = requireNotNull(javaClass.getResource("/openapi/ir/about-blank-problems.yaml")).readText()
     source.writeText(
@@ -346,8 +344,10 @@ class ProblemUriResolutionTest {
         "\nx-sunday-problemBaseUri: https://example.com/problems/\n",
     )
     val api = GeneratedApiIrExporter().export(source.toUri())
-    val error =
-      assertThrows(IllegalArgumentException::class.java) { GeneratedApiIndex(api).validateSchemaProblemResponses() }
-    assertTrue(error.message.orEmpty().contains("https://example.com/problems/missing"))
+    val index = GeneratedApiIndex(api)
+    index.validateSchemaProblemResponses()
+    val registered = api.services.single().referencedSchemaProblems(index)
+    assertEquals(listOf("https://example.com/problems/missing"), registered.keys.toList())
+    assertEquals("BadRequestProblem", registered.values.single().name)
   }
 }

@@ -21,11 +21,13 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.pythonPlacement
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
@@ -37,14 +39,53 @@ import java.net.URI
 @Tag("responses")
 class PythonAboutBlankProblemTest : PythonTest() {
   @ParameterizedTest
+  @ValueSource(strings = ["sunday", "litestar"])
+  fun `schema registrations preserve annotated types and skip duplicate URIs`(
+    target: String,
+    @ResourceUri("openapi/ir/schema-problem-registration.yaml") source: URI,
+    compiler: PythonCompiler,
+  ) {
+    val original = GeneratedApiIrExporter().export(source)
+    val api = original.copy(services = original.services.map { it.copy(name = "Example", group = null) })
+    val options = PythonGeneratorOptions(placement = pythonPlacement("test_api"))
+    val modules =
+      if (target == "sunday") {
+        PythonSundayIrGenerator(api, options).generateModules()
+      } else {
+        PythonLitestarIrGenerator(api, options).generateModules()
+      }
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        smokeCode =
+          """
+          from sunday import ProblemRegistry
+          from test_api.problems import register_problems as register_annotations, AnnotatedProblem
+          from test_api.models_problems import register_problems as register_schemas, MissingProblem
+          registry = ProblemRegistry()
+          register_annotations(registry)
+          register_schemas(registry)
+          annotated = registry.decode(dict(type='https://example.com/problems/annotated', title='Annotated', status=400))
+          assert isinstance(annotated, AnnotatedProblem)
+          missing = registry.decode(dict(type='https://example.com/problems/missing', title='Missing', status=404))
+          assert isinstance(missing, MissingProblem)
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @ParameterizedTest
   @ValueSource(strings = ["sunday", "sunday-models", "sunday-owner", "litestar", "litestar-models", "litestar-owner"])
-  fun `custom URI conflicts fail regardless of generation mode or output selection`(
+  fun `shared custom URIs register only once across generation modes and output selections`(
     target: String,
     @ResourceUri("openapi/ir/about-blank-problems.yaml") source: URI,
+    compiler: PythonCompiler,
   ) {
     val original = GeneratedApiIrExporter().export(source)
     val api =
       original.copy(
+        services = original.services.map { it.copy(name = "Example", group = null) },
         models =
           original.models.map { model ->
             model.copy(
@@ -68,17 +109,22 @@ class PythonAboutBlankProblemTest : PythonTest() {
         target.endsWith("owner") -> GeneratedOutputSelection(ownerUris = setOf(URI("file:///other.yaml")))
         else -> GeneratedOutputSelection()
       }
-    val error =
-      assertThrows(IllegalArgumentException::class.java) {
-        if (target.startsWith("litestar")) {
-          PythonLitestarIrGenerator(api, options).generateModules(selection)
-        } else {
-          PythonSundayIrGenerator(api, options).generateModules(selection)
-        }
+    val modules =
+      if (target.startsWith("litestar")) {
+        PythonLitestarIrGenerator(api, options).generateModules(selection)
+      } else {
+        PythonSundayIrGenerator(api, options).generateModules(selection)
       }
-    for (part in listOf("urn:example:shared", "BadRequestProblem", "NotFoundProblem", "distinct fixed type URIs")) {
-      assertTrue(error.message.orEmpty().contains(part), error.message)
-    }
+    assertTrue(compileModules(compiler, modules))
+    val sources =
+      modules.map {
+        CompiledGeneratedSources.source(
+          GeneratedCodeLanguage.Python,
+          it.path,
+        )
+      }
+    val registrations = sources.sumOf { Regex("register_problem\\(\"urn:example:shared\"").findAll(it).count() }
+    assertEquals(if (target.endsWith("owner")) 0 else 1, registrations)
   }
 
   @ParameterizedTest

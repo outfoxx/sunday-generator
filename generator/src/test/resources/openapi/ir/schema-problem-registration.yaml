@@ -1,0 +1,73 @@
+openapi: 3.1.0
+info: {title: Schema problem registration, version: '1'}
+x-sunday-problemBaseUri: https://example.com/problems/
+x-sunday-problemTypes:
+  annotated:
+    status: 400
+    title: Annotated
+paths:
+  /example:
+    get:
+      operationId: getExample
+      x-sunday-problems: [annotated]
+      responses:
+        '204': {description: Success}
+        '400':
+          description: Annotation collision
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/CollisionProblem'}
+        '404':
+          description: Custom problem
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/MissingProblem'}
+        '409':
+          description: Repeated custom URI
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/RepeatedProblem'}
+        '500':
+          description: Standard problem
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/StandardProblem'}
+        default:
+          description: Generic problem
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/HttpProblem'}
+components:
+  schemas:
+    HttpProblem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+    MissingProblem:
+      allOf:
+        - {$ref: '#/components/schemas/HttpProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, enum: ['https://example.com/problems/missing']}
+    RepeatedProblem:
+      allOf:
+        - {$ref: '#/components/schemas/HttpProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'missing'}
+    StandardProblem:
+      allOf:
+        - {$ref: '#/components/schemas/HttpProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'about:blank'}
+    CollisionProblem:
+      allOf:
+        - {$ref: '#/components/schemas/HttpProblem'}
+        - type: object
+          properties:
+            type: {type: string, format: uri, const: 'annotated'}

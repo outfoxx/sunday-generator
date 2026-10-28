@@ -50,3 +50,4 @@ val JACKSON_JSON_TYPENAME = ClassName.bestGuess("com.fasterxml.jackson.annotatio
 val JSON_NODE = ClassName.bestGuess("com.fasterxml.jackson.databind.JsonNode")
 val OBJECT_NODE = ClassName.bestGuess("com.fasterxml.jackson.databind.node.ObjectNode")
 val OBJECT_MAPPER = ClassName.bestGuess("com.fasterxml.jackson.databind.ObjectMapper")
+val JACKSON_NAMED_TYPE = ClassName.bestGuess("com.fasterxml.jackson.databind.jsontype.NamedType")

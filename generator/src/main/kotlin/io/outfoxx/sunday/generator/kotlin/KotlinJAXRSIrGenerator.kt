@@ -99,6 +99,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.referencedSchemaProblems
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.sseEnabled
 import io.outfoxx.sunday.generator.ir.emit.target
@@ -132,6 +133,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_NAMED_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionGenerator
@@ -1340,7 +1342,11 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedService.problemRegistrationType(): TypeSpec? {
     val referencedProblems = referencedProblems(apiIndex)
-    if (!typeRegistry.options.contains(JacksonAnnotations) || referencedProblems.isEmpty()) {
+    val schemaProblems = referencedSchemaProblems(apiIndex)
+    if (!typeRegistry.options.contains(JacksonAnnotations) ||
+      referencedProblems.isEmpty() &&
+      schemaProblems.isEmpty()
+    ) {
       return null
     }
 
@@ -1350,12 +1356,28 @@ class KotlinJAXRSIrGenerator(
         FunSpec
           .builder("registerProblems")
           .addParameter("mapper", OBJECT_MAPPER)
-          .addCode(
-            "mapper.registerSubtypes(⇥\n" +
-              referencedProblems.joinToString(",\n") { "%T::class.java" } +
-              "⇤\n)",
-            *referencedProblems.map { problem -> problem.typeName() }.toTypedArray(),
-          ).build(),
+          .apply {
+            if (referencedProblems.isNotEmpty()) {
+              addCode(
+                "mapper.registerSubtypes(⇥\n" +
+                  referencedProblems.joinToString(",\n") { "%T::class.java" } +
+                  "⇤\n)",
+                *referencedProblems.map { problem -> problem.typeName() }.toTypedArray(),
+              )
+            }
+            if (schemaProblems.isNotEmpty()) {
+              if (referencedProblems.isNotEmpty()) addCode("\n")
+              addCode(
+                "mapper.registerSubtypes(⇥\n" +
+                  schemaProblems.entries.joinToString(",\n") { "%T(%T::class.java, %S)" } +
+                  "⇤\n)",
+                *schemaProblems
+                  .flatMap { (uri, model) ->
+                    listOf(JACKSON_NAMED_TYPE, model.kotlinClassName(), uri)
+                  }.toTypedArray(),
+              )
+            }
+          }.build(),
       ).build()
   }
 

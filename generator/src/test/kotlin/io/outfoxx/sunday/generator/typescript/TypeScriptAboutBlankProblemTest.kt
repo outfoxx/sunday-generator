@@ -17,13 +17,17 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
+import io.outfoxx.sunday.generator.typescript.tools.compileTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -36,6 +40,21 @@ import java.nio.file.Path
 @Tag("models")
 @Tag("responses")
 class TypeScriptAboutBlankProblemTest {
+  @Test
+  fun `schema problems register unique wire types alongside annotated problems`(
+    @ResourceUri("openapi/ir/schema-problem-registration.yaml") source: URI,
+    compiler: TypeScriptCompiler,
+  ) {
+    val registry = TypeScriptTypeRegistry(emptySet())
+    TypeScriptSundayIrGenerator(GeneratedApiIrExporter().export(source), registry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+    assertTrue(compileTypes(compiler, registry.buildTypes()))
+    val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "api.ts")
+    assertEquals(1, Regex("https://example.com/problems/missing").findAll(service).count(), service)
+    assertEquals(1, Regex("https://example.com/problems/annotated").findAll(service).count(), service)
+    assertTrue(!service.contains("about:blank"), service)
+  }
+
   @Test
   fun `named URI enum constraints survive Problem codecs`(
     compiler: TypeScriptCompiler,
