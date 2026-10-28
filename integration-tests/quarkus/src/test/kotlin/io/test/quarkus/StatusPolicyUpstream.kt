@@ -97,7 +97,16 @@ class StatusPolicyUpstream : QuarkusTestResourceLifecycleManager {
             }
           ).writeValueAsBytes(body)
         }
-      exchange.responseHeaders.set("Content-Type", if (status == 200) "text/plain" else "application/problem+$format")
+      exchange.responseHeaders.set(
+        "Content-Type",
+        if (status == 200 ||
+          format == "plain"
+        ) {
+          "text/plain"
+        } else {
+          "application/problem+$format"
+        },
+      )
       exchange.sendResponseHeaders(status, bytes.size.toLong())
       exchange.responseBody.use { it.write(bytes) }
       exchange.close()
