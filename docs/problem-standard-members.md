@@ -18,10 +18,10 @@ Regenerated Problems require these runtime versions or later:
 
 | Target | Minimum version | Implementation / API change |
 | --- | --- | --- |
-| Kotlin Sunday | `2.0.0-beta.18` | `ProblemString`, `ProblemReference`, and `ProblemStatus` Jackson annotations; scoped Problem union normalization. No additional Jackson module registration. |
-| TypeScript | `2.0.0-beta.17` | Bidirectional Zod property codecs; optional title/status; URI members are `URL \| string`. |
-| Swift | `2.0.0-beta.18` | Optional title/status; `type: String`, `instance: String?`, and optional `typeURI` / `instanceURI` convenience accessors. |
-| Python | Git tag `2.0.0-beta.12` | Inherited Pydantic Problem pre-validation and alias-aware normalization. |
+| Kotlin Sunday | `2.0.0-beta.19` | `ProblemString`, `ProblemReference`, and `ProblemStatus` Jackson annotations; scoped Problem union normalization. No additional Jackson module registration. |
+| TypeScript | `2.0.0-beta.18` | Bidirectional Zod property codecs; optional title/status; URI members are `URL \| string`. |
+| Swift | `2.0.0-beta.19` | Optional title/status; `type: String`, `instance: String?`, and optional `typeURI` / `instanceURI` convenience accessors. |
+| Python | Git tag `2.0.0-beta.13` | Inherited Pydantic Problem pre-validation with fixed standard-member names. |
 
 Swift stores the original URI reference, including empty and relative references. Use the optional URL accessors when Foundation URL behavior is needed. A URL-taking GenericProblem initializer remains available. Its dictionary decoding initializers now throw for correctly typed semantic errors.
 
@@ -29,7 +29,7 @@ TypeScript property codecs support `.parse()`, `.decode()`, `.safeParse()`, and 
 
 Kotlin uses property-level inclusion rules, preserving nullable custom properties. Annotated Problem factory creators keep convenient programmatic defaults separate from the RFC wire type default. Jackson constructs registered types through its normal creator handling; generated schema-aware extension handling remains in place.
 
-Python keeps Pydantic field-presence information and inherited validators. Normalization copies inputs without changing ordinary SundayModel behavior. Transport defaults use enabled validation aliases or field names.
+Python keeps Pydantic field-presence information and inherited validators. Normalization copies inputs without changing ordinary SundayModel behavior. The five standard members use their fixed RFC wire names for decoding, HTTP defaults, and encoding. Sunday rejects aliases that rename these members or let extensions claim their names; this is a Sunday API restriction, not an RFC requirement. Other extension aliases and paths retain native Pydantic behavior. Authored requiredness, constraints, defaults, and serializers remain supported.
 
 ## Quarkus and Zalando limitations
 
