@@ -47,3 +47,9 @@ sourceSets.main { resources.srcDir(generateStatusPolicies).include("META-INF/**"
 ktlint {
   filter { exclude { it.file.path.contains("/generated/") } }
 }
+
+// Runtime descriptors belong to the contract jar, not the source archive.
+tasks.named<Jar>("sourcesJar") { exclude("META-INF/**") }
+
+// Exercise the archive used by publication on every PR check.
+tasks.check { dependsOn(tasks.named("sourcesJar")) }
