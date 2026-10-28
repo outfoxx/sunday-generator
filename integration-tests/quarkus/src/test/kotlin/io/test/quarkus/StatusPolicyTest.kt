@@ -25,6 +25,7 @@ import io.test.quarkus.status.OtherProblem
 import io.test.quarkus.status.RebuildingProblem
 import io.test.quarkus.status.StatusAPI
 import jakarta.inject.Inject
+import jakarta.ws.rs.WebApplicationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -44,6 +45,38 @@ class StatusPolicyTest {
   @Inject
   @RestClient
   lateinit var client: StatusAPI
+
+  @Test
+  fun `default HTTP exceptions retain status policy behavior without a status mapper`() =
+    runBlocking {
+      for (status in listOf(401, 403, 404)) {
+        repeat(3) {
+          val key = key()
+          val error = failure<WebApplicationException> { client.read(status.toString(), "plain", key) }
+          assertEquals(status, error.response.status)
+          assertEquals(1, StatusPolicyUpstream.count(key))
+        }
+      }
+      assertEquals("ok", client.read("200", "plain", key()))
+      val exhausted = key()
+      val error = failure<WebApplicationException> { client.read("503", "plain", exhausted) }
+      assertEquals(503, error.response.status)
+      assertEquals(3, StatusPolicyUpstream.count(exhausted))
+      assertTrue(error.response.readEntity(String::class.java).contains("read attempt 3"))
+      val recovered = key()
+      assertEquals("ok", client.read("recover", "plain", recovered))
+      assertEquals(3, StatusPolicyUpstream.count(recovered))
+      val conflict = key()
+      failure<WebApplicationException> { client.read("409", "plain", conflict) }
+      assertEquals(1, StatusPolicyUpstream.count(conflict))
+      // An exact exclusion overrides the family selector for both retries and breaker accounting.
+      repeat(3) {
+        val key = key()
+        failure<WebApplicationException> { client.overlap("503", "plain", key) }
+        assertEquals(1, StatusPolicyUpstream.count(key))
+      }
+      assertEquals("ok", client.overlap("200", "plain", key()))
+    }
 
   @Test
   fun `excluded statuses retain generic and registered identities in JSON and CBOR`() =

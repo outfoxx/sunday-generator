@@ -187,6 +187,14 @@ internal class KotlinPolicyGuards(
     if (!statuses.isNullOrEmpty()) {
       val ranges = statuses.map { CodeBlock.of("%L in %L..%L", problem.statusCodeAccess("failure"), it.first, it.last) }
       tests.add(CodeBlock.of("(failure is %T && (%L))", problem.throwableType, ranges.joinToCode(" || ")))
+      val responseRanges = statuses.map { CodeBlock.of("failure.response.status in %L..%L", it.first, it.last) }
+      tests.add(
+        CodeBlock.of(
+          "(failure is %T && (%L))",
+          ClassName("jakarta.ws.rs", "WebApplicationException"),
+          responseRanges.joinToCode(" || "),
+        ),
+      )
     }
     // Referencing the parameter also avoids unused-lambda-parameter warnings for explicitly empty lists.
     return if (tests.isEmpty()) CodeBlock.of("failure.let { false }") else tests.joinToCode(" || ")

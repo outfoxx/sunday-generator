@@ -201,6 +201,12 @@ including when a registered Problem subtype matches both a class and a status se
 positive list replaces the implicit `Exception` default: `retryOn: [503]` does not retry other exceptions.
 Omitting a positive list retains the runtime's `Exception` default.
 
+Status selectors match both the configured Problem library's exception status and
+`jakarta.ws.rs.WebApplicationException.response.status`, including wrapped causes.
+The latter preserves status-based policies when the REST client's default mapper handles
+an empty or non-Problem error response; no additional status-classification provider is needed.
+This classification does not decode, consume, or replace the response body.
+
 A selected status selector explicitly opts that operation into generated SmallRye `Guard` enforcement.
 Use CLI `kotlin/jaxrs -mode client -quarkus` or Gradle `framework = JAXRS`, `mode = Client`,
 `quarkus = true`; both use the same contract syntax and `profile` selection. No additional switch is
