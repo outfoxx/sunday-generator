@@ -37,7 +37,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
@@ -48,11 +47,15 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.net.URI
 import javax.inject.Inject
 
-@CacheableTask
+/** Discovers referenced documents and records checkout-local source indexes for generation. */
+@DisableCachingByDefault(
+  because = "Source indexes contain absolute paths and transitive inputs require a prior local index",
+)
 abstract class SundayDiscoverIncludes
   @Inject
   constructor(

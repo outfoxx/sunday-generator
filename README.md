@@ -38,7 +38,8 @@ Gradle Plugin Cache Notes
 -------------------------
 
 - The Gradle plugin now defaults to deterministic output for build/cache correctness by omitting generated timestamps unless explicitly set.
-- Includes are discovered by parsing RAML sources; changes in nested include chains are tracked automatically.
+- Includes are discovered by parsing source documents; changes in nested include chains are tracked automatically.
+- Discovery indexes contain checkout-local paths, so discovery does not use the Gradle build cache. Local up-to-date checks remain enabled for RAML and AsyncAPI; generation and compilation can still reuse cached outputs across checkouts.
 - The `includes` DSL property is deprecated and has no effect.
 - To opt in to a timestamp, set `generationTimestamp` on a generation (for example, a fixed string or a time you compute in the build script).
 - Each generation exclusively owns its output directory. Do not share it with

@@ -320,8 +320,8 @@ class GradlePluginTests {
     testProjectDir.resolve("build").deleteRecursively()
 
     runBuild().also { result ->
-      assertGenerationOutcome(result, "client", equalTo(TaskOutcome.FROM_CACHE), equalTo(TaskOutcome.FROM_CACHE))
-      assertGenerationOutcome(result, "server", equalTo(TaskOutcome.FROM_CACHE), equalTo(TaskOutcome.FROM_CACHE))
+      assertGenerationOutcome(result, "client", equalTo(TaskOutcome.SUCCESS), equalTo(TaskOutcome.FROM_CACHE))
+      assertGenerationOutcome(result, "server", equalTo(TaskOutcome.SUCCESS), equalTo(TaskOutcome.FROM_CACHE))
 
       val kotlinTask = result.task(":compileKotlin")
       assertThat(kotlinTask?.outcome, equalTo(TaskOutcome.FROM_CACHE))
