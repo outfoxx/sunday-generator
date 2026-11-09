@@ -24,7 +24,6 @@ import io.outfoxx.sunday.security.ProviderCredentials
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.TokenConfiguration
 import io.outfoxx.sunday.security.TokenManager
-import io.outfoxx.sunday.security.TokenManagerFactory
 import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.security.TokenRequest
 import io.outfoxx.sunday.security.TokenSet
@@ -106,20 +105,14 @@ object PersistenceCheck {
                 )
               }
             }
-          val factory: TokenManagerFactory = { providers ->
-            factories++
-            assertEquals(mapOf("application" to provider), providers)
-            TokenManager(
-              providers,
-              store,
-              Duration.ofSeconds(5),
-              Clock.fixed(Instant.ofEpochSecond(time), ZoneOffset.UTC),
-              this,
-            ).also {
-              managers +=
-                it
-            }
-          }
+          factories++
+          val manager = TokenManager(
+            provider = provider,
+            store = store,
+            expirySkew = Duration.ofSeconds(5),
+            clock = Clock.fixed(Instant.ofEpochSecond(time), ZoneOffset.UTC),
+            scope = this,
+          ).also { managers += it }
           var captured: ClientSettings? = null
           var calls = 0
           val transportFactory: (ClientSettings) -> JdkTransport = { settings ->
@@ -128,7 +121,7 @@ object PersistenceCheck {
             JdkTransport(
               URITemplate(settings.baseURL.toString()),
               SundayHttpProblem.Factory,
-              tokenManager = settings.tokenManager,
+              tokenProviders = settings.tokenProviders,
             )
           }
           if (aggregate) {
@@ -136,9 +129,8 @@ object PersistenceCheck {
               createExampleAPI(
                 ExampleAPIDevelopmentConfig(),
                 transportFactory,
-                ExampleAPICredentials(identity = ProviderCredentials(provider)),
+                ExampleAPICredentials(identity = ProviderCredentials(manager)),
                 securityProfile = profile,
-                tokenManagerFactory = factory,
               )
             check(client.users.transport === client.transport && client.projects.transport === client.transport)
             transports += client.transport
@@ -155,9 +147,8 @@ object PersistenceCheck {
               createUsersAPI(
                 ExampleAPIDevelopmentConfig(),
                 transportFactory,
-                UsersAPICredentials(identity = ProviderCredentials(provider)),
+                UsersAPICredentials(identity = ProviderCredentials(manager)),
                 securityProfile = profile,
-                tokenManagerFactory = factory,
               )
             transports += client.transport
             readRequests[requireNotNull(captured)] = {
@@ -175,16 +166,16 @@ object PersistenceCheck {
 
         suspend fun token(settings: ClientSettings): TokenSet {
           readRequests.getValue(settings)()
-          return settings.tokenManager!!.credentials(settings.bindings.getValue("listUsers").single()).tokens
+          return (settings.tokenProviders.getValue("application") as TokenManager).credentials(settings.bindings.getValue("listUsers").single()).tokens
         }
         try {
           val first = settings(0)
           assertEquals(listOf(0, 0, 0, 1), listOf(reads, saves, acquisitions, factories))
           publicRequests.getValue(first)()
           assertEquals(0, reads)
-          val lease = first.tokenManager!!.credentials(first.bindings.getValue("listUsers").single())
+          val lease = (first.tokenProviders.getValue("application") as TokenManager).credentials(first.bindings.getValue("listUsers").single())
           assertEquals("initial", lease.tokens.accessToken)
-          first.tokenManager!!.close()
+          (first.tokenProviders.getValue("application") as TokenManager).close()
           assertEquals("initial", token(settings(0)).accessToken)
           assertEquals(1, acquisitions)
           val third = settings(96)

@@ -86,7 +86,7 @@ class SwiftScopedSecurityTest {
           config.protocolClasses = [CaptureProtocol.self]
           let session = URLSession(configuration: config)
           let transport = URLSessionTransport(baseURL: "https://api.example", session: session, eventSession: session,
-                                              tokenManager: manager)
+                                              tokenProviders: ["application": manager])
           defer { transport.close() }
           let client = SecurityAPI(transport: transport)
           $calls

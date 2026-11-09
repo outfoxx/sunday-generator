@@ -143,7 +143,7 @@ class KotlinClientConfigurationTest {
               try {
                 val client: API<io.outfoxx.sunday.jdk.JdkRequest> = createAPI(config, { settings ->
                   calls++
-                  check((settings.tokenManager != null) == ${authenticated
+                  check((settings.tokenProviders.isNotEmpty()) == ${authenticated
               })
                   check(settings.baseURL.toString() == "https://secondary.example/v1")
                   transport
@@ -172,8 +172,10 @@ class KotlinClientConfigurationTest {
       .invoke(null)
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
   fun `aggregate factory resolves all children before sharing one transport`(
+    cached: Boolean,
     @TempDir directory: Path,
   ) {
     val api = aggregateClientConfigurationApi(directory)
@@ -209,8 +211,9 @@ class KotlinClientConfigurationTest {
                   return io.outfoxx.sunday.security.TokenSet("token")
                 }
               }
-              val credentials = ExampleAPICredentials(identity = io.outfoxx.sunday.security.ProviderCredentials(provider))
               for (override in listOf(false, true)) {
+                val manager = if ($cached) io.outfoxx.sunday.security.TokenManager(provider = provider) else null
+                val credentials = ExampleAPICredentials(identity = io.outfoxx.sunday.security.ProviderCredentials(manager ?: provider))
                 acquired.clear()
                 var calls = 0
                 val expected = if (override) "external" else "external-development"
@@ -224,7 +227,7 @@ class KotlinClientConfigurationTest {
                     check(binding.profile == expected)
                     check(binding.scopes == setOf("items:read"))
                   }
-                  io.outfoxx.sunday.jdk.JdkTransport(io.outfoxx.sunday.URITemplate(settings.baseURL.toString()), io.outfoxx.sunday.problems.SundayHttpProblem.Factory, tokenManager = settings.tokenManager)
+                  io.outfoxx.sunday.jdk.JdkTransport(io.outfoxx.sunday.URITemplate(settings.baseURL.toString()), io.outfoxx.sunday.problems.SundayHttpProblem.Factory, tokenProviders = settings.tokenProviders)
                 }
                 val client = if (override) createExampleAPI(ExampleAPIDevelopmentConfig(), factory, credentials, securityProfile = "external")
                              else createExampleAPI(ExampleAPIDevelopmentConfig(), factory, credentials,
@@ -239,13 +242,14 @@ class KotlinClientConfigurationTest {
                     client.users.listUsers().transportRequest()
                     client.projects.listProjects().transportRequest()
                   }
-                  check(acquired.size == 1)
-                  check(acquired.single().binding.profile == expected)
+                  check(acquired.size == ${if (cached) 1 else 2})
+                  check(acquired.all { it.binding.profile == expected })
+                  manager?.close()
                 }
               }
               for (invalidCredentials in listOf(
                 ExampleAPICredentials(),
-                ExampleAPICredentials(identity = credentials.identity, backupToken = io.outfoxx.sunday.security.BearerCredentials("key")),
+                ExampleAPICredentials(identity = io.outfoxx.sunday.security.ProviderCredentials(provider), backupToken = io.outfoxx.sunday.security.BearerCredentials("key")),
               )) {
               var invalidCalls = 0
               try {

@@ -94,7 +94,7 @@ class PythonScopedSecurityTest : PythonTest() {
               return httpx.Response(204)
           async def main():
               async with httpx.AsyncClient(base_url="https://api.example", transport=httpx.MockTransport(handler)) as native:
-                  transport = HttpxTransport(native, token_manager=TokenManager({"application": Provider()}))
+                  transport = HttpxTransport(native, token_providers={"application": TokenManager(Provider())})
                   client = SecurityClient(transport)
           GENERATED_CALLS
               assert len(requests) == ${operations.size}

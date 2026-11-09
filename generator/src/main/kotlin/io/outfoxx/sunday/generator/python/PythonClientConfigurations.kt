@@ -172,7 +172,6 @@ internal class PythonClientConfigurations(
         appendLine("from collections.abc import Callable as _Callable, Mapping as _Mapping, Sequence as _Sequence")
         appendLine("from sunday import (")
         appendLine("    ClientSettings as _ClientSettings,")
-        appendLine("    TokenManagerFactory as _TokenManagerFactory,")
         appendLine("    UNSET as _UNSET,")
         appendLine("    UnsetType as _UnsetType,")
         appendLine("    MediaType as _MediaType,")
@@ -247,7 +246,6 @@ internal class PythonClientConfigurations(
         appendLine("    default_accept_types: _Sequence[_MediaType] | None = None,")
         appendLine("    security_profile: str | None | _UnsetType = _UNSET,")
         appendLine("    security_selection: _Mapping[str, $alternativeType] | None = None,")
-        appendLine("    token_manager_factory: _TokenManagerFactory | None = None,")
         appendLine(") -> $clientType[TransportRequestT, TransportResponseT]:")
         appendLine(
           "    \"\"\"Construct a service with the application's chosen transport and compatible credentials.\"\"\"",
@@ -302,11 +300,7 @@ internal class PythonClientConfigurations(
         appendLine("        if selection is not None:")
         appendLine("            choices = [choice for choice in choices if selection.matches(choice)]")
         appendLine("        selected_alternatives[operation] = choices")
-        appendLine("    settings = _ClientSettings.resolve(")
-        appendLine(
-          "        config.base_url(), selected_alternatives, supplied, token_manager_factory=token_manager_factory",
-        )
-        appendLine("    )")
+        appendLine("    settings = _ClientSettings.resolve(config.base_url(), selected_alternatives, supplied)")
         appendLine("    transport = transport_factory(settings)")
         appendLine("    return $clientType(")
         appendLine("        transport,")

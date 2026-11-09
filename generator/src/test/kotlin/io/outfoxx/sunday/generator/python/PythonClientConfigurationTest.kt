@@ -271,7 +271,7 @@ class PythonClientConfigurationTest : PythonTest() {
               async with httpx.AsyncClient(base_url=config.base_url()) as native:
                   def transport_factory(settings):
                       calls.append(settings)
-                      assert (settings.token_manager is not None) == ${if (authenticated
+                      assert (bool(settings.token_providers)) == ${if (authenticated
           ) {
             "True"
           } else {
@@ -303,8 +303,10 @@ class PythonClientConfigurationTest : PythonTest() {
     )
   }
 
-  @Test
-  fun `aggregate factory shares settings and lazy token cache`(
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `aggregate factory preserves provider cache ownership`(
+    cached: Boolean,
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
@@ -330,7 +332,7 @@ class PythonClientConfigurationTest : PythonTest() {
           """
           import asyncio
           import httpx
-          from sunday import BearerCredentials, ProviderCredentials, TokenConfiguration, TokenSet
+          from sunday import BearerCredentials, ProviderCredentials, TokenConfiguration, TokenManager, TokenSet
           from sunday.httpx import HttpxTransport
           from example_api.config import ExampleAPIDevelopmentConfig
           from example_api.api import create_example_api, ExampleAPICredentials, ExampleAPISecurityAlternative
@@ -363,7 +365,7 @@ class PythonClientConfigurationTest : PythonTest() {
                               assert binding.profile == expected and binding.scopes == ("items:read",)
                           return HttpxTransport.from_settings(settings, native)
                       client = create_example_api(ExampleAPIDevelopmentConfig(), factory,
-                          credentials=ExampleAPICredentials(identity=ProviderCredentials(Provider())),
+                          credentials=ExampleAPICredentials(identity=ProviderCredentials(TokenManager(Provider()) if ${if (cached) "True" else "False"} else Provider())),
                           security_selection={"listProjects": ExampleAPISecurityAlternative.identity},
                           **({"security_profile": "external"} if override else {}))
                       assert len(calls) == 1 and not acquired
@@ -372,7 +374,7 @@ class PythonClientConfigurationTest : PythonTest() {
                       assert not acquired and "authorization" not in requests[0].headers
                       await client.users.list_users().execute()
                       await client.projects.list_projects().execute()
-                      assert len(acquired) == 1 and acquired[0].profile == expected
+                      assert len(acquired) == ${if (cached) 1 else 2} and all(r.profile == expected for r in acquired)
                       assert all(r.headers["authorization"].lower() == "bearer token" for r in requests[1:])
               def unexpected(settings):
                   raise AssertionError("Transport constructed before validation")

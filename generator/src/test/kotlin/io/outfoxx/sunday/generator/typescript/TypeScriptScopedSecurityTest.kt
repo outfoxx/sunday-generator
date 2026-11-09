@@ -84,18 +84,13 @@ class TypeScriptScopedSecurityTest {
               acquire: async request => { acquired.push(request); return {accessToken: 'external-token'}; }
             }});
             class CaptureTransport extends FetchTransport {
-              override async transportRequest(spec: RequestSpec<unknown>): Promise<Request> {
-                const request = await super.transportRequest(spec);
-                requests.push(request);
-                return request;
-              }
               override eventStream<E>(spec: RequestSpec<void>): AsyncIterable<E> {
                 const transport = this;
-                return {async *[Symbol.asyncIterator]() { await transport.transportRequest(spec); }};
+                return {async *[Symbol.asyncIterator]() { requests.push(await transport.transportRequest(spec)); }};
               }
             }
-            globalThis.fetch = async () => new Response(null, {status: 204});
-            const client = createSecurityAPI(new CaptureTransport('https://api.example', {tokenManager: manager}));
+            globalThis.fetch = async request => { requests.push(request as Request); return new Response(null, {status: 204}); };
+            const client = createSecurityAPI(new CaptureTransport('https://api.example', {tokenProviders: {application: manager}}));
             $calls
             if (requests.length !== ${operations.size}) throw new Error('Missing operation authentication');
             if (acquired.length !== 1) throw new Error('Cache not shared across operation scopes');

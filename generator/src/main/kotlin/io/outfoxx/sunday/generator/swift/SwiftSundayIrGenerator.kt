@@ -1513,11 +1513,6 @@ class SwiftSundayIrGenerator(
                 MEDIA_TYPE_ARRAY,
               ).defaultValue("%L", mediaTypesArray(media.acceptTypes))
               .build(),
-          ).addParameter(
-            ParameterSpec
-              .builder("tokenManagerFactory", DeclaredTypeName.typeName("Sunday.TokenManagerFactory").makeOptional())
-              .defaultValue("nil")
-              .build(),
           )
       factory.addCode(
         "%L supplied: [String: any %T] = [:]\n",
@@ -1554,7 +1549,7 @@ class SwiftSundayIrGenerator(
         "let selectedAlternatives = Dictionary(uniqueKeysWithValues: alternatives.map { entry in (entry.key, entry.value.filter { securitySelection[entry.key]?.matches($0) ?? true }) })\n",
       )
       factory.addCode(
-        "let settings = try %T.resolve(baseURL: config.baseURL(), alternatives: selectedAlternatives, credentials: supplied, tokenManagerFactory: tokenManagerFactory)\n",
+        "let settings = try %T.resolve(baseURL: config.baseURL(), alternatives: selectedAlternatives, credentials: supplied)\n",
         clientSettingsType,
       )
       factory.addCode(

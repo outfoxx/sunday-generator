@@ -1,7 +1,6 @@
 """Application-owned manager storage survives settings instances without eager I/O."""
 
 import asyncio
-from collections.abc import Mapping
 
 import httpx
 from example_api.api import ExampleAPICredentials, create_example_api
@@ -13,7 +12,6 @@ from sunday import (
     SecurityBinding,
     TokenConfiguration,
     TokenManager,
-    TokenProvider,
     TokenRequest,
     TokenSet,
 )
@@ -70,13 +68,9 @@ def verify(aggregate: bool) -> None:
 
             provider = Provider()
 
-            def factory(providers: Mapping[str, TokenProvider]) -> TokenManager:
-                nonlocal factories
-                factories += 1
-                assert dict(providers) == {"application": provider}
-                return TokenManager(
-                    providers, store=store, expiry_skew=5, now=lambda: time
-                )
+            nonlocal factories
+            factories += 1
+            manager = TokenManager(provider, store=store, expiry_skew=5, now=lambda: time)
 
             captured = []
 
@@ -94,23 +88,22 @@ def verify(aggregate: bool) -> None:
             client = constructor(
                 ExampleAPIDevelopmentConfig(),
                 transport_factory,
-                credentials=credential_type(identity=ProviderCredentials(provider)),
+                credentials=credential_type(identity=ProviderCredentials(manager)),
                 security_profile=profile,
-                token_manager_factory=factory,
             )
             assert len(captured) == 1
             clients[id(captured[0])] = client
             return captured[0]
 
         async def token(settings: ClientSettings) -> TokenSet:
-            assert settings.token_manager is not None
+            assert settings.token_providers["application"] is not None
             client = clients[id(settings)]
             users = client.users if aggregate else client
             await users.list_users().execute()
             if aggregate:
                 await client.projects.list_projects().execute()
             return (
-                await settings.token_manager.credentials(
+                await settings.token_providers["application"].credentials(
                     settings.bindings["listUsers"][0]
                 )
             ).tokens
@@ -122,8 +115,8 @@ def verify(aggregate: bool) -> None:
         client = clients[id(first)]
         await (client.users if aggregate else client).register().execute()
         assert reads == 0
-        assert first.token_manager is not None
-        lease = await first.token_manager.credentials(first.bindings["listUsers"][0])
+        assert first.token_providers["application"] is not None
+        lease = await first.token_providers["application"].credentials(first.bindings["listUsers"][0])
         assert lease.tokens.access_token == "initial"
         assert (await token(settings(0))).access_token == "initial"
         assert acquisitions == 1

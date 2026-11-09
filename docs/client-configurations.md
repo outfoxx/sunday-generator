@@ -26,8 +26,7 @@ const client = createAPI(
 
 The callback is required. It is invoked exactly once after configuration, credentials, server selection,
 and security alternatives have been validated. Its immutable runtime settings contain the resolved
-endpoint, operation-specific security bindings, and a prepared token manager when authentication is
-configured. Preparing settings never acquires tokens or performs authentication requests. The returned
+endpoint, operation-specific security bindings, and the selected token provider instances. Preparing settings never acquires tokens or performs authentication requests. The returned
 client preserves the transport's native request/response types. Applications own transport lifecycle
 and cleanup.
 
@@ -47,77 +46,81 @@ available.
 
 The aggregate resolves security for every child operation before invoking the transport callback once.
 All children receive the same transport and resolved settings, so server-selected profiles, explicit
-profile overrides, scopes, public operations, and token caching remain consistent across services.
+profile overrides, scopes, public operations, and provider ownership remain consistent across services.
 Credential and alternative validation happens before constructing any child. All services must have
 compatible effective server configurations and unique operation security identities.
 
-## Application-owned token persistence
+## Provider ownership and optional caching
 
-Both per-service and aggregate configuration factories accept an optional runtime `TokenManagerFactory`:
-`tokenManagerFactory` in Kotlin and Swift, `options.tokenManagerFactory` in TypeScript, and
-`token_manager_factory` in Python. The factory receives the complete resolved provider map and returns
-one native manager; consumers do not reconstruct provider names or implement another cache/refresh layer.
-There is no unused default manager when a factory is supplied. With no selected providers the hook is
-skipped. Without a hook, settings continue to create their default memory-only manager.
+Factories preserve application-supplied providers in `settings.tokenProviders` (`token_providers` in
+Python). Transports use those instances directly. No implicit manager, cache, refresh loop, or manager
+factory is created. A provider backed by an external framework such as Auth0 owns its entire credential
+lifecycle; supply that adapter directly through provider credentials.
 
-For example, use the generated TypeScript entry point with an application-managed store:
+To opt into Sunday's caching, refresh coalescing, and persistence, wrap the provider explicitly and pass
+the manager in the same credential slot:
 
 ```typescript
 import { FetchTransport, TokenManager } from '@outfoxx/sunday';
 
+const manager = new TokenManager(provider, { store: applicationStore });
 const client = createAPI(config, settings => FetchTransport.fromSettings(settings), {
-  credentials,
-  tokenManagerFactory: providers => new TokenManager(providers, { store: applicationStore }),
+  credentials: { identity: { kind: 'provider', provider: manager } },
 });
 ```
 
-Equivalent hooks for native manager options are:
+Equivalent manager construction in other runtimes:
 
 ```kotlin
-tokenManagerFactory = { providers ->
-  TokenManager(providers, store = applicationStore, expirySkew = skew, clock = clock, scope = scope)
-}
+val manager = TokenManager(provider = provider, store = applicationStore)
+val credentials = APICredentials(identity = ProviderCredentials(manager))
 ```
 
 ```swift
-tokenManagerFactory: { providers in
-  try TokenManager(providers: providers, store: applicationStore, expirySkew: skew, now: clock)
-}
+let manager = try TokenManager(provider: provider, store: applicationStore)
+let credentials = APICredentials(identity: ProviderCredentials(provider: manager))
 ```
 
 ```python
-token_manager_factory=lambda providers: TokenManager(
-    providers, store=application_store, expiry_skew=skew, now=clock,
-)
+manager = TokenManager(provider, store=application_store)
+credentials = APICredentials(identity=ProviderCredentials(manager))
 ```
 
-Factories must construct managers without token acquisition or storage I/O. Authentication stays lazy,
-including on public operations. The application owns storage security, session/environment identity and
-manager lifecycle. Retain one client/aggregate for concurrent work: separate managers sharing a store do
-not coordinate refreshes. Reopening a session may use a new client with the same store and stable identities.
+Settings resolution and transport construction perform no token acquisition or storage I/O. Public
+operations acquire no credentials. A managed operation acquires once per send attempt; a supported,
+bounded invalid-token recovery obtains a new credential only for the retry. Providers may implement
+rejection recovery against the original request context and rejected token. Providers without that
+capability return the original unauthorized response without an automatic authentication retry.
+
+Request-export APIs materialize an optionally authorized transport-specific request, acquiring once
+when authorization is required. Execution, retries, refreshing, and lifecycle then belong to the consumer.
+Exported requests do not retain hidden Sunday security state.
+
+The application owns storage security, session/environment identity, and manager lifecycle. Share one
+manager across clients that should share a cache: separate managers sharing a store do not coordinate
+refreshes. Reopening a session may use a new manager with the same store and stable identities.
 Distinct sessions/environments need distinct grant/provider/profile/endpoint identities or isolated stores;
 the API base URL alone does not create a storage namespace.
 
-Kotlin exposes clock, skew and parent coroutine scope; close the manager when all sharing clients are done.
-Swift accepts a Sendable store and clock in its Sendable factory; call `await manager.close()` at shutdown.
-TypeScript supports `expirySkewMs` and a millisecond clock; Python supports `expiry_skew` and a seconds clock
-on its asyncio loop. Those managers have no close method: cancel/await requests before discarding them.
-Transport cleanup does not erase saved tokens. For logout, stop requests, let pending rotation commits
-settle, remove the application's session entries and create fresh settings. `invalidate` retains refresh
-state and is not a logout operation. Runtime README examples describe each native lifecycle.
+Kotlin exposes clock, skew, and parent coroutine scope; close the manager when all sharing clients are done.
+Swift accepts a Sendable store and clock; call `await manager.close()` at shutdown.
+TypeScript supports `expirySkewMs` and a millisecond clock; Python supports `expiry_skew` and a seconds clock.
+Those managers have no close method: cancel/await requests before discarding them.
+Transport cleanup does not erase saved tokens. Invalidation retains refresh state and is not logout.
+External providers must ensure rejection of an older token cannot invalidate a newer session.
 
-The compiler-backed tests pin the compatible runtime releases below. These versions provide the manager
-factory hook forwarded by generated clients:
+### Migration and coordinated runtime updates
 
-| Target | Runtime version | Distribution |
-| --- | --- | --- |
-| Kotlin | `2.0.0-beta.16` | Maven Central |
-| Swift | `2.0.0-beta.17` | Swift Package Manager Git tag |
-| TypeScript | `2.0.0-beta.12` | npm (`@outfoxx/sunday`) |
-| Python | `2.0.0-beta.11` | Git tag installed with pip; PyPI publication remains disabled |
+The `TokenManagerFactory` contract and generated `tokenManagerFactory` / `token_manager_factory` options
+are removed. Move manager construction into application setup and pass it as a provider. Custom transport
+factories forward `settings.tokenProviders` / `settings.token_providers` instead of a singular manager.
 
-Kotlin/Swift beta.13, TypeScript beta.10 and Python beta.9 do not provide this hook. Consumers generating
-configuration factories must update their runtime dependencies to the compatible releases above or later.
+This generator change requires the matching provider-direct runtime updates in Swift, Kotlin,
+TypeScript, and Python. Existing released runtimes still construct implicit managers and do not provide
+the new settings surface. Before publishing this generator change, release the runtime updates and
+advance the compiler-fixture dependency pins together. During coordinated development, set
+`SUNDAY_SWIFT_PATH`, `SUNDAY_KOTLIN_PATH`, `SUNDAY_TYPESCRIPT_PATH`, and `SUNDAY_PYTHON_PATH` to the
+updated runtime checkouts; build the TypeScript runtime first.
 
 ## Credentials and alternatives
 
@@ -125,7 +128,7 @@ Server configurations contain no credentials. Generated `<Service>Credentials` g
 narrowest runtime credential family for each scheme: bearer, API key, Basic, OAuth, or a custom provider.
 Runtime OAuth credentials select client-credentials or authorization-code/PKCE acquisition and carry an
 application-selected provider factory. That factory constructs the provider from the installed module,
-without acquiring tokens. Existing token managers own refresh, caching, and cancellation behavior.
+without acquiring tokens. Providers own refresh, caching, and cancellation behavior; an explicitly supplied TokenManager adds Sunday's lifecycle.
 
 A factory selects one complete alternative per operation. Supplying only part of a conjunctive requirement
 is invalid. When supplied credentials satisfy more than one alternative, select one explicitly with the
