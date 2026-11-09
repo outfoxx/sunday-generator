@@ -24,7 +24,7 @@ public final class API<TransportType : Transport> : Sendable {
     self.clientSettings = clientSettings
   }
 
-  public func fetchEventsSimple() -> AsyncStream<Test1> {
+  public func fetchEventsSimple() -> AsyncThrowingStream<Test1, any Swift.Error> {
     return self.transport.eventStream(
       spec: Sunday.OperationSpec(
         method: .get,
@@ -41,7 +41,7 @@ public final class API<TransportType : Transport> : Sendable {
     )
   }
 
-  public func fetchEventsDiscriminated() -> AsyncStream<Any> {
+  public func fetchEventsDiscriminated() -> AsyncThrowingStream<Any, any Swift.Error> {
     return self.transport.eventStream(
       spec: Sunday.OperationSpec(
         method: .get,

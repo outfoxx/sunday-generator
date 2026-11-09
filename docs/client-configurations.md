@@ -115,12 +115,49 @@ The `TokenManagerFactory` contract and generated `tokenManagerFactory` / `token_
 are removed. Move manager construction into application setup and pass it as a provider. Custom transport
 factories forward `settings.tokenProviders` / `settings.token_providers` instead of a singular manager.
 
-This generator change requires the matching provider-direct runtime updates in Swift, Kotlin,
-TypeScript, and Python. Existing released runtimes still construct implicit managers and do not provide
-the new settings surface. Before publishing this generator change, release the runtime updates and
-advance the compiler-fixture dependency pins together. During coordinated development, set
-`SUNDAY_SWIFT_PATH`, `SUNDAY_KOTLIN_PATH`, `SUNDAY_TYPESCRIPT_PATH`, and `SUNDAY_PYTHON_PATH` to the
-updated runtime checkouts; build the TypeScript runtime first.
+This generator requires Swift `2.0.0-beta.20`, Kotlin `2.0.0-beta.20`, TypeScript
+`2.0.0-beta.19`, and Python Git tag `2.0.0-beta.14`, or compatible newer versions.
+Compiler fixtures pin these releases. Older runtimes construct implicit managers and do not provide
+the new settings surface. During coordinated development, set `SUNDAY_SWIFT_PATH`,
+`SUNDAY_KOTLIN_PATH`, `SUNDAY_TYPESCRIPT_PATH`, and `SUNDAY_PYTHON_PATH` to updated runtime checkouts;
+build the TypeScript runtime first.
+
+## Kotlin native request and response types
+
+Generated Kotlin HTTP services and aggregate clients carry both native types as `TReq` and `TRes`.
+Their constructors accept `Transport<TReq, TRes>`, and generated factories infer both types from the
+application's transport factory. For example, a JDK-backed client uses `java.net.http.HttpRequest` and
+`java.net.http.HttpResponse<kotlinx.io.Source>`; an OkHttp-backed client uses `okhttp3.Request` and
+`okhttp3.Response`. These type arguments identify native values, not Sunday's wrapper classes.
+
+Request exports return `Request<TReq>` and expose the native request through `.transport`. Response
+exports return `Response<TRes>`; operations, decoded operation responses, and event sources preserve
+the corresponding native types. Execute managed requests through the transport or generated operation;
+request wrappers no longer execute themselves. Sending an exported native request remains the consumer's
+responsibility, including any subsequent response adaptation or retry policy.
+
+The pinned Kotlin runtime includes this adapter and execution contract. Both JDK and OkHttp generated
+clients are compiled against the published runtime in the generator's regression tests.
+
+## Request and response adapters
+
+Configure request and response adapters independently on the transport returned by the application
+factory. Swift uses `RequestAdapter` and `ResponseAdapter`, TypeScript uses objects with `adapt`
+methods, and HTTPX accepts asynchronous functions or adapter instances through `request_adapter`
+and `response_adapter`. Use the runtime's explicit composition helpers when combining adapters.
+Generated clients forward operation specifications and leave adaptation, response handling, and
+retry decisions to the transport.
+
+Request exports apply request adaptation once and return without sending. Raw-response operations
+remain managed executions: Swift and TypeScript pass their operation specifications to
+`transportResponse`, and Python passes its specification to `execute_request`. Python's
+`transport_request` followed by a native send is the consumer-owned export path and does not preserve
+the invocation's managed security recovery context.
+
+Generated Swift event-stream methods now return `AsyncThrowingStream<Element, any Error>`.
+Consume them with `for try await` and handle errors, including adapter stop signals. TypeScript's
+`AsyncIterable` and Python's `EventStream` already propagate failures during iteration; their generated
+return types do not need to change. The matching adapter runtime updates are required for these paths.
 
 ## Credentials and alternatives
 

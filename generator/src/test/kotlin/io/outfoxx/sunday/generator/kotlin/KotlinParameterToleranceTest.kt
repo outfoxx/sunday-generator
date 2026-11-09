@@ -94,7 +94,7 @@ class KotlinParameterToleranceTest {
             .newInstance(transport, listOf(MediaType.JSON), listOf(MediaType.JSON))
 
         fun request(values: Array<Any?>) {
-          val operation = method.invoke(client, *values) as Operation<*, *, *>
+          val operation = method.invoke(client, *values) as Operation<*, *, *, *>
           runBlocking { operation.transportRequest() }
         }
         request(arrayOf(null, null, null))
@@ -207,7 +207,7 @@ class KotlinParameterToleranceTest {
                 listOf(MediaType.JSON),
                 listOf(MediaType.JSON),
               )
-          val operation = method.invoke(client, *arguments) as Operation<*, *, *>
+          val operation = method.invoke(client, *arguments) as Operation<*, *, *, *>
           runBlocking { operation.transportRequest() }
           states += unknown
           val failure = assertThrows(RuntimeException::class.java) { runBlocking { operation.transportRequest() } }
@@ -221,7 +221,7 @@ class KotlinParameterToleranceTest {
           states += known
           runBlocking { operation.transportRequest() }
           arguments[4] = value("DefaultState", "future")
-          val defaultOperation = method.invoke(client, *arguments) as Operation<*, *, *>
+          val defaultOperation = method.invoke(client, *arguments) as Operation<*, *, *, *>
           if (tolerance == Tolerance.All) {
             runBlocking { defaultOperation.transportRequest() }
           } else {

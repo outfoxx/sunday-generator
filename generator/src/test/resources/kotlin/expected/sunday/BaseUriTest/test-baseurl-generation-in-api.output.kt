@@ -6,7 +6,6 @@ import io.outfoxx.sunday.OperationSpec
 import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.Method
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.operation
 import io.outfoxx.sunday.security.ClientSettings
 import io.outfoxx.sunday.security.Credentials
@@ -22,15 +21,15 @@ import kotlin.jvm.JvmOverloads
 /**
  * Creates API using the application's chosen transport. The caller owns its lifecycle.
  */
-public fun <Req : Request> createAPI(
+public fun <TReq, TRes> createAPI(
   config: TestAPIConfig,
-  transportFactory: (ClientSettings) -> Transport<Req>,
+  transportFactory: (ClientSettings) -> Transport<TReq, TRes>,
   credentials: APICredentials = APICredentials(),
   securityProfile: String? = null,
   securitySelection: Map<String, APISecurityAlternative> = emptyMap(),
   defaultContentTypes: List<MediaType> = listOf(),
   defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-): API<Req> {
+): API<TReq, TRes> {
   val supplied = mutableMapOf<String, Credentials>()
   val alternatives: Map<String, List<List<SecurityBinding>>> = when (securityProfile) {
     null -> mapOf(
@@ -47,15 +46,15 @@ public fun <Req : Request> createAPI(
   return API(transport, defaultContentTypes, defaultAcceptTypes, settings)
 }
 
-public class API<Req : Request> @JvmOverloads constructor(
-  public val transport: Transport<Req>,
+public class API<TReq, TRes> @JvmOverloads constructor(
+  public val transport: Transport<TReq, TRes>,
   public val defaultContentTypes: List<MediaType> = listOf(),
   public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
   private val clientSettings: ClientSettings? = null,
 ) {
-  public fun fetchTest(): Operation<Unit, String, Req> = (if (clientSettings != null)
+  public fun fetchTest(): Operation<Unit, String, TReq, TRes> = (if (clientSettings != null)
       this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest")) else
-      this.transport).operation<Unit, String, Req>(
+      this.transport).operation<Unit, String, TReq, TRes>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/tests",

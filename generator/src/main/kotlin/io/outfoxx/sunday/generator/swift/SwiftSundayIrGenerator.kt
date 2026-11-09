@@ -81,7 +81,7 @@ import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.OutputDirectory
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE_DECODER
-import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
+import io.outfoxx.sunday.generator.swift.utils.ASYNC_THROWING_STREAM
 import io.outfoxx.sunday.generator.swift.utils.CODABLE
 import io.outfoxx.sunday.generator.swift.utils.CODING_KEY
 import io.outfoxx.sunday.generator.swift.utils.CUSTOM_DEBUG_STRING_CONVERTIBLE
@@ -93,6 +93,7 @@ import io.outfoxx.sunday.generator.swift.utils.DESCRIPTION_BUILDER
 import io.outfoxx.sunday.generator.swift.utils.EMPTY
 import io.outfoxx.sunday.generator.swift.utils.ENCODER
 import io.outfoxx.sunday.generator.swift.utils.EQUATABLE
+import io.outfoxx.sunday.generator.swift.utils.ERROR
 import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.swift.utils.GENERIC_PROBLEM
 import io.outfoxx.sunday.generator.swift.utils.HASHABLE
@@ -6307,9 +6308,10 @@ class SwiftSundayIrGenerator(
       return EVENT_SOURCE
     }
     if (streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM) {
-      return ASYNC_STREAM.parameterizedBy(
+      return ASYNC_THROWING_STREAM.parameterizedBy(
         response?.type?.swiftEventStreamTypeName(publicExistential = true)
           ?: responseType,
+        ERROR.swiftExistentialTypeName(),
       )
     }
     if (!isNilableOperation && requestBody.isSwiftStreamingRequestBody) {

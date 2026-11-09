@@ -422,7 +422,7 @@ class KotlinSundayIrGeneratorTest {
       }
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    assertContains(serviceSource, "public fun getUser(): Operation<Unit, UserProfile, Req>")
+    assertContains(serviceSource, "public fun getUser(): Operation<Unit, UserProfile, TReq, TRes>")
     assertContains(unionSource, "public sealed interface UserProfile")
     assertContains(unionSource, "@JsonDeserialize(using = UserProfile.Deserializer::class)")
     assertContains(unionSource, "JsonDeserializer<UserProfile>()")
@@ -1381,7 +1381,7 @@ class KotlinSundayIrGeneratorTest {
     assertContains(holderSource, "public val `documented`: Any?")
     assertContains(holderSource, "public val `named`: Any?")
     assertContains(serviceSource, "body: Any")
-    assertContains(serviceSource, "Operation<Any, Any, Req>")
+    assertContains(serviceSource, "Operation<Any, Any, TReq, TRes>")
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -2163,14 +2163,14 @@ class KotlinSundayIrGeneratorTest {
 
     assertContains(
       compactServiceSource,
-      "public fun importArchive(body: StreamingBody? = null): StreamingOperation<ImportAccepted, Req>",
+      "public fun importArchive(body: StreamingBody? = null): StreamingOperation<ImportAccepted, TReq, TRes>",
     )
     assertContains(
       compactServiceSource,
-      "public fun importArchiveOrNil(body: StreamingBody? = null): NullableOperation<StreamingBody, ImportAccepted, Req>",
+      "public fun importArchiveOrNil(body: StreamingBody? = null): NullableOperation<StreamingBody, ImportAccepted, TReq, TRes>",
     )
-    assertContains(serviceSource, ".operation<StreamingBody, ImportAccepted, Req>")
-    assertContains(serviceSource, ".nullableOperation<StreamingBody, ImportAccepted, Req>")
+    assertContains(serviceSource, ".operation<StreamingBody, ImportAccepted, TReq, TRes>")
+    assertContains(serviceSource, ".nullableOperation<StreamingBody, ImportAccepted, TReq, TRes>")
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -3514,7 +3514,7 @@ class KotlinSundayIrGeneratorTest {
         "io/test/service/SubscribeOnlyBroker.kt",
       )
 
-    assertTrue(mixedHttpSource.contains("public class EventsBroker<Req : Request>"), mixedHttpSource)
+    assertTrue(mixedHttpSource.contains("public class EventsBroker<TReq, TRes>"), mixedHttpSource)
     assertTrue(mixedBrokerSource.contains("public class EventsAmqpBroker("), mixedBrokerSource)
     assertTrue(mixedBrokerSource.contains("private val producer: BrokerProducer"), mixedBrokerSource)
     assertFalse(mixedBrokerSource.contains("private val consumer: BrokerConsumer"), mixedBrokerSource)

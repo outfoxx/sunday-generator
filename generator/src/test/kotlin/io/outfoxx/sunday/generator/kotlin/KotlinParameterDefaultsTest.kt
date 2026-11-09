@@ -213,11 +213,15 @@ class KotlinParameterDefaultsTest {
             .single { it.parameterCount == 3 }
             .newInstance(transport, listOf(MediaType.JSON), listOf(MediaType.JSON))
 
-        fun request(values: Array<Any?>): Request {
-          val operation = method.invoke(client, *values) as Operation<*, *, *>
+        fun request(values: Array<Any?>): Request<*> {
+          val operation = method.invoke(client, *values) as Operation<*, *, *, *>
           return runBlocking { operation.transportRequest() }
         }
-        val omittedOperation = method.invoke(client, *arrayOfNulls<Any?>(method.parameterCount)) as Operation<*, *, *>
+        val omittedOperation =
+          method.invoke(
+            client,
+            *arrayOfNulls<Any?>(method.parameterCount),
+          ) as Operation<*, *, *, *>
         assertTrue(
           omittedOperation.spec.pathParameters
             .orEmpty()
@@ -242,7 +246,7 @@ class KotlinParameterDefaultsTest {
             null,
             31,
             null,
-          ) as Operation<*, *, *>
+          ) as Operation<*, *, *, *>
         assertEquals(java.time.LocalDate.parse("2026-10-03"), formatted.spec.queryParameters?.get("date"))
         assertEquals(java.time.LocalTime.parse("12:34:56.125"), formatted.spec.queryParameters?.get("time"))
         assertEquals(
@@ -262,7 +266,7 @@ class KotlinParameterDefaultsTest {
             *arrayOfNulls<Any?>(method.parameterCount),
             (1 shl method.parameterCount) - 1,
             null,
-          ) as Operation<*, *, *>
+          ) as Operation<*, *, *, *>
         val defaults = runBlocking { defaultOperation.transportRequest() }
         assertEquals("/probe/fallback", defaults.uri.path)
         assertTrue(defaults.uri.query.contains("queryValue=5"))

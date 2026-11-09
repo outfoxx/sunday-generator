@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.ir.GeneratedExchange
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
@@ -48,7 +49,22 @@ class TypeScriptScopedSecurityTest {
           operation.copy(auth = source.effectiveAuth(service, operation))
         }
       }
-    val api = source.copy(services = listOf(GeneratedService("SecurityService", operations = operations)))
+    val exchangeOperation = operations.first().copy(streaming = null)
+    val api =
+      source.copy(
+        services =
+          listOf(
+            GeneratedService(
+              "SecurityService",
+              operations =
+                operations +
+                  listOf(
+                    exchangeOperation.copy(id = "exportRequest", exchange = GeneratedExchange.REQUEST),
+                    exchangeOperation.copy(id = "rawResponse", exchange = GeneratedExchange.RESPONSE),
+                  ),
+            ),
+          ),
+      )
     val registry = TypeScriptTypeRegistry(emptySet(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
     TypeScriptSundayIrGenerator(
       api,
@@ -63,7 +79,14 @@ class TypeScriptScopedSecurityTest {
     val calls =
       operations.joinToString("\n") {
         if (it.streaming != null) {
-          "for await (const ignored of client.${it.id}()) { void ignored; }"
+          """
+          stopping = true;
+          try {
+            for await (const ignored of client.${it.id}()) { void ignored; }
+            throw new Error('Stream swallowed stop signal');
+          } catch (error) { if (error !== stop) throw error; }
+          stopping = false;
+          """.trimIndent()
         } else {
           "await client.${it.id}().execute();"
         }
@@ -74,7 +97,7 @@ class TypeScriptScopedSecurityTest {
         .addCode(
           CodeBlock.of(
             """
-            import {FetchTransport, RequestSpec, TokenManager, TokenRequest} from '@outfoxx/sunday';
+            import {FetchTransport, RequestCancellationError, TokenManager, TokenRequest} from '@outfoxx/sunday';
             import {createSecurityAPI} from './security-api.js';
             const acquired: TokenRequest[] = [];
             const requests: Request[] = [];
@@ -83,16 +106,40 @@ class TypeScriptScopedSecurityTest {
               configure: () => ({clientIdentity: 'public-client', grantIdentity: 'fresh-session'}),
               acquire: async request => { acquired.push(request); return {accessToken: 'external-token'}; }
             }});
-            class CaptureTransport extends FetchTransport {
-              override eventStream<E>(spec: RequestSpec<void>): AsyncIterable<E> {
-                const transport = this;
-                return {async *[Symbol.asyncIterator]() { requests.push(await transport.transportRequest(spec)); }};
-              }
-            }
+            const stop = new RequestCancellationError('adapter stop');
+            let stopping = false;
+            let adaptations = 0;
+            let responses = 0;
             globalThis.fetch = async request => { requests.push(request as Request); return new Response(null, {status: 204}); };
-            const client = createSecurityAPI(new CaptureTransport('https://api.example', {tokenProviders: {application: manager}}));
+            const transport = new FetchTransport('https://api.example', {
+              tokenProviders: {application: manager},
+              requestAdapter: {adapt: async request => {
+                adaptations++;
+                if (request.headers.has('X-Adapted')) throw new Error('Request adapted twice');
+                request.headers.set('X-Adapted', 'yes');
+                return request;
+              }},
+              responseAdapter: {adapt: async (response, request) => {
+                responses++;
+                if (request.headers.get('X-Adapted') !== 'yes') throw new Error('Wrong effective request');
+                if (stopping) throw stop;
+                return response;
+              }}
+            });
+            const client = createSecurityAPI(transport);
             $calls
-            if (requests.length !== ${operations.size}) throw new Error('Missing operation authentication');
+            if (Number(requests.length) !== ${operations.size}) throw new Error('Missing operation authentication');
+            if (Number(adaptations) !== ${operations.size} || Number(responses) !== ${operations.size}) throw new Error('Wrong adapter count');
+            const exported: Request = await client.exportRequest();
+            if (exported.headers.get('X-Adapted') !== 'yes') throw new Error('Export was not adapted');
+            if (Number(requests.length) !== ${operations.size} || Number(responses) !== ${operations.size}) throw new Error('Export executed');
+            const response: Response = await client.rawResponse();
+            if (response.status !== 204 || Number(requests.length) !== ${operations.size + 1}) throw new Error('Raw response failed');
+            stopping = true;
+            try { await client.rawResponse(); throw new Error('Buffered execution swallowed stop signal'); }
+            catch (error) { if (error !== stop) throw error; }
+            if (Number(adaptations) !== ${operations.size + 3} || Number(responses) !== ${operations.size + 2} ||
+                Number(requests.length) !== ${operations.size + 2}) throw new Error('Unexpected retry or adaptation');
             if (acquired.length !== 1) throw new Error('Cache not shared across operation scopes');
             const binding = acquired[0];
             if (binding.provider !== 'application' || binding.profile !== 'external' || binding.flow !== 'authorizationCode' ||

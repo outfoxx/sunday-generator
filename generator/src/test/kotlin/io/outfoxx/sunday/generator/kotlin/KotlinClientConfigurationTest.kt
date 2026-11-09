@@ -141,7 +141,7 @@ class KotlinClientConfigurationTest {
               val config = $configType(tenant = "secondary")
               val transport = io.outfoxx.sunday.jdk.JdkTransport(io.outfoxx.sunday.URITemplate(config.baseURL().toString()), io.outfoxx.sunday.problems.SundayHttpProblem.Factory)
               try {
-                val client: API<io.outfoxx.sunday.jdk.JdkRequest> = createAPI(config, { settings ->
+                val client: API<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>> = createAPI(config, { settings ->
                   calls++
                   check((settings.tokenProviders.isNotEmpty()) == ${authenticated
               })
@@ -253,7 +253,7 @@ class KotlinClientConfigurationTest {
               )) {
               var invalidCalls = 0
               try {
-                createExampleAPI<io.outfoxx.sunday.jdk.JdkRequest>(ExampleAPIDevelopmentConfig(), { _ ->
+                createExampleAPI<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>(ExampleAPIDevelopmentConfig(), { _ ->
                   invalidCalls++
                   error("UnexpectedTransport")
                 }, invalidCredentials)

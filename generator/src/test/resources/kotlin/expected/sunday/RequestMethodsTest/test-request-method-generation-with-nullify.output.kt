@@ -6,7 +6,6 @@ import io.outfoxx.sunday.NullifySpec
 import io.outfoxx.sunday.OperationSpec
 import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.http.Method
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.nullableOperation
 import io.outfoxx.sunday.security.ClientSettings
 import io.outfoxx.sunday.withSecurity
@@ -18,8 +17,8 @@ import kotlin.Unit
 import kotlin.collections.List
 import kotlin.jvm.JvmOverloads
 
-public class API<Req : Request> @JvmOverloads constructor(
-  public val transport: Transport<Req>,
+public class API<TReq, TRes> @JvmOverloads constructor(
+  public val transport: Transport<TReq, TRes>,
   public val defaultContentTypes: List<MediaType> = listOf(),
   public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
   private val clientSettings: ClientSettings? = null,
@@ -28,9 +27,9 @@ public class API<Req : Request> @JvmOverloads constructor(
     transport.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
     transport.registerProblem("http://example.com/another_not_found", AnotherNotFoundProblem::class)
   }
-  public fun fetchTest1(limit: Int): NullableOperation<Unit, Test, Req> = (if (clientSettings !=
-      null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest1")) else
-      this.transport).nullableOperation<Unit, Test, Req>(
+  public fun fetchTest1(limit: Int): NullableOperation<Unit, Test, TReq, TRes> = (if (clientSettings
+      != null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest1")) else
+      this.transport).nullableOperation<Unit, Test, TReq, TRes>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/test1",
@@ -45,9 +44,9 @@ public class API<Req : Request> @JvmOverloads constructor(
     )
   )
 
-  public fun fetchTest2(limit: Int): NullableOperation<Unit, Test, Req> = (if (clientSettings !=
-      null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest2")) else
-      this.transport).nullableOperation<Unit, Test, Req>(
+  public fun fetchTest2(limit: Int): NullableOperation<Unit, Test, TReq, TRes> = (if (clientSettings
+      != null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest2")) else
+      this.transport).nullableOperation<Unit, Test, TReq, TRes>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/test2",
@@ -62,9 +61,9 @@ public class API<Req : Request> @JvmOverloads constructor(
     )
   )
 
-  public fun fetchTest3(limit: Int): NullableOperation<Unit, Test, Req> = (if (clientSettings !=
-      null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest3")) else
-      this.transport).nullableOperation<Unit, Test, Req>(
+  public fun fetchTest3(limit: Int): NullableOperation<Unit, Test, TReq, TRes> = (if (clientSettings
+      != null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest3")) else
+      this.transport).nullableOperation<Unit, Test, TReq, TRes>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/test3",
@@ -79,9 +78,9 @@ public class API<Req : Request> @JvmOverloads constructor(
     )
   )
 
-  public fun fetchTest4(limit: Int): NullableOperation<Unit, Test, Req> = (if (clientSettings !=
-      null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest4")) else
-      this.transport).nullableOperation<Unit, Test, Req>(
+  public fun fetchTest4(limit: Int): NullableOperation<Unit, Test, TReq, TRes> = (if (clientSettings
+      != null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest4")) else
+      this.transport).nullableOperation<Unit, Test, TReq, TRes>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/test4",
@@ -96,9 +95,9 @@ public class API<Req : Request> @JvmOverloads constructor(
     )
   )
 
-  public fun fetchTest5(limit: Int): NullableOperation<Unit, Test, Req> = (if (clientSettings !=
-      null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest5")) else
-      this.transport).nullableOperation<Unit, Test, Req>(
+  public fun fetchTest5(limit: Int): NullableOperation<Unit, Test, TReq, TRes> = (if (clientSettings
+      != null) this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest5")) else
+      this.transport).nullableOperation<Unit, Test, TReq, TRes>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/test5",

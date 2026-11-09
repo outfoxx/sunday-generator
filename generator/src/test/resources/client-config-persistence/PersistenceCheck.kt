@@ -73,7 +73,7 @@ object PersistenceCheck {
             }
           }
         val managers = mutableListOf<TokenManager>()
-        val transports = mutableListOf<io.outfoxx.sunday.Transport<io.outfoxx.sunday.jdk.JdkRequest>>()
+        val transports = mutableListOf<io.outfoxx.sunday.Transport<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>>()
         val readRequests = mutableMapOf<ClientSettings, suspend () -> Unit>()
         val publicRequests = mutableMapOf<ClientSettings, suspend () -> Unit>()
 
