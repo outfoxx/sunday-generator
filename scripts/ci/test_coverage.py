@@ -34,6 +34,37 @@ class CoverageArtifactsTest(unittest.TestCase):
     def test_complete_partitions_are_accepted_without_executing_tests(self):
         self.assertEqual(11, len(coverage.verify(self.artifacts, "commit-a")))
 
+    def test_configuration_failure_reports_are_preserved_without_test_results(self):
+        source = self.root / "failed-python"
+        reports = (
+            "build/reports/dependency-verification/at-123/dependency-verification-report.html",
+            "build/reports/dependency-verification/at-123/css/style.css",
+            "build/reports/configuration-cache/task-key/entry-key/configuration-cache-report.html",
+            "generator/build/reports/dependency-verification/at-456/dependency-verification-report.html",
+            "generator/build/reports/configuration-cache/task-key/entry-key/configuration-cache-report.html",
+        )
+        for name in reports:
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(name)
+        coverage.package(source, self.artifacts, "python", "commit-a")
+        directory = self.artifacts / "python"
+        manifest = json.loads((directory / "manifest.json").read_text())
+        self.assertEqual(set(reports), set(manifest["files"]))
+        for name in reports:
+            self.assertEqual(name, (directory / name).read_text())
+            self.assertEqual(coverage.digest(source / name), manifest["files"][name])
+        with self.assertRaisesRegex(ValueError, "Missing coverage or JUnit results: python/generator"):
+            coverage.verify(self.artifacts, "commit-a")
+
+    def test_diagnostic_reports_do_not_prevent_successful_aggregation(self):
+        source = self.root / "python"
+        report = source / "build/reports/configuration-cache/task-key/entry-key/configuration-cache-report.html"
+        report.parent.mkdir(parents=True)
+        report.write_text("configuration cache diagnostics")
+        coverage.package(source, self.artifacts, "python", "commit-a")
+        self.assertEqual(11, len(coverage.verify(self.artifacts, "commit-a")))
+
     def test_missing_secondary_test_task_is_rejected(self):
         directory = self.artifacts / "infrastructure"
         name = "integration-tests/jaxrs/build/kover/bin-reports/defaultModelTest.ic"

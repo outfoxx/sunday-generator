@@ -35,7 +35,8 @@ def package(root, destination, partition, commit):
     for module in modules:
         source = root / module
         for pattern in ("build/kover/bin-reports/*.ic", "build/kover/bin-reports/*.log", "build/test-results/**/*.xml",
-                        "build/diagnostics/**/*", "build/reports/profile/*"):
+                        "build/diagnostics/**/*", "build/reports/profile/*",
+                        "build/reports/dependency-verification/**/*", "build/reports/configuration-cache/**/*"):
             for path in source.glob(pattern):
                 if path.is_file():
                     output = target / path.relative_to(root)
@@ -52,11 +53,13 @@ def package(root, destination, partition, commit):
             output = target / "build/diagnostics" / path.name
             output.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, output)
-    for path in (root / "build/reports/profile").glob("*"):
-        if path.is_file():
-            output = target / "build/reports/profile" / path.name
-            output.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, output)
+    for pattern in ("build/reports/profile/*", "build/reports/dependency-verification/**/*",
+                    "build/reports/configuration-cache/**/*"):
+        for path in root.glob(pattern):
+            if path.is_file():
+                output = target / path.relative_to(root)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, output)
     files = {str(p.relative_to(target)): digest(p) for p in sorted(target.rglob("*")) if p.is_file()}
     manifest = dict(commit=commit, partition=partition, testTags=PARTITIONS[partition],
                     modules=list(modules), files=files)
