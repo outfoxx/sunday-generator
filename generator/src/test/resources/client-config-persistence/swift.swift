@@ -34,19 +34,14 @@ struct GeneratedPersistenceTests {
       profile: String = "external-development"
     ) throws -> ClientSettings {
       let provider = Provider(session: session, time: time, state: state)
-      let factory: TokenManagerFactory = { providers in
-        state.counts.withLock { $0.factories += 1 }
-        #expect(Set(providers.keys) == ["application"])
-        #expect(providers["application"]?.identity == "application")
-        let manager = try TokenManager(
-          providers: providers,
-          store: store,
-          expirySkew: 5,
-          now: { Date(timeIntervalSince1970: time) }
-        )
-        managers.withLock { $0.append(manager) }
-        return manager
-      }
+      state.counts.withLock { $0.factories += 1 }
+      let manager = try TokenManager(
+        provider: provider,
+        store: store,
+        expirySkew: 5,
+        now: { Date(timeIntervalSince1970: time) }
+      )
+      managers.withLock { $0.append(manager) }
       var captured: ClientSettings?
       var calls = 0
       let transportFactory: ClientTransportFactory<URLSessionTransport> = { settings in
@@ -58,13 +53,12 @@ struct GeneratedPersistenceTests {
         let client = try createExampleAPI(
           config: ExampleAPIDevelopmentConfig(),
           transportFactory: transportFactory,
-          credentials: ExampleAPICredentials(identity: ProviderCredentials(provider: provider)),
-          securityProfile: profile,
-          tokenManagerFactory: factory
+          credentials: ExampleAPICredentials(identity: ProviderCredentials(provider: manager)),
+          securityProfile: profile
         )
         #expect(client.users.transport === client.transport && client.projects.transport === client.transport)
         transports.append(client.transport)
-        let manager = try #require(captured?.tokenManager)
+        let manager = try #require(captured?.tokenProviders["application"] as? TokenManager)
         let key = ObjectIdentifier(manager)
         readRequests[key] = {
           _ = try await client.users.listUsers().transportRequest()
@@ -79,12 +73,11 @@ struct GeneratedPersistenceTests {
         let client = try createUsersAPI(
           config: ExampleAPIDevelopmentConfig(),
           transportFactory: transportFactory,
-          credentials: UsersAPICredentials(identity: ProviderCredentials(provider: provider)),
-          securityProfile: profile,
-          tokenManagerFactory: factory
+          credentials: UsersAPICredentials(identity: ProviderCredentials(provider: manager)),
+          securityProfile: profile
         )
         transports.append(client.transport)
-        let key = try ObjectIdentifier(#require(captured?.tokenManager))
+        let key = try ObjectIdentifier(#require(captured?.tokenProviders["application"] as? TokenManager))
         readRequests[key] = { _ = try await client.listUsers().transportRequest() }
         publicRequests[key] = {
           let request = try await client.register().transportRequest()
@@ -96,7 +89,7 @@ struct GeneratedPersistenceTests {
     }
 
     func token(_ settings: ClientSettings) async throws -> TokenSet {
-      let manager = try #require(settings.tokenManager)
+      let manager = try #require(settings.tokenProviders["application"] as? TokenManager)
       let read = try #require(readRequests[ObjectIdentifier(manager)])
       try await read()
       return try await manager.credentials(for: #require(settings.bindings["listUsers"]?.first)).tokens
@@ -105,7 +98,7 @@ struct GeneratedPersistenceTests {
       let first = try settings(0)
       #expect(await store.reads == 0)
       #expect(state.counts.withLock { $0.factories == 1 && $0.acquisitions == 0 })
-      let manager = try #require(first.tokenManager)
+      let manager = try #require(first.tokenProviders["application"] as? TokenManager)
       let publicRequest = try #require(publicRequests[ObjectIdentifier(manager)])
       try await publicRequest()
       #expect(await store.reads == 0)
@@ -117,7 +110,7 @@ struct GeneratedPersistenceTests {
       let third = try settings(96)
       let configured = state.counts.withLock { $0.configurations }
       try await withThrowingTaskGroup(of: String.self) { group in
-        let manager = try #require(third.tokenManager)
+        let manager = try #require(third.tokenProviders["application"] as? TokenManager)
         let selected = try #require(third.bindings["listUsers"]?.first)
         let read = try #require(readRequests[ObjectIdentifier(manager)])
         for _ in 0 ..< 20 {

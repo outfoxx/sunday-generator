@@ -28,7 +28,11 @@ internal fun GeneratedClientSecurity?.kotlinTransport(profile: String?): CodeBlo
   if (this == null || bindings.isEmpty()) {
     CodeBlock.of("this.transport")
   } else {
-    CodeBlock.of("this.transport.%M(%L)", MemberName("io.outfoxx.sunday", "withSecurity"), kotlinBindings(profile))
+    CodeBlock.of(
+      "this.transport.%M(%L)",
+      MemberName("io.outfoxx.sunday", "withSecurity", isExtension = true),
+      kotlinBindings(profile),
+    )
   }
 
 /** Emits immutable operation binding metadata for configured clients. */

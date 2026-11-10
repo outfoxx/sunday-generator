@@ -59,6 +59,7 @@ dependencies {
   generatedCodeClasspath(libs.jacksonJavaTime)
   generatedCodeClasspath(libs.sundayKt)
   generatedCodeClasspath("io.outfoxx.sunday:sunday-jdk:${libs.versions.sundayKt.get()}")
+  generatedCodeClasspath("io.outfoxx.sunday:sunday-okhttp:${libs.versions.sundayKt.get()}")
   generatedCodeClasspath(libs.sundayBroker)
   generatedCodeClasspath(libs.sundayProblem)
   generatedCodeClasspath("io.outfoxx.sunday:sunday-client-quarkus:${libs.versions.sundayKt.get()}")

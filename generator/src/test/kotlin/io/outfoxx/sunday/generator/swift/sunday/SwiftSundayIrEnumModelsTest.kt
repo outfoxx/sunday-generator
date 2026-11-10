@@ -274,12 +274,18 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
       serviceSource.contains("Operation<Empty, NotificationEventEnvelopeRef, TransportType>"),
       serviceSource,
     )
-    assertTrue(serviceSource.contains("AsyncStream<NotificationEventEnvelopeRef>"), serviceSource)
+    assertTrue(
+      serviceSource.contains("AsyncThrowingStream<NotificationEventEnvelopeRef, any Swift.Error>"),
+      serviceSource,
+    )
     assertTrue(
       serviceSource.contains("Operation<Empty, InheritedNotificationEventEnvelopeRef, TransportType>"),
       serviceSource,
     )
-    assertTrue(serviceSource.contains("AsyncStream<InheritedNotificationEventEnvelopeRef>"), serviceSource)
+    assertTrue(
+      serviceSource.contains("AsyncThrowingStream<InheritedNotificationEventEnvelopeRef, any Swift.Error>"),
+      serviceSource,
+    )
     assertTrue(
       serviceSource.contains("decoder.decode(NotificationEventEnvelopeRef.self, from: data) }"),
       serviceSource,

@@ -797,7 +797,7 @@ class PythonClientRendererTest : PythonTest() {
     assertTrue(source.contains("method=\"POST\""), source)
     assertTrue(source.contains("return await self.transport.transport_request(request_spec)"), source)
     assertTrue(source.contains("async def native_response(self) -> TransportResponseT:"), source)
-    assertTrue(source.contains("return await self.transport.transport_response(request)"), source)
+    assertTrue(source.contains("return await self.transport.execute_request(request_spec)"), source)
     assertTrue(source.contains("def raw_events(self) -> EventSource:"), source)
     assertTrue(source.contains("return self.transport.event_source(request_spec)"), source)
     assertFalse(source.contains("self._transport"), source)

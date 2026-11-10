@@ -51,6 +51,7 @@ if (useLocalSundayKt && localSundayKt.isDirectory) {
     dependencySubstitution {
       substitute(module("io.outfoxx.sunday:sunday-core")).using(project(":sunday-core"))
       substitute(module("io.outfoxx.sunday:sunday-jdk")).using(project(":sunday-jdk"))
+      substitute(module("io.outfoxx.sunday:sunday-okhttp")).using(project(":sunday-okhttp"))
       substitute(module("io.outfoxx.sunday:sunday-broker")).using(project(":sunday-broker"))
       substitute(module("io.outfoxx.sunday:sunday-problem")).using(project(":sunday-problem"))
       substitute(module("io.outfoxx.sunday:sunday-jaxrs-quarkus")).using(project(":sunday-jaxrs-quarkus"))

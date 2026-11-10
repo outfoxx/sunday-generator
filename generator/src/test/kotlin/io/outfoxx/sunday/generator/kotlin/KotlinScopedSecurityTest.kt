@@ -91,7 +91,7 @@ class KotlinScopedSecurityTest {
             .addParameter("manager", TokenManager::class)
             .addCode("%M {\n", MemberName("kotlinx.coroutines", "runBlocking"))
             .addCode(
-              "  %T(%T(base), %T.Factory, tokenManager = manager).use { transport ->\n",
+              "  %T(%T(base), %T.Factory, tokenProviders = mapOf(\"application\" to manager)).use { transport ->\n",
               ClassName("io.outfoxx.sunday.jdk", "JdkTransport"),
               ClassName("io.outfoxx.sunday", "URITemplate"),
               ClassName("io.outfoxx.sunday.problems", "SundayHttpProblem"),

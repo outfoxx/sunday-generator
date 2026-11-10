@@ -225,8 +225,9 @@ class KotlinSundayIrGenerator(
     if (options.generateClientConfig) api.clientConfigurations(api.kotlinSundayServices()) else emptyList()
   }
 
-  private val requestTypeVariable = TypeVariableName("Req", SUNDAY_REQUEST)
-  private val transportType = TRANSPORT.parameterizedBy(requestTypeVariable)
+  private val requestTypeVariable = TypeVariableName("TReq")
+  private val responseTypeVariable = TypeVariableName("TRes")
+  private val transportType = TRANSPORT.parameterizedBy(requestTypeVariable, responseTypeVariable)
   private val kotlinEnumEntries = KotlinEnumEntriesResolver()
 
   init {
@@ -771,6 +772,7 @@ class KotlinSundayIrGenerator(
     return TypeSpec
       .classBuilder(aggregateTypeName)
       .addTypeVariable(requestTypeVariable)
+      .addTypeVariable(responseTypeVariable)
       .primaryConstructor(constructorBuilder.build())
       .addProperty(PropertySpec.builder("transport", transportType, KModifier.PUBLIC).build())
       .addProperty(
@@ -793,7 +795,7 @@ class KotlinSundayIrGenerator(
             PropertySpec
               .builder(
                 serviceProperty.name,
-                serviceProperty.typeName.parameterizedBy(requestTypeVariable),
+                serviceProperty.typeName.parameterizedBy(requestTypeVariable, responseTypeVariable),
                 KModifier.PUBLIC,
               ).build(),
           )
@@ -1057,7 +1059,8 @@ class KotlinSundayIrGenerator(
             "Creates %L using the application's chosen transport. The caller owns its lifecycle.\n",
             serviceType.simpleName,
           ).addTypeVariable(requestTypeVariable)
-          .returns(serviceType.parameterizedBy(requestTypeVariable))
+          .addTypeVariable(responseTypeVariable)
+          .returns(serviceType.parameterizedBy(requestTypeVariable, responseTypeVariable))
           .addParameter("config", ClassName(serviceType.packageName, plan.name))
           .addParameter(
             "transportFactory",
@@ -1097,13 +1100,6 @@ class KotlinSundayIrGenerator(
                 LIST.parameterizedBy(MEDIA_TYPE),
               ).defaultValue("%L", mediaTypesArray(media.acceptTypes))
               .build(),
-          ).addParameter(
-            ParameterSpec
-              .builder(
-                "tokenManagerFactory",
-                ClassName("io.outfoxx.sunday.security", "TokenManagerFactory").copy(nullable = true),
-              ).defaultValue("null")
-              .build(),
           ).addStatement("val supplied = mutableMapOf<String, %T>()", credentialsBase)
       schemes.forEach { scheme ->
         builder.addStatement("credentials.%N?.let { supplied[%S] = it }", scheme.name.kotlinIdentifierName, scheme.name)
@@ -1124,7 +1120,7 @@ class KotlinSundayIrGenerator(
         ).addStatement(
           "val selectedAlternatives = alternatives.mapValues { (operation, choices) -> choices.filter { securitySelection[operation]?.matches(it) ?: true } }",
         ).addStatement(
-          "val settings = %T.resolve(config.baseURL(), selectedAlternatives, supplied, tokenManagerFactory = tokenManagerFactory)",
+          "val settings = %T.resolve(config.baseURL(), selectedAlternatives, supplied)",
           clientSettingsType,
         ).addStatement("val transport = transportFactory(settings)")
         .addStatement("return %T(transport, defaultContentTypes, defaultAcceptTypes, settings)", serviceType)
@@ -1196,6 +1192,7 @@ class KotlinSundayIrGenerator(
 
       serviceTypeBuilder
         .addTypeVariable(requestTypeVariable)
+        .addTypeVariable(responseTypeVariable)
         .primaryConstructor(
           constructorBuilder.build(),
         ).addProperty(
@@ -1238,7 +1235,7 @@ class KotlinSundayIrGenerator(
                   } else {
                     CodeBlock.of(
                       "(if (clientSettings != null) this.transport.%M(clientSettings.bindings.getValue(%S)) else %L)",
-                      MemberName("io.outfoxx.sunday", "withSecurity"),
+                      MemberName("io.outfoxx.sunday", "withSecurity", isExtension = true),
                       operation.id,
                       legacy,
                     )
@@ -3039,7 +3036,15 @@ class KotlinSundayIrGenerator(
     val builder = CodeBlock.builder()
     val operationFunction = if (isNullifyingOperation) SUNDAY_NULLABLE_OPERATION_FUNCTION else SUNDAY_OPERATION_FUNCTION
 
-    builder.add("return %L.%M<%T,·%T,·Req>(⇥\n", transport, operationFunction, requestType, responseType)
+    builder.add(
+      "return %L.%M<%T,·%T,·%T,·%T>(⇥\n",
+      transport,
+      operationFunction,
+      requestType,
+      responseType,
+      requestTypeVariable,
+      responseTypeVariable,
+    )
     builder.add("%T(⇥\n", SUNDAY_OPERATION_SPEC)
     builder.add("method = %T.%L", SUNDAY_METHOD, sundayRequestMethod())
     builder.add(",\npathTemplate = %S", path)
@@ -3216,7 +3221,8 @@ class KotlinSundayIrGenerator(
 
   private fun GeneratedOperation.returnTypeName(response: GeneratedResponse?): TypeName =
     when {
-      streaming?.kind == GeneratedStreaming.Kind.EVENT_SOURCE -> SUNDAY_EVENT_SOURCE
+      streaming?.kind == GeneratedStreaming.Kind.EVENT_SOURCE ->
+        SUNDAY_EVENT_SOURCE.parameterizedBy(requestTypeVariable, responseTypeVariable)
       streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM -> {
         val eventType =
           if (streaming.eventMode == GeneratedStreaming.EventMode.DISCRIMINATED) {
@@ -3228,8 +3234,8 @@ class KotlinSundayIrGenerator(
       }
       else ->
         when (exchange) {
-          GeneratedExchange.REQUEST -> requestTypeVariable
-          GeneratedExchange.RESPONSE -> SUNDAY_RESPONSE
+          GeneratedExchange.REQUEST -> SUNDAY_REQUEST.parameterizedBy(requestTypeVariable)
+          GeneratedExchange.RESPONSE -> SUNDAY_RESPONSE.parameterizedBy(responseTypeVariable)
           null ->
             when {
               isNullifyingOperation ->
@@ -3237,17 +3243,20 @@ class KotlinSundayIrGenerator(
                   requestBody?.kotlinTypeName()?.copy(nullable = false) ?: UNIT,
                   responseBodyTypeName(response),
                   requestTypeVariable,
+                  responseTypeVariable,
                 )
               requestBody.isKotlinStreamingRequestBody ->
                 SUNDAY_STREAMING_OPERATION.parameterizedBy(
                   responseBodyTypeName(response),
                   requestTypeVariable,
+                  responseTypeVariable,
                 )
               else ->
                 SUNDAY_OPERATION.parameterizedBy(
                   requestBody?.kotlinTypeName()?.copy(nullable = false) ?: UNIT,
                   responseBodyTypeName(response),
                   requestTypeVariable,
+                  responseTypeVariable,
                 )
             }
         }
@@ -3827,9 +3836,9 @@ class KotlinSundayIrGenerator(
     }
 
   private companion object {
-    val SUNDAY_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "operation")
-    val SUNDAY_NULLABLE_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "nullableOperation")
-    val BROKER_DECODE_DELIVERIES = MemberName("io.outfoxx.sunday.broker", "decodeDeliveries")
+    val SUNDAY_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "operation", isExtension = true)
+    val SUNDAY_NULLABLE_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "nullableOperation", isExtension = true)
+    val BROKER_DECODE_DELIVERIES = MemberName("io.outfoxx.sunday.broker", "decodeDeliveries", isExtension = true)
     val TYPE_OF = MemberName("kotlin.reflect", "typeOf")
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")

@@ -124,7 +124,7 @@ class SwiftClientConfigurationTest {
           var calls = 0
           let client: API<URLSessionTransport> = try createAPI(config: config, transportFactory: { settings in
             calls += 1
-            XCTAssertEqual(settings.tokenManager != nil, ${authenticated
+            XCTAssertEqual(!settings.tokenProviders.isEmpty, ${authenticated
       })
             XCTAssertEqual(settings.baseURL.absoluteString, "https://secondary.example/v1")
             return URLSessionTransport(settings: settings)
@@ -145,8 +145,10 @@ class SwiftClientConfigurationTest {
     assertTrue(compileAndTestGeneratedFiles(compiler))
   }
 
-  @Test
-  fun `aggregate factory shares settings and lazy token cache`(
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `aggregate factory shares settings and honors provider cache ownership`(
+    cached: Boolean,
     compiler: SwiftCompiler,
     @TempDir directory: Path,
   ) {
@@ -181,6 +183,7 @@ class SwiftClientConfigurationTest {
           for override in [false, true] {
             CaptureProtocol.requests.withLock { ${'$'}0.removeAll() }
             let provider = Provider()
+            let manager = $cached ? try TokenManager(provider: provider) : nil
             var calls = 0
             let expected = override ? "external" : "external-development"
             let factory: ClientTransportFactory<URLSessionTransport> = { settings in
@@ -196,9 +199,9 @@ class SwiftClientConfigurationTest {
               config.protocolClasses = [CaptureProtocol.self]
               let session = URLSession(configuration: config)
               return URLSessionTransport(baseURL: URI.Template(stringLiteral: settings.baseURL.absoluteString), session: session, eventSession: session,
-                                         tokenManager: settings.tokenManager)
+                                         tokenProviders: settings.tokenProviders)
             }
-            let credentials = ExampleAPICredentials(identity: ProviderCredentials(provider: provider))
+            let credentials = ExampleAPICredentials(identity: ProviderCredentials(provider: (manager as (any TokenProvider)?) ?? provider))
             let client = try override
               ? createExampleAPI(config: ExampleAPIDevelopmentConfig(), transportFactory: factory, credentials: credentials, securityProfile: "external")
               : createExampleAPI(config: ExampleAPIDevelopmentConfig(), transportFactory: factory, credentials: credentials,
@@ -214,8 +217,9 @@ class SwiftClientConfigurationTest {
             try await client.users.listUsers().execute()
             try await client.projects.listProjects().execute()
             let acquired = provider.requests.withLock { ${'$'}0 }
-            XCTAssertEqual(acquired.count, 1)
-            XCTAssertEqual(acquired.first?.binding.profile, expected)
+            XCTAssertEqual(acquired.count, ${if (cached) 1 else 2})
+            XCTAssertTrue(acquired.allSatisfy { ${'$'}0.binding.profile == expected })
+            await manager?.close()
           }
           for credentials in [
             ExampleAPICredentials(),

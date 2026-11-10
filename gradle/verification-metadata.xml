@@ -128,6 +128,11 @@
          <trusted-key id="51B52DC5DD452F92BE342CC2858FC4C4F43856A3" group="org.apache.cxf"/>
          <trusted-key id="59A8E169739301FD48139CA00E325BECB6962A24" group="jakarta.annotation" name="jakarta.annotation-api" version="3.0.0"/>
          <trusted-key id="5B51871EA3910573DCD83A1B0AF99366B4D6DE14" group="com.aayushatharva.brotli4j"/>
+         <trusted-key id="5DD80B0DDCCBE005F0A47FD66751E1A6E2001B8D">
+            <trusting group="com.squareup.okhttp3" name="okhttp-coroutines" version="5.5.1"/>
+            <trusting group="com.squareup.okhttp3" name="okhttp-jvm" version="5.5.1"/>
+            <trusting group="com.squareup.okio" name="okio-jvm" version="3.18.1"/>
+         </trusted-key>
          <trusted-key id="600EA202B1EC682F4A788E5AAC7A514BC9F9BB70" group="io.opencensus"/>
          <trusted-key id="60200AC4AE761F1614D6C46766D68DAA073BE985">
             <trusting group="ch.qos.logback"/>

@@ -5,7 +5,6 @@ import io.outfoxx.sunday.Operation
 import io.outfoxx.sunday.OperationSpec
 import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.http.Method
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.operation
 import io.outfoxx.sunday.security.ClientSettings
 import io.outfoxx.sunday.withSecurity
@@ -16,8 +15,8 @@ import kotlin.Unit
 import kotlin.collections.List
 import kotlin.jvm.JvmOverloads
 
-public class API<Req : Request> @JvmOverloads constructor(
-  public val transport: Transport<Req>,
+public class API<TReq, TRes> @JvmOverloads constructor(
+  public val transport: Transport<TReq, TRes>,
   public val defaultContentTypes: List<MediaType> = listOf(),
   public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
   private val clientSettings: ClientSettings? = null,
@@ -26,9 +25,9 @@ public class API<Req : Request> @JvmOverloads constructor(
     obj: Test,
     strReq: String,
     int: Int? = 5,
-  ): Operation<Unit, Test, Req> = (if (clientSettings != null)
+  ): Operation<Unit, Test, TReq, TRes> = (if (clientSettings != null)
       this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest")) else
-      this.transport).operation<Unit, Test, Req>(
+      this.transport).operation<Unit, Test, TReq, TRes>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/tests",
@@ -41,9 +40,9 @@ public class API<Req : Request> @JvmOverloads constructor(
     )
   )
 
-  public fun deleteTest(): Operation<Unit, Unit, Req> = (if (clientSettings != null)
+  public fun deleteTest(): Operation<Unit, Unit, TReq, TRes> = (if (clientSettings != null)
       this.transport.withSecurity(clientSettings.bindings.getValue("deleteTest")) else
-      this.transport).operation<Unit, Unit, Req>(
+      this.transport).operation<Unit, Unit, TReq, TRes>(
     OperationSpec(
       method = Method.Delete,
       pathTemplate = "/tests"

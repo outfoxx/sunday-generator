@@ -101,7 +101,7 @@ class TypeScriptClientConfigurationTest {
               ""
             }}tenant: 'secondary'}, settings => {
               calls++;
-              if ((settings.tokenManager !== undefined) !== ${authenticated
+              if ((Object.keys(settings.tokenProviders).length !== 0) !== ${authenticated
             }) throw new Error('Manager was not prepared');
               if (settings.baseUrl !== 'https://secondary.example/v1') throw new Error('Endpoint mismatch');
               return FetchTransport.fromSettings(settings);
@@ -186,8 +186,10 @@ class TypeScriptClientConfigurationTest {
     )
   }
 
-  @Test
-  fun `aggregate factory shares profile settings and token acquisition across children`(
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `aggregate factory shares settings and honors provider cache ownership`(
+    cached: Boolean,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
@@ -210,7 +212,7 @@ class TypeScriptClientConfigurationTest {
         .addCode(
           CodeBlock.of(
             """
-            import {FetchTransport, TokenProvider, TokenRequest} from '@outfoxx/sunday';
+            import {FetchTransport, TokenManager, TokenProvider, TokenRequest} from '@outfoxx/sunday';
             import {createExampleAPI, ExampleAPICredentials, ExampleAPISecurityAlternative} from './example-api.js';
             const acquired: TokenRequest[] = [];
             const provider: TokenProvider = {
@@ -231,7 +233,7 @@ class TypeScriptClientConfigurationTest {
                   if (binding.profile !== expected || binding.scopes.join(',') !== 'items:read') throw new Error('Wrong binding');
                 }
                 return FetchTransport.fromSettings(settings);
-              }, {credentials: {identity: {kind: 'provider', provider}},
+              }, {credentials: {identity: {kind: 'provider', provider: $cached ? new TokenManager(provider) : provider}},
                   ...(override ? {securityProfile: 'external'} : {}),
                   securitySelection: {listProjects: ExampleAPISecurityAlternative.Identity}});
               if (calls !== 1 || acquired.length !== 0) throw new Error('Eager acquisition or duplicate transport');
@@ -239,7 +241,7 @@ class TypeScriptClientConfigurationTest {
               if (publicRequest.headers.has('Authorization') || acquired.length !== 0) throw new Error('Public operation authenticated');
               const users = await client.users.listUsers().transportRequest();
               const projects = await client.projects.listProjects().transportRequest();
-              if (Number(acquired.length) !== 1 || acquired[0].profile !== expected) throw new Error('Settings or cache not shared');
+              if (Number(acquired.length) !== ${if (cached) 1 else 2} || acquired[0].profile !== expected) throw new Error('Provider cache ownership not preserved');
               if (users.headers.get('Authorization')?.toLowerCase() !== 'bearer token' || projects.headers.get('Authorization')?.toLowerCase() !== 'bearer token') throw new Error('Missing credentials');
             }
             const invalidCredentials: ExampleAPICredentials[] = [

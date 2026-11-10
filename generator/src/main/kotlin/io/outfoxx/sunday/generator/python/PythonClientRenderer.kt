@@ -238,8 +238,7 @@ class PythonClientRenderer(
           when (exchange) {
             GeneratedExchange.REQUEST -> "        return await self.transport.transport_request(request_spec)"
             GeneratedExchange.RESPONSE ->
-              "        request = await self.transport.transport_request(request_spec)\n" +
-                "        return await self.transport.transport_response(request)"
+              "        return await self.transport.execute_request(request_spec)"
           }
         PythonCodeBlock.of(
           "        request_spec: %T[%C] = %C\n%L",

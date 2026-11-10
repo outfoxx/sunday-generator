@@ -9,13 +9,13 @@ import io.outfoxx.sunday.withSecurity
 import kotlin.collections.List
 import kotlin.jvm.JvmOverloads
 
-public class API<Req : Request> @JvmOverloads constructor(
-  public val transport: Transport<Req>,
+public class API<TReq, TRes> @JvmOverloads constructor(
+  public val transport: Transport<TReq, TRes>,
   public val defaultContentTypes: List<MediaType> = listOf(),
   public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
   private val clientSettings: ClientSettings? = null,
 ) {
-  public suspend fun fetchTest(): Req = (if (clientSettings != null)
+  public suspend fun fetchTest(): Request<TReq> = (if (clientSettings != null)
       this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest")) else
       this.transport)
     .transportRequest(

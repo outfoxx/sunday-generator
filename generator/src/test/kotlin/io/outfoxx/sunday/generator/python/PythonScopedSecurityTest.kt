@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedExchange
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -48,7 +49,22 @@ class PythonScopedSecurityTest : PythonTest() {
       source.services.flatMap { service ->
         service.operations.map { it.copy(auth = source.effectiveAuth(service, it)) }
       }
-    val api = source.copy(services = listOf(GeneratedService("SecurityService", operations = operations)))
+    val exchangeOperation = operations.first().copy(streaming = null)
+    val api =
+      source.copy(
+        services =
+          listOf(
+            GeneratedService(
+              "SecurityService",
+              operations =
+                operations +
+                  listOf(
+                    exchangeOperation.copy(id = "exportRequest", exchange = GeneratedExchange.REQUEST),
+                    exchangeOperation.copy(id = "rawResponse", exchange = GeneratedExchange.RESPONSE),
+                  ),
+            ),
+          ),
+      )
     val modules =
       PythonSundayIrGenerator(
         api,
@@ -61,7 +77,16 @@ class PythonScopedSecurityTest : PythonTest() {
     val calls =
       operations.joinToString("\n") {
         if (it.streaming != null) {
-          "    async for ignored in client.${it.id.pythonIdentifierName}():\n        pass"
+          """
+          |    stopping = True
+          |    try:
+          |        async for ignored in client.${it.id.pythonIdentifierName}():
+          |            pass
+          |        raise AssertionError("Stream swallowed stop signal")
+          |    except RequestCancellationError as error:
+          |        assert error is stop
+          |    stopping = False
+          """.trimMargin()
         } else {
           "    await client.${it.id.pythonIdentifierName}().execute()"
         }
@@ -75,12 +100,27 @@ class PythonScopedSecurityTest : PythonTest() {
           """
           import asyncio
           import httpx
-          from sunday import TokenConfiguration, TokenManager, TokenSet, EventStreamOptions
+          from sunday import TokenConfiguration, TokenManager, TokenSet, RequestCancellationError
           from sunday.httpx import HttpxTransport
           from security_api.security import SecurityClient
 
           acquired = []
           requests = []
+          adaptations = []
+          responses = []
+          stop = RequestCancellationError("adapter stop")
+          stopping = False
+          async def adapt_request(request):
+              assert "x-adapted" not in request.headers
+              request.headers["x-adapted"] = "yes"
+              adaptations.append(request)
+              return request
+          async def adapt_response(response, request):
+              assert request.headers["x-adapted"] == "yes"
+              responses.append(response)
+              if stopping:
+                  raise stop
+              return response
           class Provider:
               identity = "application"
               def configure(self, binding):
@@ -93,11 +133,27 @@ class PythonScopedSecurityTest : PythonTest() {
               assert request.headers["authorization"].lower() == "bearer external-token"
               return httpx.Response(204)
           async def main():
+              global stopping
               async with httpx.AsyncClient(base_url="https://api.example", transport=httpx.MockTransport(handler)) as native:
-                  transport = HttpxTransport(native, token_manager=TokenManager({"application": Provider()}))
+                  transport = HttpxTransport(native, token_providers={"application": TokenManager(Provider())},
+                                             request_adapter=adapt_request, response_adapter=adapt_response)
                   client = SecurityClient(transport)
           GENERATED_CALLS
-              assert len(requests) == ${operations.size}
+                  assert len(adaptations) == len(responses) == ${operations.size}
+                  exported: httpx.Request = await client.export_request()
+                  assert exported.headers["x-adapted"] == "yes"
+                  assert len(requests) == len(responses) == ${operations.size}
+                  response: httpx.Response = await client.raw_response()
+                  assert response.status_code == 204
+                  stopping = True
+                  try:
+                      await client.raw_response()
+                      raise AssertionError("Buffered execution swallowed stop signal")
+                  except RequestCancellationError as error:
+                      assert error is stop
+                  assert len(adaptations) == ${operations.size + 3}
+                  assert len(responses) == ${operations.size + 2}
+              assert len(requests) == ${operations.size + 2}
               assert len(acquired) == 1
               binding = acquired[0]
               assert binding.provider == "application"

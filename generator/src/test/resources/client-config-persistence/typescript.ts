@@ -9,7 +9,7 @@ function expect(actual: unknown) {
     toEqual: compare,
   };
 }
-import { ClientSettings, FetchTransport, TokenManager, TokenManagerFactory, TokenProvider, TokenSet, TokenStore } from '@outfoxx/sunday';
+import { ClientSettings, FetchTransport, TokenManager, TokenProvider, TokenSet, TokenStore } from '@outfoxx/sunday';
 import { createExampleAPI } from './example-api.js';
 import { createUsersAPI } from './users-api.js';
 for (const aggregate of [false, true]) {
@@ -33,18 +33,14 @@ for (const aggregate of [false, true]) {
         return { accessToken: `rotated-${refreshes.length}`, refreshToken: `refresh-${refreshes.length + 1}`, expiresAt: time + 100 };
       },
     };
-    const factory: TokenManagerFactory = providers => {
-      factories++;
-      expect(Object.keys(providers)).toEqual(['application']);
-      expect(providers['application']).toBe(provider);
-      return new TokenManager(providers, { store, expirySkewMs: 5, now: () => time });
-    };
+    factories++;
+    const manager = new TokenManager(provider, { store, expirySkewMs: 5, now: () => time });
     const transport = (resolved: ClientSettings) => {
       calls++;
       return FetchTransport.fromSettings(resolved);
     };
     let calls = 0;
-    const options = { credentials: {identity: {kind: 'provider' as const, provider}}, tokenManagerFactory: factory, securityProfile: profile };
+    const options = { credentials: {identity: {kind: 'provider' as const, provider: manager}}, securityProfile: profile };
     const client = aggregate
       ? createExampleAPI({serverId: 'development'}, transport, options)
       : createUsersAPI({serverId: 'development'}, transport, options);

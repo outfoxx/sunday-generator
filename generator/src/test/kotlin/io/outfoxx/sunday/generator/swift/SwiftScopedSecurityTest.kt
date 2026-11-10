@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedExchange
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
@@ -47,7 +48,22 @@ class SwiftScopedSecurityTest {
       source.services.flatMap { service ->
         service.operations.map { it.copy(auth = source.effectiveAuth(service, it)) }
       }
-    val api = source.copy(services = listOf(GeneratedService("SecurityService", operations = operations)))
+    val exchangeOperation = operations.first().copy(streaming = null)
+    val api =
+      source.copy(
+        services =
+          listOf(
+            GeneratedService(
+              "SecurityService",
+              operations =
+                operations +
+                  listOf(
+                    exchangeOperation.copy(id = "exportRequest", exchange = GeneratedExchange.REQUEST),
+                    exchangeOperation.copy(id = "rawResponse", exchange = GeneratedExchange.RESPONSE),
+                  ),
+            ),
+          ),
+      )
     val registry = SwiftTypeRegistry(emptySet())
     SwiftSundayIrGenerator(
       api,
@@ -64,7 +80,14 @@ class SwiftScopedSecurityTest {
     val calls =
       operations.joinToString("\n") { operation ->
         if (operation.streaming != null) {
-          "for await _ in client.${operation.id}() {}"
+          """
+          adapters.stopping.withLock { ${'$'}0 = true }
+          do {
+            for try await _ in client.${operation.id}() {}
+            XCTFail("Stream swallowed stop signal")
+          } catch { XCTAssertTrue(error as AnyObject === adapters.stop) }
+          adapters.stopping.withLock { ${'$'}0 = false }
+          """.trimIndent()
         } else {
           "try await client.${operation.id}().execute()"
         }
@@ -81,12 +104,14 @@ class SwiftScopedSecurityTest {
       final class SecurityTests: XCTestCase {
         func testSelectedProfileAndRuntimeProvider() async throws {
           let provider = Provider()
+          let adapters = Adapters()
           let manager = try TokenManager(providers: ["application": provider])
           let config = URLSessionConfiguration.ephemeral
           config.protocolClasses = [CaptureProtocol.self]
           let session = URLSession(configuration: config)
           let transport = URLSessionTransport(baseURL: "https://api.example", session: session, eventSession: session,
-                                              tokenManager: manager)
+                                              requestAdapter: adapters, responseAdapter: adapters,
+                                              tokenProviders: ["application": manager])
           defer { transport.close() }
           let client = SecurityAPI(transport: transport)
           $calls
@@ -95,6 +120,22 @@ class SwiftScopedSecurityTest {
           for request in requests {
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization")?.lowercased(), "bearer external-token")
           }
+          XCTAssertEqual(adapters.requests.withLock { ${'$'}0 }, ${operations.size})
+          XCTAssertEqual(adapters.responses.withLock { ${'$'}0 }, ${operations.size})
+          let exported: URLRequest = try await client.exportRequest()
+          XCTAssertEqual(exported.value(forHTTPHeaderField: "X-Adapted"), "yes")
+          XCTAssertEqual(CaptureProtocol.requests.withLock { ${'$'}0.count }, ${operations.size})
+          XCTAssertEqual(adapters.responses.withLock { ${'$'}0 }, ${operations.size})
+          let response: HTTPURLResponse = try await client.rawResponse()
+          XCTAssertEqual(response.statusCode, 204)
+          adapters.stopping.withLock { ${'$'}0 = true }
+          do {
+            _ = try await client.rawResponse()
+            XCTFail("Buffered execution swallowed stop signal")
+          } catch { XCTAssertTrue(error as AnyObject === adapters.stop) }
+          XCTAssertEqual(adapters.requests.withLock { ${'$'}0 }, ${operations.size + 3})
+          XCTAssertEqual(adapters.responses.withLock { ${'$'}0 }, ${operations.size + 2})
+          XCTAssertEqual(CaptureProtocol.requests.withLock { ${'$'}0.count }, ${operations.size + 2})
           let acquired = provider.requests.withLock { ${'$'}0 }
           XCTAssertEqual(acquired.count, 1)
           let binding = try XCTUnwrap(acquired.first?.binding)
@@ -105,6 +146,28 @@ class SwiftScopedSecurityTest {
           XCTAssertEqual(binding.endpoints.tokenURL, "https://identity.example/token")
           XCTAssertEqual(binding.endpoints.authorizationURL, "https://identity.example/authorize")
           await manager.close()
+        }
+      }
+
+      private final class Stop: RequestCancellationError {}
+
+      private final class Adapters: RequestAdapter, ResponseAdapter {
+        let stop = Stop()
+        let stopping = Mutex(false)
+        let requests = Mutex(0)
+        let responses = Mutex(0)
+        func adapt(request: URLRequest) async throws -> URLRequest {
+          requests.withLock { ${'$'}0 += 1 }
+          XCTAssertNil(request.value(forHTTPHeaderField: "X-Adapted"))
+          var adapted = request
+          adapted.setValue("yes", forHTTPHeaderField: "X-Adapted")
+          return adapted
+        }
+        func adapt(response: HTTPURLResponse, for request: URLRequest) async throws -> HTTPURLResponse {
+          responses.withLock { ${'$'}0 += 1 }
+          XCTAssertEqual(request.value(forHTTPHeaderField: "X-Adapted"), "yes")
+          if stopping.withLock({ ${'$'}0 }) { throw stop }
+          return response
         }
       }
 

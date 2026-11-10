@@ -49,7 +49,8 @@ val DICTIONARY_STRING_ANY_OPTIONAL = DICTIONARY.parameterizedBy(STRING, ANY.make
 val ARRAY_ANY = ARRAY.parameterizedBy(ANY)
 val ARRAY_ANY_OPTIONAL = ARRAY.parameterizedBy(ANY.makeOptional())
 
-val ASYNC_STREAM = typeName("$SWIFT_MODULE.AsyncStream")
+val ASYNC_THROWING_STREAM = typeName("$SWIFT_MODULE.AsyncThrowingStream")
+val ERROR = typeName("$SWIFT_MODULE.Error")
 
 const val FOUNDATION_MODULE = "Foundation"
 val DATE = typeName("$FOUNDATION_MODULE.Date")
